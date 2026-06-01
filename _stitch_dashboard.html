@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>INVIQ - Sessões de Inventário</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#7ad0ff",
+                      "on-secondary": "#3f008e",
+                      "secondary": "#d2bbff",
+                      "outline-variant": "#3d4850",
+                      "error-container": "#93000a",
+                      "surface": "#071325",
+                      "surface-container": "#142032",
+                      "tertiary": "#10eb8a",
+                      "on-tertiary-fixed-variant": "#00522c",
+                      "primary-fixed-dim": "#7ad0ff",
+                      "surface-variant": "#2a3548",
+                      "on-error": "#690005",
+                      "on-primary-container": "#004a65",
+                      "inverse-primary": "#00668a",
+                      "secondary-fixed-dim": "#d2bbff",
+                      "error": "#ffb4ab",
+                      "surface-bright": "#2e394d",
+                      "inverse-surface": "#d7e3fc",
+                      "on-surface": "#d7e3fc",
+                      "on-error-container": "#ffdad6",
+                      "primary": "#8fd6ff",
+                      "surface-container-high": "#1f2a3d",
+                      "background": "#071325",
+                      "on-secondary-fixed": "#25005a",
+                      "primary-container": "#00bfff",
+                      "on-primary-fixed-variant": "#004c69",
+                      "primary-fixed": "#c3e8ff",
+                      "surface-container-low": "#101c2e",
+                      "surface-container-highest": "#2a3548",
+                      "on-secondary-container": "#c9aeff",
+                      "secondary-container": "#6001d1",
+                      "on-tertiary-container": "#00502b",
+                      "on-primary": "#003549",
+                      "tertiary-fixed-dim": "#00e384",
+                      "on-tertiary-fixed": "#00210e",
+                      "surface-dim": "#071325",
+                      "tertiary-fixed": "#5affa2",
+                      "on-tertiary": "#00391d",
+                      "on-background": "#d7e3fc",
+                      "on-secondary-fixed-variant": "#5a00c6",
+                      "inverse-on-surface": "#253144",
+                      "on-primary-fixed": "#001e2c",
+                      "secondary-fixed": "#eaddff",
+                      "outline": "#87929b",
+                      "surface-container-lowest": "#030e20",
+                      "on-surface-variant": "#bcc8d1",
+                      "tertiary-container": "#00cc76"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "base": "4px",
+                      "sm": "8px",
+                      "md": "16px",
+                      "margin-desktop": "48px",
+                      "xs": "4px",
+                      "lg": "24px",
+                      "xl": "40px",
+                      "margin-mobile": "16px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "headline-xl-mobile": ["Inter"],
+                      "headline-xl": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "code-sm": ["JetBrains Mono"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "label-md": ["Inter"],
+                      "code-md": ["JetBrains Mono"]
+              },
+              "fontSize": {
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "headline-xl-mobile": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "code-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "code-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .glass-panel { background: rgba(10, 22, 40, 0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .neon-text { text-shadow: 0 0 15px rgba(143, 214, 255, 0.6); }
+        .pulse-dot { animation: pulse 2s infinite; }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 235, 138, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 235, 138, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 235, 138, 0); }
+        }
+        /* Custom scrollbar for dark tech theme */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2a3548; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #3d4850; }
+    </style>
+</head>
+<body class="bg-background text-on-surface flex h-screen overflow-hidden antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- Shared Component: SideNavBar -->
+<nav class="hidden md:flex flex-col h-full py-lg bg-surface dark:bg-surface text-primary dark:text-primary docked left-0 h-screen w-64 border-r border-white/5 shrink-0 z-50">
+<div class="px-gutter mb-xl flex items-center gap-sm">
+<span class="material-symbols-outlined text-headline-md font-headline-md font-black text-primary">qr_code_scanner</span>
+<div class="flex flex-col">
+<span class="text-headline-sm font-headline-sm font-black text-primary leading-none">INVIQ Core</span>
+<span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-widest text-[10px]">Operational Center</span>
+</div>
+</div>
+<div class="flex-1 px-sm flex flex-col gap-base">
+<!-- Active Tab -->
+<a class="flex items-center gap-md px-md py-sm rounded-lg bg-primary-container/20 text-primary border-r-4 border-primary translate-x-1 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">inventory_2</span>
+<span class="text-label-md font-label-md">Inventory</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">qr_code_scanner</span>
+<span class="text-label-md font-label-md">Scanners</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">query_stats</span>
+<span class="text-label-md font-label-md">Reports</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">psychology</span>
+<span class="text-label-md font-label-md">AI Insights</span>
+</a>
+<a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">history_edu</span>
+<span class="text-label-md font-label-md">Audit Log</span>
+</a>
+</div>
+<div class="px-gutter mt-auto flex flex-col gap-md">
+<button class="w-full py-sm bg-surface-variant/30 border border-outline-variant rounded-lg text-label-md font-label-md text-primary flex justify-center items-center gap-sm hover:bg-surface-variant/50 transition-colors">
+<span class="material-symbols-outlined text-[18px]">chat_spark</span>
+                AI Chat Support
+            </button>
+<div class="h-px bg-white/5 w-full"></div>
+<a class="flex items-center gap-md text-on-surface-variant opacity-70 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">help_outline</span>
+<span class="text-label-md font-label-md">Help</span>
+</a>
+<a class="flex items-center gap-md text-on-surface-variant opacity-70 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="text-label-md font-label-md">Logout</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col overflow-y-auto relative w-full">
+<!-- Deep Space Ambient Light Background effect -->
+<div class="absolute top-0 left-1/4 w-1/2 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+<!-- Top Header (Responsive, combining prompt and TopNavBar logic) -->
+<header class="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-white/5 px-margin-mobile md:px-margin-desktop py-md flex justify-between items-center w-full">
+<div class="flex items-center gap-md">
+<!-- Mobile Logo -->
+<div class="md:hidden flex items-center gap-xs text-primary">
+<span class="material-symbols-outlined font-black">qr_code_scanner</span>
+<span class="font-headline-md text-headline-md font-bold">INVIQ</span>
+</div>
+<!-- Session Counter -->
+<div class="hidden sm:flex items-center gap-xs bg-surface-variant/40 px-sm py-xs rounded-full border border-white/5">
+<div class="w-2 h-2 rounded-full bg-primary pulse-dot"></div>
+<span class="text-code-sm font-code-sm text-primary">12 Sessões Ativas</span>
+</div>
+</div>
+<div class="flex items-center gap-md">
+<div class="hidden sm:flex gap-sm text-on-surface-variant">
+<button class="hover:text-primary transition-colors p-xs rounded-full hover:bg-white/5"><span class="material-symbols-outlined">notifications</span></button>
+<button class="hover:text-primary transition-colors p-xs rounded-full hover:bg-white/5"><span class="material-symbols-outlined">settings</span></button>
+</div>
+<button class="bg-primary hover:bg-primary-container text-on-primary font-label-md text-label-md uppercase px-lg py-sm rounded-lg flex items-center gap-xs shadow-[0_0_15px_rgba(143,214,255,0.4)] transition-all hover:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                    Nova Sessão
+                </button>
+</div>
+</header>
+<!-- Content Area -->
+<div class="px-margin-mobile md:px-margin-desktop py-xl max-w-[1440px] mx-auto w-full flex flex-col gap-xl relative z-10">
+<!-- Hero Section -->
+<section class="flex flex-col gap-sm">
+<h1 class="font-headline-xl text-headline-xl-mobile md:text-headline-xl text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary w-fit">
+                    Sessões de Inventário
+                </h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl">
+                    Gerenciamento inteligente com análise em tempo real. Monitore o progresso, divergências e eficiência das equipes em campo.
+                </p>
+</section>
+<!-- Stats Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-md">
+<!-- Stat Card: Total -->
+<div class="glass-panel p-lg rounded-xl flex flex-col gap-sm hover:border-primary/30 transition-colors">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md uppercase text-on-surface-variant">Total Mensal</span>
+<span class="material-symbols-outlined text-outline-variant">analytics</span>
+</div>
+<div class="font-headline-xl text-headline-xl text-primary neon-text">
+                        148
+                    </div>
+</div>
+<!-- Stat Card: Ativas -->
+<div class="glass-panel p-lg rounded-xl flex flex-col gap-sm border-t-tertiary border-t-2 relative overflow-hidden">
+<div class="absolute -top-10 -right-10 w-24 h-24 bg-tertiary/10 rounded-full blur-xl pointer-events-none"></div>
+<div class="flex justify-between items-start relative z-10">
+<span class="font-label-md text-label-md uppercase text-on-surface-variant flex items-center gap-2">
+                            Em Andamento
+                            <div class="w-1.5 h-1.5 bg-tertiary rounded-full pulse-dot"></div>
+</span>
+<span class="material-symbols-outlined text-tertiary">radar</span>
+</div>
+<div class="font-headline-xl text-headline-xl text-on-surface relative z-10">
+                        12
+                    </div>
+</div>
+<!-- Stat Card: Concluídas -->
+<div class="glass-panel p-lg rounded-xl flex flex-col gap-sm hover:border-primary/30 transition-colors">
+<div class="flex justify-between items-start">
+<span class="font-label-md text-label-md uppercase text-on-surface-variant">Concluídas Hoje</span>
+<span class="material-symbols-outlined text-secondary">task_alt</span>
+</div>
+<div class="font-headline-xl text-headline-xl text-secondary">
+                        05
+                    </div>
+</div>
+</section>
+<!-- Filter & Search Bar -->
+<section class="flex flex-col md:flex-row justify-between items-start md:items-center gap-md">
+<div class="flex flex-wrap gap-xs">
+<button class="px-md py-xs rounded-full bg-primary/10 border border-primary text-primary font-label-md text-label-md uppercase">Todas</button>
+<button class="px-md py-xs rounded-full bg-surface-variant/30 border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors font-label-md text-label-md uppercase">Ativas</button>
+<button class="px-md py-xs rounded-full bg-surface-variant/30 border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors font-label-md text-label-md uppercase">Concluídas</button>
+<button class="px-md py-xs rounded-full bg-surface-variant/30 border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors font-label-md text-label-md uppercase">Canceladas</button>
+</div>
+<div class="relative w-full md:w-64">
+<span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline-variant text-[20px]">search</span>
+<input class="w-full bg-[#0f1f3d] border border-white/10 rounded-lg pl-xl pr-sm py-xs text-body-sm font-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder:text-outline-variant" placeholder="Buscar sessão, SKU..." type="text"/>
+</div>
+</section>
+<!-- Session Grid -->
+<section class="grid grid-cols-1 lg:grid-cols-2 gap-md pb-xl">
+<!-- Card: Ativa (Active) -->
+<div class="glass-panel rounded-xl overflow-hidden group cursor-pointer border-l-4 border-l-tertiary hover:bg-white/[0.02] transition-colors flex flex-col">
+<div class="p-md flex justify-between items-start border-b border-white/5">
+<div class="flex flex-col gap-xs">
+<div class="flex items-center gap-sm">
+<h3 class="font-headline-md text-body-lg md:text-headline-md text-on-surface">Depósito Central - Setor A</h3>
+<div class="bg-tertiary/10 border border-tertiary text-tertiary px-xs py-[2px] rounded font-code-sm text-[10px] uppercase flex items-center gap-1">
+<div class="w-1.5 h-1.5 bg-tertiary rounded-full pulse-dot"></div>
+                                    Ativa
+                                </div>
+</div>
+<span class="font-code-sm text-code-sm text-outline-variant">ID: INV-2023-08A</span>
+</div>
+<button class="text-outline-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<div class="p-md flex flex-col gap-sm bg-[#071325]/30">
+<div class="flex justify-between items-end">
+<div class="flex flex-col gap-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Progresso</span>
+<span class="font-code-md text-code-md text-on-surface"><span class="text-primary font-bold">850</span> / 1000 SKUs</span>
+</div>
+<div class="flex flex-col items-end gap-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Divergências</span>
+<span class="font-code-md text-code-md text-error-container bg-error-container/10 px-sm rounded">3 Encontradas</span>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-2 bg-surface-variant rounded-full overflow-hidden mt-xs">
+<div class="h-full bg-tertiary shadow-[0_0_10px_rgba(16,235,138,0.5)] w-[85%]"></div>
+</div>
+<div class="mt-sm flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span class="font-body-sm text-body-sm text-[12px]">Iniciada há 2 horas • 3 Operadores</span>
+</div>
+</div>
+</div>
+<!-- Card: Ativa (Warning/Divergence high) -->
+<div class="glass-panel rounded-xl overflow-hidden group cursor-pointer border-l-4 border-l-primary hover:bg-white/[0.02] transition-colors flex flex-col">
+<div class="p-md flex justify-between items-start border-b border-white/5">
+<div class="flex flex-col gap-xs">
+<div class="flex items-center gap-sm">
+<h3 class="font-headline-md text-body-lg md:text-headline-md text-on-surface">Loja Matriz - Eletrônicos</h3>
+<div class="bg-primary/10 border border-primary text-primary px-xs py-[2px] rounded font-code-sm text-[10px] uppercase flex items-center gap-1">
+<div class="w-1.5 h-1.5 bg-primary rounded-full pulse-dot"></div>
+                                    Ativa
+                                </div>
+</div>
+<span class="font-code-sm text-code-sm text-outline-variant">ID: INV-2023-08B</span>
+</div>
+<button class="text-outline-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<div class="p-md flex flex-col gap-sm bg-[#071325]/30">
+<div class="flex justify-between items-end">
+<div class="flex flex-col gap-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Progresso</span>
+<span class="font-code-md text-code-md text-on-surface"><span class="text-primary font-bold">120</span> / 450 SKUs</span>
+</div>
+<div class="flex flex-col items-end gap-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Divergências</span>
+<span class="font-code-md text-code-md text-error shadow-[0_0_8px_rgba(255,180,171,0.3)] bg-error-container/20 px-sm rounded">12 Críticas</span>
+</div>
+</div>
+<!-- Progress Bar -->
+<div class="w-full h-2 bg-surface-variant rounded-full overflow-hidden mt-xs">
+<div class="h-full bg-primary shadow-[0_0_10px_rgba(143,214,255,0.5)] w-[26%]"></div>
+</div>
+<div class="mt-sm flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]">schedule</span>
+<span class="font-body-sm text-body-sm text-[12px]">Iniciada há 45 min • 1 Operador</span>
+</div>
+</div>
+</div>
+<!-- Card: Concluída -->
+<div class="glass-panel rounded-xl overflow-hidden group cursor-pointer border-l-4 border-l-outline hover:bg-white/[0.02] transition-colors flex flex-col opacity-80">
+<div class="p-md flex justify-between items-start border-b border-white/5">
+<div class="flex flex-col gap-xs">
+<div class="flex items-center gap-sm">
+<h3 class="font-headline-md text-body-lg md:text-headline-md text-on-surface">Câmara Fria 02</h3>
+<div class="bg-surface-variant border border-outline text-outline px-xs py-[2px] rounded font-code-sm text-[10px] uppercase flex items-center gap-1">
+                                    Concluída
+                                </div>
+</div>
+<span class="font-code-sm text-code-sm text-outline-variant">ID: INV-2023-07C</span>
+</div>
+<button class="text-outline-variant group-hover:text-primary transition-colors">
+<span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+<div class="p-md flex flex-col gap-sm bg-[#071325]/30">
+<div class="flex justify-between items-end">
+<div class="flex flex-col gap-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Leituras</span>
+<span class="font-code-md text-code-md text-outline">320 SKUs Auditados</span>
+</div>
+<div class="flex flex-col items-end gap-xs">
+<span class="font-label-md text-label-md text-on-surface-variant uppercase">Status Final</span>
+<span class="font-code-md text-code-md text-tertiary">Aprovado</span>
+</div>
+</div>
+<!-- Progress Bar Full -->
+<div class="w-full h-1 bg-surface-variant rounded-full overflow-hidden mt-xs">
+<div class="h-full bg-outline w-full"></div>
+</div>
+<div class="mt-sm flex items-center gap-xs text-outline-variant">
+<span class="material-symbols-outlined text-[16px]">check_circle</span>
+<span class="font-body-sm text-body-sm text-[12px]">Finalizada em 14/10 às 09:30</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</body></html>

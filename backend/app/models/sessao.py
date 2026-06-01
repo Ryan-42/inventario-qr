@@ -1,0 +1,35 @@
+from sqlalchemy import Column, String, DateTime, Integer, Enum as SAEnum
+from sqlalchemy.orm import relationship
+from datetime import datetime, timezone
+import enum
+import uuid
+import secrets
+
+from app.database import Base
+
+
+class StatusSessao(str, enum.Enum):
+    ativa = "ativa"
+    concluida = "concluida"
+    cancelada = "cancelada"
+
+
+def _gerar_token() -> str:
+    """Gera um token alfanumérico de 8 caracteres maiúsculos."""
+    return secrets.token_hex(4).upper()
+
+
+class Sessao(Base):
+    __tablename__ = "sessoes"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    codigo = Column(String, unique=True, nullable=False)  # INV-2026-0001
+    nome = Column(String, nullable=False)
+    status = Column(SAEnum(StatusSessao), default=StatusSessao.ativa)
+    data_inicio = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    data_fim = Column(DateTime(timezone=True), nullable=True)
+    token_acesso = Column(String, nullable=True, default=_gerar_token)
+    rodada_token = Column(Integer, nullable=True, default=1)  # rodada para qual o token é válido
+
+    itens = relationship("ItemBase", back_populates="sessao", cascade="all, delete-orphan")
+    contagens = relationship("Contagem", back_populates="sessao", cascade="all, delete-orphan")

@@ -1,0 +1,166 @@
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
+from sqlalchemy.orm import Session
+
+from app.database import get_db
+from app.repositories import sessao_repo
+from app.services.sessao_service import montar_inventario_completo, montar_divergencias
+from app.services.excel_service import exportar_inventario_completo, exportar_divergencias
+from app.services.pdf_service import gerar_relatorio_pdf, gerar_etiquetas_pdf
+from app.services.relatorio_final_service import gerar_relatorio_final_pdf, gerar_relatorio_final_excel
+
+router = APIRouter(prefix="/sessoes", tags=["Exportações"])
+
+XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+def _tentar_analise_ia(db, sessao) -> dict | None:
+    """Tenta rodar análise IA; retorna None silenciosamente se falhar."""
+    try:
+        from app.agents.analise import AnaliseAgent
+        from app.repositories.sessao_repo import stats_sessao, calcular_valor_estoque
+        from app.services.sessao_service import montar_inventario_completo, montar_divergencias
+
+        stats = stats_sessao(db, sessao.id)
+        itens = montar_inventario_completo(db, sessao.id)
+        divergencias_lista = montar_divergencias(db, sessao.id)
+        try:
+            ve = calcular_valor_estoque(db, sessao.id)
+        except Exception:
+            ve = None
+
+        result = AnaliseAgent().analisar(
+            sessao=sessao,
+            stats=stats,
+            divergencias=divergencias_lista[:50],
+            itens_sample=itens[:30],
+            valor_estoque=ve,
+        )
+        return result if isinstance(result, dict) else None
+    except Exception:
+        return None
+
+
+@router.get("/{sessao_id}/exportar/completo")
+def exportar_completo(sessao_id: str, db: Session = Depends(get_db)):
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    itens = montar_inventario_completo(db, sessao_id)
+    arquivo = exportar_inventario_completo(itens)
+
+    nome_arquivo = f"inventario_completo_{sessao.codigo}.xlsx"
+    return Response(
+        content=arquivo,
+        media_type=XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'},
+    )
+
+
+@router.get("/{sessao_id}/exportar/divergencias")
+def exportar_somente_divergencias(sessao_id: str, db: Session = Depends(get_db)):
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    divergencias = montar_divergencias(db, sessao_id)
+    arquivo = exportar_divergencias(divergencias)
+
+    nome_arquivo = f"divergencias_{sessao.codigo}.xlsx"
+    return Response(
+        content=arquivo,
+        media_type=XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'},
+    )
+
+
+@router.get("/{sessao_id}/exportar/pdf")
+def exportar_pdf(sessao_id: str, db: Session = Depends(get_db)):
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    itens = montar_inventario_completo(db, sessao_id)
+    stats = sessao_repo.stats_sessao(db, sessao_id)
+    arquivo = gerar_relatorio_pdf(sessao, stats, itens)
+
+    nome_arquivo = f"relatorio_{sessao.codigo}.pdf"
+    return Response(
+        content=arquivo,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'},
+    )
+
+
+@router.get("/{sessao_id}/exportar/relatorio-final-pdf")
+def exportar_relatorio_final_pdf(sessao_id: str, db: Session = Depends(get_db)):
+    """Gera PDF executivo final com análise completa, erros, acertos e impacto financeiro."""
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    itens = montar_inventario_completo(db, sessao_id)
+    stats = sessao_repo.stats_sessao(db, sessao_id)
+
+    # Tenta carregar dados financeiros e análise IA
+    try:
+        ve_dict = sessao_repo.calcular_valor_estoque(db, sessao_id)
+    except Exception:
+        ve_dict = None
+
+    analise_dict = _tentar_analise_ia(db, sessao)
+
+    arquivo = gerar_relatorio_final_pdf(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict)
+    nome = f"relatorio_final_{sessao.codigo}.pdf"
+    return Response(content=arquivo, media_type="application/pdf",
+                    headers={"Content-Disposition": f'attachment; filename="{nome}"'})
+
+
+@router.get("/{sessao_id}/exportar/relatorio-final-excel")
+def exportar_relatorio_final_excel_endpoint(sessao_id: str, db: Session = Depends(get_db)):
+    """Gera Excel final com múltiplas abas: resumo, itens, divergências, recomendações e impacto financeiro."""
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    itens = montar_inventario_completo(db, sessao_id)
+    stats = sessao_repo.stats_sessao(db, sessao_id)
+
+    try:
+        ve_dict = sessao_repo.calcular_valor_estoque(db, sessao_id)
+    except Exception:
+        ve_dict = None
+
+    analise_dict = _tentar_analise_ia(db, sessao)
+
+    arquivo = gerar_relatorio_final_excel(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict)
+    nome = f"relatorio_final_{sessao.codigo}.xlsx"
+    return Response(content=arquivo, media_type=XLSX_MEDIA_TYPE,
+                    headers={"Content-Disposition": f'attachment; filename="{nome}"'})
+
+
+@router.get("/{sessao_id}/exportar/etiquetas")
+def exportar_etiquetas(sessao_id: str, db: Session = Depends(get_db)):
+    """Gera PDF com folha de etiquetas QR Code — 14 etiquetas por página (2×7)."""
+    from app.repositories import item_repo
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    itens_raw = item_repo.listar_itens(db, sessao_id)
+    if not itens_raw:
+        raise HTTPException(status_code=422, detail="Nenhum item cadastrado nesta sessão. Importe a planilha primeiro.")
+
+    itens = [
+        {"codigo": i.codigo, "produto": i.produto, "quantidade_base": i.quantidade_base}
+        for i in itens_raw
+    ]
+    arquivo = gerar_etiquetas_pdf(itens, nome_sessao=sessao.nome)
+
+    nome_arquivo = f"etiquetas_{sessao.codigo}.pdf"
+    return Response(
+        content=arquivo,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}"'},
+    )

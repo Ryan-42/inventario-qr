@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html class="dark" lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>INVIQ — Sessões de Inventário</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface-tint": "#7ad0ff",
+        "on-secondary": "#3f008e",
+        "secondary": "#d2bbff",
+        "outline-variant": "#3d4850",
+        "error-container": "#93000a",
+        "surface": "#071325",
+        "surface-container": "#142032",
+        "tertiary": "#10eb8a",
+        "primary-fixed-dim": "#7ad0ff",
+        "surface-variant": "#2a3548",
+        "on-error": "#690005",
+        "on-primary-container": "#004a65",
+        "inverse-primary": "#00668a",
+        "secondary-fixed-dim": "#d2bbff",
+        "error": "#ffb4ab",
+        "surface-bright": "#2e394d",
+        "inverse-surface": "#d7e3fc",
+        "on-surface": "#d7e3fc",
+        "on-error-container": "#ffdad6",
+        "primary": "#8fd6ff",
+        "surface-container-high": "#1f2a3d",
+        "background": "#071325",
+        "primary-container": "#00bfff",
+        "primary-fixed": "#c3e8ff",
+        "surface-container-low": "#101c2e",
+        "surface-container-highest": "#2a3548",
+        "on-secondary-container": "#c9aeff",
+        "secondary-container": "#6001d1",
+        "on-tertiary-container": "#00502b",
+        "on-primary": "#003549",
+        "tertiary-fixed-dim": "#00e384",
+        "tertiary-fixed": "#5affa2",
+        "on-tertiary": "#00391d",
+        "on-background": "#d7e3fc",
+        "inverse-on-surface": "#253144",
+        "on-primary-fixed": "#001e2c",
+        "secondary-fixed": "#eaddff",
+        "outline": "#87929b",
+        "surface-container-lowest": "#030e20",
+        "on-surface-variant": "#bcc8d1",
+        "tertiary-container": "#00cc76"
+      },
+      borderRadius: {
+        DEFAULT: "0.125rem",
+        lg: "0.25rem",
+        xl: "0.5rem",
+        full: "0.75rem"
+      },
+      spacing: {
+        gutter: "24px",
+        base: "4px",
+        sm: "8px",
+        md: "16px",
+        "margin-desktop": "48px",
+        xs: "4px",
+        lg: "24px",
+        xl: "40px",
+        "margin-mobile": "16px"
+      },
+      fontFamily: {
+        "headline-lg": ["Inter"],
+        "headline-md": ["Inter"],
+        "headline-xl-mobile": ["Inter"],
+        "headline-xl": ["Inter"],
+        "body-sm": ["Inter"],
+        "code-sm": ["JetBrains Mono"],
+        "body-md": ["Inter"],
+        "body-lg": ["Inter"],
+        "label-md": ["Inter"],
+        "code-md": ["JetBrains Mono"]
+      },
+      fontSize: {
+        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+        "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+        "headline-xl-mobile": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+        "headline-xl": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+        "code-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+        "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+        "code-md": ["14px", {"lineHeight": "20px", "fontWeight": "500"}]
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .glass-panel { background: rgba(10,22,40,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+  .pulse-dot { animation: pulse-ring 2s infinite; }
+  @keyframes pulse-ring {
+    0%   { box-shadow: 0 0 0 0 rgba(16,235,138,0.7); }
+    70%  { box-shadow: 0 0 0 6px rgba(16,235,138,0); }
+    100% { box-shadow: 0 0 0 0 rgba(16,235,138,0); }
+  }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a3548; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3d4850; }
+
+  /* Session cards */
+  .session-card-stitch { cursor: pointer; }
+  .session-card-stitch:hover .card-arrow { color: #8fd6ff; }
+
+  /* Modals */
+  .modal-backdrop {
+    position: fixed; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+    display: flex; align-items: center; justify-content: center; padding: 1rem;
+    opacity: 0; pointer-events: none; transition: opacity 0.22s;
+  }
+  .modal-backdrop.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: #0b1629; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px; padding: 1.5rem;
+    width: 100%; max-width: 480px;
+    transform: translateY(10px) scale(0.97); transition: transform 0.22s;
+    box-shadow: 0 8px 48px rgba(0,0,0,0.9);
+  }
+  .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+  .modal-title { font-size: 1rem; font-weight: 600; color: #d7e3fc; }
+  .modal-close { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #bcc8d1; cursor: pointer; transition: all 0.15s; background: none; border: none; }
+  .modal-close:hover { background: rgba(255,255,255,0.07); color: #d7e3fc; }
+  .modal-footer { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.18s ease; border: 1px solid transparent; white-space: nowrap; user-select: none; font-family: inherit; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
+  .btn-primary { background: linear-gradient(135deg,#005f8f,#0080b3,#005f8f); background-size: 200% 100%; color: #4dd9ff; border-color: rgba(143,214,255,0.35); }
+  .btn-primary:hover:not(:disabled) { background-position: right center; box-shadow: 0 0 20px rgba(143,214,255,0.22); border-color: rgba(143,214,255,0.6); color: #fff; transform: translateY(-1px); }
+  .btn-secondary { background: rgba(255,255,255,0.04); color: #bcc8d1; border-color: rgba(255,255,255,0.1); }
+  .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.08); color: #d7e3fc; }
+  .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8125rem; }
+  .input { width: 100%; padding: 0.75rem 1rem; background: #fff; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; color: #111; font-size: 1rem; transition: border-color 0.15s, box-shadow 0.15s; outline: none; font-family: inherit; }
+  .input::placeholder { color: #9ca3af; }
+  .input:focus { border-color: #8fd6ff; box-shadow: 0 0 0 3px rgba(143,214,255,0.15); }
+  .input:-webkit-autofill,.input:-webkit-autofill:hover,.input:-webkit-autofill:focus { -webkit-text-fill-color:#111!important; -webkit-box-shadow:0 0 0 1000px #fff inset!important; }
+  .spinner { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(143,214,255,0.12); border-top-color: #8fd6ff; animation: spin 0.75s linear infinite; }
+  .spinner-sm { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(143,214,255,0.12); border-top-color: #8fd6ff; animation: spin 0.75s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none !important; }
+
+  /* Toast */
+  #toast-container { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; max-width: 360px; }
+  .toast { background: #0b1629; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.875rem 1rem; font-size: 0.875rem; color: #d7e3fc; display: flex; align-items: center; gap: 0.625rem; box-shadow: 0 8px 48px rgba(0,0,0,0.9); animation: toast-in 0.25s ease; }
+  .toast-success { border-color: rgba(16,235,138,0.3); }
+  .toast-success .toast-icon { color: #10eb8a; }
+  .toast-error { border-color: rgba(255,180,171,0.3); }
+  .toast-error .toast-icon { color: #ffb4ab; }
+  .toast-info .toast-icon { color: #8fd6ff; }
+  .toast-warning .toast-icon { color: #ffcc44; }
+  @keyframes toast-in { from { opacity: 0; transform: translateX(1rem); } to { opacity: 1; transform: translateX(0); } }
+  .animate-enter { animation: enter 0.3s ease; }
+  @keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @media (max-width: 640px) {
+    .modal { margin: 0; border-radius: 14px 14px 0 0; max-height: 88vh; position: fixed; bottom: 0; left: 0; right: 0; max-width: 100%; }
+    .modal-backdrop { align-items: flex-end; padding: 0; }
+  }
+</style>
+</head>
+<body class="bg-background text-on-surface flex h-screen overflow-hidden antialiased">
+
+<!-- Side Nav (desktop) -->
+<nav class="hidden md:flex flex-col h-full py-lg bg-surface border-r border-white/5 w-64 shrink-0 z-50">
+  <div class="px-gutter mb-xl flex items-center gap-sm">
+    <span class="material-symbols-outlined text-2xl font-black text-primary">qr_code_scanner</span>
+    <div class="flex flex-col">
+      <span class="text-base font-black text-primary leading-none">INVIQ Core</span>
+      <span class="text-[10px] text-on-surface-variant uppercase tracking-widest">Operational Center</span>
+    </div>
+  </div>
+  <div class="flex-1 px-sm flex flex-col gap-base">
+    <a class="flex items-center gap-md px-md py-sm rounded-lg bg-primary/10 text-primary border-r-4 border-primary" href="/">
+      <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">inventory_2</span>
+      <span class="text-label-md font-label-md">Inventory</span>
+    </a>
+    <a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
+      <span class="material-symbols-outlined">qr_code_scanner</span>
+      <span class="text-label-md font-label-md">Scanners</span>
+    </a>
+    <a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
+      <span class="material-symbols-outlined">query_stats</span>
+      <span class="text-label-md font-label-md">Reports</span>
+    </a>
+    <a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
+      <span class="material-symbols-outlined">psychology</span>
+      <span class="text-label-md font-label-md">AI Insights</span>
+    </a>
+    <a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
+      <span class="material-symbols-outlined">history_edu</span>
+      <span class="text-label-md font-label-md">Audit Log</span>
+    </a>
+  </div>
+  <div class="px-gutter mt-auto flex flex-col gap-md">
+    <div class="h-px bg-white/5 w-full"></div>
+    <a class="flex items-center gap-md text-on-surface-variant opacity-70 hover:text-primary transition-colors" href="#">
+      <span class="material-symbols-outlined">help_outline</span>
+      <span class="text-label-md font-label-md">Help</span>
+    </a>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main class="flex-1 flex flex-col overflow-y-auto relative w-full">
+  <!-- Ambient light -->
+  <div class="absolute top-0 left-1/4 w-1/2 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-white/5 px-margin-mobile md:px-margin-desktop py-md flex justify-between items-center w-full">
+    <div class="flex items-center gap-md">
+      <div class="md:hidden flex items-center gap-xs text-primary">
+        <span class="material-symbols-outlined font-black">qr_code_scanner</span>
+        <span class="font-bold text-lg">INVIQ</span>
+      </div>
+      <div id="session-count-label" class="hidden sm:flex items-center gap-xs bg-surface-variant/40 px-sm py-xs rounded-full border border-white/5">
+        <div class="w-2 h-2 rounded-full bg-primary pulse-dot"></div>
+        <span class="text-code-sm font-code-sm text-primary"></span>
+      </div>
+    </div>
+    <div class="flex items-center gap-md">
+      <div class="hidden sm:flex gap-sm text-on-surface-variant">
+        <button class="hover:text-primary transition-colors p-xs rounded-full hover:bg-white/5"><span class="material-symbols-outlined">notifications</span></button>
+        <button class="hover:text-primary transition-colors p-xs rounded-full hover:bg-white/5"><span class="material-symbols-outlined">settings</span></button>
+      </div>
+      <button id="btn-nova-sessao" class="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md uppercase px-lg py-sm rounded-lg flex items-center gap-xs shadow-[0_0_15px_rgba(143,214,255,0.3)] transition-all hover:scale-[0.98] text-[#003549]">
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        Nova Sessão
+      </button>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div class="px-margin-mobile md:px-margin-desktop py-xl max-w-[1440px] mx-auto w-full flex flex-col gap-xl relative z-10">
+
+    <!-- Hero -->
+    <section class="flex flex-col gap-sm">
+      <h1 class="text-headline-xl-mobile md:text-headline-xl font-headline-xl text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary w-fit">
+        Sessões de Inventário
+      </h1>
+      <p class="text-body-lg font-body-lg text-on-surface-variant max-w-2xl">
+        Gerenciamento inteligente com análise em tempo real. Monitore o progresso, divergências e eficiência das equipes em campo.
+      </p>
+    </section>
+
+    <!-- Stats -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-md">
+      <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm hover:border-primary/30 transition-colors">
+        <div class="flex justify-between items-start">
+          <span class="text-label-md font-label-md uppercase text-on-surface-variant">Total de Sessões</span>
+          <span class="material-symbols-outlined text-outline-variant">analytics</span>
+        </div>
+        <div id="stat-total" class="text-headline-xl font-headline-xl text-primary" style="text-shadow: 0 0 20px rgba(143,214,255,0.4)">—</div>
+      </div>
+      <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm border-t-2 border-t-tertiary relative overflow-hidden">
+        <div class="absolute -top-10 -right-10 w-24 h-24 bg-tertiary/10 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex justify-between items-start relative z-10">
+          <span class="text-label-md font-label-md uppercase text-on-surface-variant flex items-center gap-2">
+            Em Andamento
+            <div class="w-1.5 h-1.5 bg-tertiary rounded-full pulse-dot"></div>
+          </span>
+          <span class="material-symbols-outlined text-tertiary">radar</span>
+        </div>
+        <div id="stat-ativas" class="text-headline-xl font-headline-xl text-on-surface relative z-10">—</div>
+      </div>
+      <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm hover:border-primary/30 transition-colors">
+        <div class="flex justify-between items-start">
+          <span class="text-label-md font-label-md uppercase text-on-surface-variant">Concluídas</span>
+          <span class="material-symbols-outlined text-secondary">task_alt</span>
+        </div>
+        <div id="stat-concluidas" class="text-headline-xl font-headline-xl text-secondary">—</div>
+      </div>
+    </section>
+
+    <!-- Filter row -->
+    <section id="filter-row" class="hidden flex-col md:flex-row justify-between items-start md:items-center gap-md">
+      <div class="flex flex-wrap gap-xs">
+        <button class="filter-pill active px-md py-xs rounded-full bg-primary/10 border border-primary text-primary text-label-md font-label-md uppercase" data-filter="todas">Todas</button>
+        <button class="filter-pill px-md py-xs rounded-full bg-surface-variant/30 border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors text-label-md font-label-md uppercase" data-filter="ativa">Ativas</button>
+        <button class="filter-pill px-md py-xs rounded-full bg-surface-variant/30 border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors text-label-md font-label-md uppercase" data-filter="concluida">Concluídas</button>
+        <button class="filter-pill px-md py-xs rounded-full bg-surface-variant/30 border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors text-label-md font-label-md uppercase" data-filter="cancelada">Canceladas</button>
+      </div>
+      <div class="relative w-full md:w-64">
+        <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline-variant text-[20px]">search</span>
+        <input id="search-input" class="w-full bg-white border border-black/20 rounded-lg pl-xl pr-sm py-xs text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder:text-gray-400" style="color:#111" placeholder="Buscar sessão, código..." type="search"/>
+      </div>
+    </section>
+
+    <!-- Sessions container -->
+    <section id="sessions-container">
+      <!-- Loading -->
+      <div id="sessions-loading" class="flex flex-col items-center justify-center py-24 gap-4">
+        <div class="relative w-12 h-12 flex items-center justify-center">
+          <div class="absolute w-full h-full border-4 border-surface-container-high rounded-full"></div>
+          <div class="absolute w-full h-full border-4 border-primary rounded-full border-t-transparent animate-spin shadow-[0_0_15px_rgba(143,214,255,0.5)]"></div>
+        </div>
+        <p class="text-on-surface-variant text-code-sm font-code-sm uppercase tracking-widest">Carregando sessões…</p>
+      </div>
+
+      <!-- Empty state -->
+      <div id="sessions-empty" class="hidden flex flex-col items-center justify-center py-24 gap-4 text-center">
+        <div class="w-20 h-20 rounded-2xl glass-panel flex items-center justify-center mb-2">
+          <span class="material-symbols-outlined text-[40px] text-on-surface-variant">inventory_2</span>
+        </div>
+        <h3 class="text-headline-md font-headline-md text-on-surface">Nenhuma sessão encontrada</h3>
+        <p class="empty-state-text text-on-surface-variant text-body-sm font-body-sm max-w-xs">Crie uma nova sessão para começar o inventário</p>
+        <button id="btn-nova-sessao-empty" class="mt-4 bg-primary text-on-primary font-label-md text-label-md uppercase px-lg py-sm rounded-lg flex items-center gap-xs shadow-[0_0_15px_rgba(143,214,255,0.3)] transition-all hover:scale-[0.98] text-[#003549]">
+          <span class="material-symbols-outlined text-[18px]">add</span>
+          Nova Sessão
+        </button>
+      </div>
+
+      <!-- Error state -->
+      <div id="sessions-error" class="hidden py-8">
+        <div class="glass-panel rounded-xl p-md flex items-start gap-sm border border-error/20">
+          <span class="material-symbols-outlined text-error shrink-0 mt-0.5">error</span>
+          <div class="flex-1">
+            <strong class="text-on-surface text-body-sm font-body-sm">Erro ao carregar sessões</strong>
+            <p id="sessions-error-msg" class="text-on-surface-variant text-code-sm font-code-sm mt-1"></p>
+          </div>
+          <button id="btn-retry" class="btn btn-secondary btn-sm shrink-0">Tentar novamente</button>
+        </div>
+      </div>
+
+      <!-- Sessions grid -->
+      <div id="sessions-grid" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-md pb-xl"></div>
+    </section>
+
+  </div>
+</main>
+
+<!-- Toast -->
+<div id="toast-container"></div>
+
+<!-- Modal Nova Sessão -->
+<div class="modal-backdrop" id="modal-nova-sessao" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Nova Sessão de Inventário</span>
+      <button class="modal-close" id="modal-close-btn" aria-label="Fechar">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+    <div>
+      <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3d4850;display:block;margin-bottom:0.75rem" for="input-nome-sessao">Nome da Sessão</label>
+      <input id="input-nome-sessao" type="text" class="input" placeholder="Ex: Inventário Geral — Janeiro 2025" maxlength="120" autocomplete="off"/>
+      <p class="text-xs mt-2" style="color:#3d4850;font-size:0.75rem;margin-top:0.5rem">Escolha um nome descritivo para identificar esta contagem.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-cancel-btn">Cancelar</button>
+      <button class="btn btn-primary" id="modal-create-btn" disabled>
+        <span id="modal-create-label">Criar Sessão</span>
+        <span id="modal-create-spinner" class="spinner-sm hidden"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { listarSessoes, criarSessao } from '/static/js/api.js'
+
+// ── State
+let allSessions = []
+let activeFilter = 'todas'
+let searchQuery = ''
+
+// ── DOM refs
+const sessionsGrid     = document.getElementById('sessions-grid')
+const sessionsLoading  = document.getElementById('sessions-loading')
+const sessionsEmpty    = document.getElementById('sessions-empty')
+const sessionsError    = document.getElementById('sessions-error')
+const sessionsErrorMsg = document.getElementById('sessions-error-msg')
+const filterRow        = document.getElementById('filter-row')
+const statTotal        = document.getElementById('stat-total')
+const statAtivas       = document.getElementById('stat-ativas')
+const statConcluidas   = document.getElementById('stat-concluidas')
+const sessionCountLbl  = document.getElementById('session-count-label')
+const searchInput      = document.getElementById('search-input')
+const modalBackdrop    = document.getElementById('modal-nova-sessao')
+const inputNome        = document.getElementById('input-nome-sessao')
+const modalCreateBtn   = document.getElementById('modal-create-btn')
+const modalCreateLbl   = document.getElementById('modal-create-label')
+const modalCreateSpinner = document.getElementById('modal-create-spinner')
+
+// ── Toast
+function toast(msg, type = 'info', duration = 3500) {
+  const container = document.getElementById('toast-container')
+  const icons = {
+    success: '<span class="toast-icon material-symbols-outlined" style="font-size:16px">check_circle</span>',
+    error:   '<span class="toast-icon material-symbols-outlined" style="font-size:16px">error</span>',
+    warning: '<span class="toast-icon material-symbols-outlined" style="font-size:16px">warning</span>',
+    info:    '<span class="toast-icon material-symbols-outlined" style="font-size:16px">info</span>',
+  }
+  const el = document.createElement('div')
+  el.className = `toast toast-${type}`
+  el.innerHTML = `${icons[type] || icons.info}<span>${escapeHtml(msg)}</span>`
+  container.appendChild(el)
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.3s, transform 0.3s'
+    el.style.opacity = '0'
+    el.style.transform = 'translateX(1rem)'
+    setTimeout(() => el.remove(), 320)
+  }, duration)
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
+function formatDate(iso) {
+  if (!iso) return '—'
+  try {
+    const d = new Date(iso)
+    return d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' })
+  } catch { return iso }
+}
+
+function statusLabel(status) {
+  return { ativa:'Ativa', concluida:'Concluída', cancelada:'Cancelada' }[status] || status
+}
+
+// ── Session card (Stitch design)
+function renderCard(s) {
+  const isAtiva = s.status === 'ativa'
+  const isConcluida = s.status === 'concluida'
+  const isCancelada = s.status === 'cancelada'
+
+  const borderColor = isAtiva ? 'border-l-tertiary' : isConcluida ? 'border-l-outline' : 'border-l-error'
+  const opacity = isConcluida ? 'opacity-80' : ''
+
+  let statusBadge
+  if (isAtiva) {
+    statusBadge = `<div class="bg-tertiary/10 border border-tertiary text-tertiary px-xs py-[2px] rounded font-code-sm text-[10px] uppercase flex items-center gap-1 shrink-0">
+      <div class="w-1.5 h-1.5 bg-tertiary rounded-full pulse-dot"></div>Ativa</div>`
+  } else if (isConcluida) {
+    statusBadge = `<div class="bg-surface-variant border border-outline text-outline px-xs py-[2px] rounded font-code-sm text-[10px] uppercase shrink-0">Concluída</div>`
+  } else {
+    statusBadge = `<div class="bg-error/10 border border-error text-error px-xs py-[2px] rounded font-code-sm text-[10px] uppercase shrink-0">Cancelada</div>`
+  }
+
+  const progressPct = (s.total_itens && s.total_itens > 0) ? Math.round(((s.itens_contados || 0) / s.total_itens) * 100) : 0
+  const progressBar = (s.total_itens && s.total_itens > 0) ? `
+    <div>
+      <div class="flex justify-between items-end mb-xs">
+        <div class="flex flex-col gap-xs">
+          <span class="text-label-md font-label-md text-on-surface-variant uppercase">Progresso</span>
+          <span class="text-code-md font-code-md text-on-surface"><span class="text-primary font-bold">${s.itens_contados || 0}</span> / ${s.total_itens} SKUs</span>
+        </div>
+        ${s.total_divergencias > 0 ? `<div class="flex flex-col items-end gap-xs">
+          <span class="text-label-md font-label-md text-on-surface-variant uppercase">Divergências</span>
+          <span class="text-code-md font-code-md text-error bg-error/10 px-sm rounded">${s.total_divergencias} Encontradas</span>
+        </div>` : ''}
+      </div>
+      <div class="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
+        <div class="h-full ${isAtiva ? 'bg-tertiary shadow-[0_0_10px_rgba(16,235,138,0.5)]' : 'bg-outline'}" style="width:${progressPct}%"></div>
+      </div>
+    </div>` : ''
+
+  const codigo = s.codigo
+    ? `<span class="text-code-sm font-code-sm text-outline-variant">ID: ${escapeHtml(s.codigo)}</span>`
+    : ''
+
+  return `
+    <div class="glass-panel rounded-xl overflow-hidden group session-card-stitch border-l-4 ${borderColor} hover:bg-white/[0.02] transition-colors flex flex-col animate-enter ${opacity}"
+         role="button" tabindex="0" data-id="${escapeHtml(String(s.id))}" data-status="${escapeHtml(s.status || '')}">
+      <div class="p-md flex justify-between items-start border-b border-white/5">
+        <div class="flex flex-col gap-xs min-w-0 flex-1">
+          <div class="flex items-center gap-sm flex-wrap">
+            <h3 class="text-body-lg font-body-lg font-semibold text-on-surface truncate">${escapeHtml(s.nome || 'Sessão sem nome')}</h3>
+            ${statusBadge}
+          </div>
+          ${codigo}
+        </div>
+        <button class="card-arrow text-outline-variant transition-colors shrink-0 ml-sm">
+          <span class="material-symbols-outlined">arrow_forward</span>
+        </button>
+      </div>
+      <div class="p-md flex flex-col gap-sm bg-[#071325]/30">
+        ${progressBar}
+        <div class="flex items-center gap-xs text-on-surface-variant">
+          <span class="material-symbols-outlined text-[16px]">schedule</span>
+          <span class="text-body-sm font-body-sm text-[12px]">${formatDate(s.data_inicio || s.criado_em)}${s.total_itens != null ? ` • ${s.total_itens} itens` : ''}</span>
+        </div>
+      </div>
+    </div>`
+}
+
+// ── Stats
+function updateStats(sessions) {
+  const total = sessions.length
+  const ativas = sessions.filter(s => s.status === 'ativa').length
+  const concluidas = sessions.filter(s => s.status === 'concluida').length
+  statTotal.textContent = total
+  statAtivas.textContent = ativas
+  statConcluidas.textContent = concluidas
+  const label = sessionCountLbl.querySelector('span')
+  if (label) label.textContent = total > 0 ? `${total} sessão${total !== 1 ? 'ões' : ''}` : ''
+  sessionCountLbl.classList.toggle('hidden', total === 0)
+}
+
+// ── Filter + search
+function filteredSessions() {
+  let list = allSessions
+  if (activeFilter !== 'todas') list = list.filter(s => s.status === activeFilter)
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase()
+    list = list.filter(s => (s.nome||'').toLowerCase().includes(q) || (s.codigo||'').toLowerCase().includes(q))
+  }
+  return list
+}
+
+// ── Render grid
+function renderGrid() {
+  const list = filteredSessions()
+  if (list.length === 0) {
+    sessionsGrid.classList.add('hidden')
+    sessionsEmpty.classList.remove('hidden')
+    const emptyText = sessionsEmpty.querySelector('.empty-state-text')
+    if (searchQuery || activeFilter !== 'todas') {
+      if (emptyText) emptyText.textContent = 'Nenhuma sessão corresponde aos filtros aplicados.'
+      const emptyBtn = document.getElementById('btn-nova-sessao-empty')
+      if (emptyBtn) emptyBtn.style.display = 'none'
+    } else {
+      if (emptyText) emptyText.textContent = 'Crie uma nova sessão para começar o inventário'
+      const emptyBtn = document.getElementById('btn-nova-sessao-empty')
+      if (emptyBtn) emptyBtn.style.display = ''
+    }
+    return
+  }
+  sessionsEmpty.classList.add('hidden')
+  sessionsGrid.classList.remove('hidden')
+  sessionsGrid.innerHTML = list.map(renderCard).join('')
+  sessionsGrid.querySelectorAll('[data-id]').forEach(card => {
+    const id = card.dataset.id
+    const navigate = () => { window.location.href = `/sessao/${id}` }
+    card.addEventListener('click', navigate)
+    card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate() } })
+  })
+}
+
+function showLoading() {
+  sessionsLoading.classList.remove('hidden')
+  sessionsGrid.classList.add('hidden')
+  sessionsEmpty.classList.add('hidden')
+  sessionsError.classList.add('hidden')
+  filterRow.style.display = 'none'
+}
+
+function hideLoading() { sessionsLoading.classList.add('hidden') }
+
+function showError(msg) {
+  sessionsError.classList.remove('hidden')
+  sessionsErrorMsg.textContent = msg
+}
+
+// ── Load
+async function loadSessions() {
+  showLoading()
+  try {
+    const data = await listarSessoes()
+    allSessions = Array.isArray(data) ? data : (data.sessoes || data.items || [])
+    hideLoading()
+    updateStats(allSessions)
+    if (allSessions.length > 0) filterRow.style.display = ''
+    renderGrid()
+  } catch (err) {
+    hideLoading()
+    showError(err.message || 'Não foi possível conectar ao servidor.')
+    toast('Erro ao carregar sessões: ' + err.message, 'error')
+  }
+}
+
+// ── Create
+async function createSession(nome) {
+  modalCreateBtn.disabled = true
+  modalCreateLbl.textContent = 'Criando…'
+  modalCreateSpinner.classList.remove('hidden')
+  try {
+    const sessao = await criarSessao(nome.trim())
+    toast(`Sessão "${sessao.nome || nome}" criada com sucesso!`, 'success')
+    closeModal()
+    await loadSessions()
+  } catch (err) {
+    toast('Erro ao criar sessão: ' + err.message, 'error')
+    modalCreateBtn.disabled = false
+    modalCreateLbl.textContent = 'Criar Sessão'
+    modalCreateSpinner.classList.add('hidden')
+  }
+}
+
+// ── Modal
+function openModal() {
+  modalBackdrop.classList.add('open')
+  inputNome.value = ''
+  modalCreateBtn.disabled = true
+  modalCreateLbl.textContent = 'Criar Sessão'
+  modalCreateSpinner.classList.add('hidden')
+  setTimeout(() => inputNome.focus(), 80)
+}
+function closeModal() {
+  modalBackdrop.classList.remove('open')
+  inputNome.value = ''
+  modalCreateBtn.disabled = true
+}
+
+inputNome.addEventListener('input', () => { modalCreateBtn.disabled = inputNome.value.trim().length < 2 })
+inputNome.addEventListener('keydown', e => { if (e.key === 'Enter' && !modalCreateBtn.disabled) createSession(inputNome.value) })
+document.getElementById('btn-nova-sessao').addEventListener('click', openModal)
+document.getElementById('modal-close-btn').addEventListener('click', closeModal)
+document.getElementById('modal-cancel-btn').addEventListener('click', closeModal)
+document.getElementById('modal-create-btn').addEventListener('click', () => { const nome = inputNome.value.trim(); if (nome.length >= 2) createSession(nome) })
+modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeModal() })
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) closeModal() })
+document.getElementById('btn-nova-sessao-empty').addEventListener('click', openModal)
+document.getElementById('btn-retry').addEventListener('click', loadSessions)
+
+// ── Filters
+document.getElementById('filter-row').querySelectorAll('.filter-pill').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-pill').forEach(b => {
+      b.classList.remove('active', 'bg-primary/10', 'border-primary', 'text-primary')
+      b.classList.add('bg-surface-variant/30', 'border-outline-variant', 'text-on-surface-variant')
+    })
+    btn.classList.add('active', 'bg-primary/10', 'border-primary', 'text-primary')
+    btn.classList.remove('bg-surface-variant/30', 'border-outline-variant', 'text-on-surface-variant')
+    activeFilter = btn.dataset.filter
+    renderGrid()
+  })
+})
+
+searchInput.addEventListener('input', e => { searchQuery = e.target.value; renderGrid() })
+
+loadSessions()
+</script>
+</body>
+</html>

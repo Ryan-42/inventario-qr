@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html class="dark" lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sessão — INVIQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="/static/css/app.css" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface-tint":"#7ad0ff","on-secondary":"#3f008e","secondary":"#d2bbff",
+        "outline-variant":"#3d4850","error-container":"#93000a","surface":"#071325",
+        "surface-container":"#142032","tertiary":"#10eb8a","primary-fixed-dim":"#7ad0ff",
+        "surface-variant":"#2a3548","error":"#ffb4ab","surface-bright":"#2e394d",
+        "inverse-surface":"#d7e3fc","on-surface":"#d7e3fc","primary":"#8fd6ff",
+        "surface-container-high":"#1f2a3d","background":"#071325","primary-container":"#00bfff",
+        "primary-fixed":"#c3e8ff","surface-container-low":"#101c2e","surface-container-highest":"#2a3548",
+        "on-secondary-container":"#c9aeff","secondary-container":"#6001d1",
+        "on-tertiary-container":"#00502b","on-primary":"#003549","tertiary-fixed-dim":"#00e384",
+        "tertiary-fixed":"#5affa2","on-tertiary":"#00391d","on-background":"#d7e3fc",
+        "inverse-on-surface":"#253144","on-primary-fixed":"#001e2c","secondary-fixed":"#eaddff",
+        "outline":"#87929b","surface-container-lowest":"#030e20","on-surface-variant":"#bcc8d1",
+        "tertiary-container":"#00cc76"
+      },
+      spacing: {
+        gutter:"24px",base:"4px",sm:"8px",md:"16px","margin-desktop":"48px",
+        xs:"4px",lg:"24px",xl:"40px","margin-mobile":"16px"
+      },
+      fontSize: {
+        "headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}],
+        "headline-md":["24px",{"lineHeight":"32px","fontWeight":"600"}],
+        "body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],
+        "code-sm":["12px",{"lineHeight":"16px","fontWeight":"500"}],
+        "body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],
+        "body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],
+        "label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],
+        "code-md":["14px",{"lineHeight":"20px","fontWeight":"500"}]
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; background: #071325; color: #d7e3fc; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-family: 'Material Symbols Outlined'; font-size: 24px; display: inline-block; vertical-align: middle; }
+  .glass-panel { background: rgba(10,22,40,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+  .glow-cyan { box-shadow: 0 0 15px rgba(143,214,255,0.3); }
+  .glow-cyan:hover { box-shadow: 0 0 25px rgba(143,214,255,0.6); }
+  .glow-purple { box-shadow: 0 0 15px rgba(96,1,209,0.3); }
+  .glow-purple:hover { box-shadow: 0 0 25px rgba(96,1,209,0.6); }
+  @keyframes progress-pulse { 0%,100% { opacity:0.8; } 50% { opacity:1; filter:brightness(1.2); } }
+  .animate-progress { animation: progress-pulse 2s infinite ease-in-out; background: linear-gradient(90deg,#00bfff 0%,#8fd6ff 100%); box-shadow: 0 0 10px rgba(143,214,255,0.5); }
+  .bg-grid-pattern { background-image: linear-gradient(to right,rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,0.02) 1px,transparent 1px); background-size: 40px 40px; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a3548; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3d4850; }
+  /* Override app.css defaults for new layout */
+  .app-header { display: none !important; }
+  /* Ensure bg-mesh doesn't show */
+  .bg-mesh { display: none; }
+  /* Stitch button overrides */
+  .btn-stitch-ia { display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; border:1px solid; background:rgba(10,22,40,0.8); backdrop-filter:blur(20px); }
+  .btn-stitch-ia:disabled { opacity:0.45; cursor:not-allowed; }
+  .btn-stitch-primary { background:#8fd6ff; color:#003549; border-color:#8fd6ff; padding:8px 24px; border-radius:8px; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:8px; }
+  .btn-stitch-primary:hover { background:#c3e8ff; box-shadow:0 0 20px rgba(143,214,255,0.4); }
+</style>
+</head>
+<body class="min-h-screen relative font-sans overflow-x-hidden">
+<div class="fixed inset-0 z-0 pointer-events-none bg-grid-pattern"></div>
+<div class="fixed top-0 left-[20%] w-[600px] h-[600px] bg-primary/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+<div class="fixed bottom-0 right-[10%] w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
+
+<div id="toast-container"></div>
+
+<main class="relative z-10 w-full max-w-[1440px] mx-auto px-gutter md:px-margin-desktop py-lg pb-[100px] flex flex-col gap-xl">
+
+  <!-- HEADER -->
+  <header class="flex flex-col md:flex-row md:items-center justify-between gap-md border-b border-white/5 pb-md">
+    <div class="flex items-center gap-md">
+      <a href="/" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-primary transition-colors">
+        <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+      </a>
+      <div class="flex items-center gap-sm flex-wrap">
+        <h1 id="sessao-nome" class="text-headline-lg font-bold text-on-surface">Carregando...</h1>
+        <span id="status-badge" class="badge badge-dot" style="flex-shrink:0"></span>
+      </div>
+    </div>
+    <div class="flex items-center gap-sm flex-wrap">
+      <div class="ws-indicator flex items-center gap-1 px-sm py-1 rounded-full bg-surface-variant/30 border border-white/5" style="font-size:0.7rem;color:#bcc8d1">
+        <span class="ws-dot ws-disconnected" id="ws-dot"></span>
+        <span id="ws-label" class="hide-mobile">Desconectado</span>
+      </div>
+      <button id="btn-mostrar-qr" class="btn-stitch-ia text-tertiary border-tertiary/30 hover:bg-tertiary/10" title="QR Code de acesso mobile">
+        <span class="material-symbols-outlined text-[18px]">qr_code_2</span>
+        <span class="hide-mobile">QR Acesso</span>
+      </button>
+      <button id="btn-ai-analise" class="btn-stitch-ia text-secondary border-secondary/30 hover:bg-secondary/10 glow-purple">
+        <span class="material-symbols-outlined text-[18px]">psychology</span>
+        <span class="hide-mobile">IA Analisar</span>
+      </button>
+      <button id="btn-ai-chat" class="btn-stitch-ia text-primary border-primary/30 hover:bg-primary/10">
+        <span class="material-symbols-outlined text-[18px]">chat</span>
+        <span class="hide-mobile">Chat IA</span>
+      </button>
+      <button id="btn-concluir" class="btn-stitch-primary glow-cyan" style="display:none">
+        <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
+        Concluir Sessão
+      </button>
+    </div>
+  </header>
+
+  <!-- BANNER: Rodada completa (aparece ao receber evento WS) -->
+  <div id="banner-rodada" class="hidden glass-panel rounded-xl border overflow-hidden" style="border-color:rgba(143,214,255,0.3)">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-md px-lg py-md">
+      <div class="flex items-center gap-sm">
+        <div id="banner-icon" class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style="background:rgba(143,214,255,0.15)">
+          <span class="material-symbols-outlined text-[20px] text-primary" style="font-variation-settings:'FILL' 1">refresh</span>
+        </div>
+        <div>
+          <div id="banner-titulo" class="text-body-md font-semibold text-on-surface">Rodada 1 Concluída</div>
+          <div id="banner-subtitulo" class="text-body-sm font-body-sm text-on-surface-variant"></div>
+        </div>
+      </div>
+      <div class="flex gap-sm flex-wrap shrink-0">
+        <button id="banner-btn-qr" class="btn-stitch-ia text-primary border-primary/30 hover:bg-primary/10" style="display:none">
+          <span class="material-symbols-outlined text-[16px]">qr_code_2</span>
+          Gerar QR Próxima Rodada
+        </button>
+        <button id="banner-btn-fechar" class="btn btn-secondary btn-sm">
+          <span class="material-symbols-outlined text-[14px]">close</span>
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROGRESS SECTION -->
+  <section class="flex flex-col gap-md">
+    <div id="stats-grid" class="grid grid-cols-2 md:grid-cols-5 gap-sm">
+      <div class="glass-panel rounded-xl p-md flex flex-col gap-1 border border-white/10">
+        <span class="text-label-md font-label-md text-on-surface-variant uppercase">Total</span>
+        <span id="stat-total" class="text-headline-md font-bold text-on-surface">—</span>
+      </div>
+      <div class="glass-panel rounded-xl p-md flex flex-col gap-1 border-l-2 border-primary border border-white/10">
+        <span class="text-label-md font-label-md text-primary uppercase">Conferidos</span>
+        <span id="stat-conferidos" class="text-headline-md font-bold text-on-surface">—</span>
+      </div>
+      <div class="glass-panel rounded-xl p-md flex flex-col gap-1 border-l-2 border-outline-variant border border-white/10">
+        <span class="text-label-md font-label-md text-on-surface-variant uppercase">Pendentes</span>
+        <span id="stat-pendentes" class="text-headline-md font-bold text-on-surface">—</span>
+      </div>
+      <div class="glass-panel rounded-xl p-md flex flex-col gap-1 border-l-2 border-error border border-white/10">
+        <span class="text-label-md font-label-md text-error uppercase">Divergências</span>
+        <span id="stat-divs" class="text-headline-md font-bold text-on-surface">—</span>
+      </div>
+      <div class="glass-panel rounded-xl p-md flex flex-col gap-1 bg-primary/5 border border-white/10">
+        <span class="text-label-md font-label-md text-primary uppercase">% Concluído</span>
+        <span id="stat-pct" class="text-headline-md font-bold text-primary">—</span>
+      </div>
+    </div>
+    <div class="w-full h-3 bg-surface-container-high rounded-full overflow-hidden relative border border-white/5">
+      <div id="progress-fill" class="absolute top-0 left-0 h-full rounded-full animate-progress" style="width:0%"></div>
+    </div>
+  </section>
+
+  <!-- PAINEL FINANCEIRO (visível só com valor_estoque na planilha) -->
+  <section id="painel-financeiro" class="hidden">
+    <div class="glass-panel rounded-xl border border-white/10 overflow-hidden">
+      <!-- Header -->
+      <div class="flex justify-between items-center px-lg py-md border-b border-white/10">
+        <div class="flex items-center gap-sm">
+          <span class="material-symbols-outlined text-secondary text-[22px]" style="font-variation-settings:'FILL' 1">payments</span>
+          <h2 class="text-body-lg font-semibold text-on-surface">Impacto Financeiro</h2>
+        </div>
+        <span id="fin-status-badge" class="text-label-md font-label-md px-sm py-xs rounded-full border" style="font-size:10px"></span>
+      </div>
+
+      <!-- Resumo: 3 cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-white/5">
+        <div class="px-lg py-md flex flex-col gap-xs">
+          <span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Valor Inicial</span>
+          <span id="fin-valor-inicial" class="font-bold text-on-surface" style="font-size:22px;font-family:'JetBrains Mono',monospace">—</span>
+          <span class="text-code-sm font-code-sm text-on-surface-variant" id="fin-itens-com-valor"></span>
+        </div>
+        <div class="px-lg py-md flex flex-col gap-xs">
+          <span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Valor Final Apurado</span>
+          <span id="fin-valor-final" class="font-bold text-on-surface" style="font-size:22px;font-family:'JetBrains Mono',monospace">—</span>
+          <span class="text-code-sm font-code-sm text-on-surface-variant">Baseado nas contagens</span>
+        </div>
+        <div class="px-lg py-md flex flex-col gap-xs">
+          <span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">Variação</span>
+          <span id="fin-variacao" class="font-bold" style="font-size:22px;font-family:'JetBrains Mono',monospace">—</span>
+          <span id="fin-variacao-pct" class="text-code-sm font-code-sm text-on-surface-variant"></span>
+        </div>
+      </div>
+
+      <!-- Tabelas: top perdas + top ganhos -->
+      <div id="fin-tabelas" class="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-white/5 border-t border-white/10 hidden">
+        <!-- Top perdas -->
+        <div class="p-md flex flex-col gap-sm">
+          <span class="text-label-md font-label-md text-error uppercase tracking-wider flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">trending_down</span>
+            Maiores Perdas
+          </span>
+          <div id="fin-perdas" class="flex flex-col gap-1"></div>
+        </div>
+        <!-- Top ganhos -->
+        <div class="p-md flex flex-col gap-sm">
+          <span class="text-label-md font-label-md text-tertiary uppercase tracking-wider flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">trending_up</span>
+            Maiores Ganhos
+          </span>
+          <div id="fin-ganhos" class="flex flex-col gap-1"></div>
+        </div>
+      </div>
+
+      <!-- Aviso sem dados -->
+      <div id="fin-sem-dados" class="hidden px-lg py-md flex items-center gap-sm text-on-surface-variant">
+        <span class="material-symbols-outlined text-[18px]">info</span>
+        <span class="text-body-sm font-body-sm">Importe uma planilha com a coluna <strong>"valor em estoque"</strong> para ver o impacto financeiro do inventário.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-lg">
+    <!-- Chart -->
+    <div class="glass-panel rounded-xl p-lg flex flex-col gap-md lg:col-span-2 border border-white/10 relative overflow-hidden">
+      <div class="flex justify-between items-center">
+        <h2 class="text-body-lg font-semibold text-on-surface">Contagens por intervalo (5 min)</h2>
+        <span class="text-label-md font-label-md text-on-surface-variant bg-surface-bright px-2 py-1 rounded">Tempo Real</span>
+      </div>
+      <canvas id="chart-canvas" style="width:100%;height:180px;display:block"></canvas>
+      <div id="chart-empty" style="display:none;text-align:center;padding:2rem 1rem">
+        <span class="material-symbols-outlined text-[32px] text-on-surface-variant mb-2" style="display:block">bar_chart</span>
+        <div class="text-on-surface-variant text-body-sm font-body-sm">Nenhuma contagem ainda</div>
+      </div>
+    </div>
+    <!-- Operators + Live Feed -->
+    <div class="flex flex-col gap-md">
+      <div class="glass-panel rounded-xl p-md flex flex-col gap-sm border border-white/10">
+        <h3 class="text-label-md font-label-md text-on-surface-variant uppercase border-b border-white/10 pb-2">Operadores Ativos</h3>
+        <div id="operators-list">
+          <div class="table-placeholder">
+            <div style="color:#3d4850;font-size:.8125rem">Nenhum operador ainda</div>
+          </div>
+        </div>
+      </div>
+      <div id="live-section" class="glass-panel rounded-xl flex flex-col border border-white/10 overflow-hidden flex-1" style="display:none">
+        <div class="p-md border-b border-white/10 bg-surface-container-high/50 flex justify-between items-center">
+          <h3 class="text-label-md font-label-md text-on-surface uppercase flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span>
+            Live Feed
+          </h3>
+          <span class="material-symbols-outlined text-on-surface-variant text-[16px]">wifi_tethering</span>
+        </div>
+        <div id="live-feed" class="flex flex-col max-h-[240px] overflow-y-auto"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RODADAS -->
+  <section id="rodadas-section" style="display:none">
+    <h2 class="text-body-lg font-semibold text-on-surface mb-md">Rodadas de Contagem</h2>
+    <div id="rodadas-content" class="flex flex-col gap-sm"></div>
+  </section>
+
+  <!-- MOBILE LINK & UPLOAD -->
+  <section class="grid grid-cols-1 md:grid-cols-2 gap-md">
+    <div class="glass-panel rounded-xl p-lg flex flex-col gap-sm border border-white/10">
+      <h3 class="text-label-md font-label-md text-on-surface-variant uppercase">Acesso Mobile</h3>
+      <p class="text-body-sm font-body-sm text-on-surface-variant">Compartilhe com os operadores:</p>
+      <div class="flex items-center gap-sm bg-surface-container-high border border-white/10 rounded-lg px-md py-sm">
+        <span id="mobile-link-text" class="font-mono text-code-sm font-code-sm text-on-surface-variant flex-1 overflow-hidden text-ellipsis whitespace-nowrap"></span>
+        <button id="btn-copy-link" class="btn btn-secondary btn-sm shrink-0">Copiar</button>
+      </div>
+    </div>
+    <div class="glass-panel rounded-xl p-lg flex flex-col gap-sm border border-white/10">
+      <h3 class="text-label-md font-label-md text-on-surface-variant uppercase">Planilha Base</h3>
+      <p class="text-body-sm font-body-sm text-on-surface-variant">Importe a planilha de estoque para validar contagens.</p>
+      <div id="planilha-item-count" class="text-code-sm font-code-sm text-primary"></div>
+      <button id="btn-upload-planilha" class="btn btn-secondary self-start">
+        <span class="material-symbols-outlined text-[16px]">upload</span>
+        Importar planilha
+      </button>
+    </div>
+  </section>
+
+  <!-- EXPORTAR -->
+  <section class="glass-panel rounded-xl p-lg border border-white/10">
+    <h2 class="text-label-md font-label-md text-on-surface-variant uppercase mb-md">Exportar</h2>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-sm mb-sm">
+      <a id="btn-export-completo" class="btn btn-secondary" style="text-decoration:none" target="_blank">
+        <span class="material-symbols-outlined text-[16px]">download</span>Excel completo
+      </a>
+      <a id="btn-export-divs" class="btn btn-secondary" style="text-decoration:none" target="_blank">
+        <span class="material-symbols-outlined text-[16px]">warning</span>Excel divergências
+      </a>
+      <a id="btn-export-etiquetas" class="btn btn-secondary" style="text-decoration:none" target="_blank" title="Etiquetas QR Code A4">
+        <span class="material-symbols-outlined text-[16px]">label</span>Etiquetas QR
+      </a>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-sm border-t border-white/5 pt-sm">
+      <a id="btn-export-pdf" class="btn btn-secondary" style="text-decoration:none" target="_blank">
+        <span class="material-symbols-outlined text-[16px]" style="color:#94A3B8">picture_as_pdf</span>PDF relatório
+      </a>
+      <a id="btn-export-relatorio-final-pdf" class="btn btn-secondary" style="text-decoration:none;border-color:rgba(255,180,171,0.3);color:#ffb4ab" target="_blank">
+        <span class="material-symbols-outlined text-[16px]">summarize</span>PDF Relatório Final
+        <span style="font-size:.6rem;color:#3d4850;margin-left:auto">+ IA + Financeiro</span>
+      </a>
+      <a id="btn-export-relatorio-final-excel" class="btn btn-secondary" style="text-decoration:none;border-color:rgba(16,235,138,0.3);color:#10eb8a" target="_blank">
+        <span class="material-symbols-outlined text-[16px]">table_chart</span>Excel Relatório Final
+        <span style="font-size:.6rem;color:#3d4850;margin-left:auto">Múltiplas abas</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ITEMS TABLE -->
+  <section class="flex flex-col gap-md">
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-sm">
+      <h2 class="text-headline-md font-bold text-on-surface">Itens do Inventário</h2>
+    </div>
+    <div class="glass-panel rounded-xl border border-white/10 overflow-hidden">
+      <div class="p-md border-b border-white/5">
+        <div class="filter-row" id="filter-row">
+          <button class="filter-btn active" data-filter="todos">Todos</button>
+          <button class="filter-btn" data-filter="ok">OK</button>
+          <button class="filter-btn" data-filter="divergente">Divergente</button>
+          <button class="filter-btn" data-filter="ajuste">Para Ajuste</button>
+          <button class="filter-btn" data-filter="pendente">Pendente</button>
+          <input type="search" id="search-itens" class="input search-input" placeholder="Buscar código ou produto..."/>
+        </div>
+      </div>
+      <div id="itens-sentinel" style="height:1px"></div>
+      <div id="itens-container">
+        <div class="table-placeholder" id="itens-loading-placeholder">
+          <div class="spinner"></div>
+          <div style="color:#3d4850;font-size:.8125rem" id="itens-loading-text">Rolar para carregar itens</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ── Modal: QR Code Acesso Mobile ── -->
+<div id="modal-qr" class="modal-backdrop">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-title" style="display:flex;align-items:center;gap:.5rem">
+        <span class="material-symbols-outlined text-[15px]">qr_code_2</span>
+        Acesso Mobile
+      </span>
+      <button class="modal-close" id="btn-close-qr">✕</button>
+    </div>
+
+    <!-- Token display -->
+    <div style="background:rgba(10,22,40,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1rem;margin-bottom:1rem;text-align:center">
+      <div style="font-size:.75rem;font-weight:600;color:#87929b;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.375rem">Token de Acesso</div>
+      <div id="qr-token-display" style="font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700;color:#8fd6ff;letter-spacing:.15em">----</div>
+      <div id="qr-rodada-badge" style="font-size:.75rem;color:#bcc8d1;margin-top:.25rem"></div>
+    </div>
+
+    <!-- QR Code image -->
+    <div style="display:flex;justify-content:center;margin-bottom:1rem">
+      <div style="background:white;border-radius:12px;padding:12px;display:inline-block">
+        <img id="qr-code-img" src="" alt="QR Code" style="width:200px;height:200px;display:block;border-radius:4px"/>
+      </div>
+    </div>
+
+    <!-- Instrução -->
+    <p style="font-size:.8125rem;color:#bcc8d1;text-align:center;line-height:1.5;margin-bottom:1rem">
+      Escaneie com o celular ou compartilhe o link abaixo.<br>
+      O operador precisará digitar o <strong style="color:#8fd6ff">token</strong> para entrar.
+    </p>
+
+    <!-- Link copiável -->
+    <div style="display:flex;gap:.5rem;margin-bottom:1rem">
+      <div id="qr-link-text" style="flex:1;background:rgba(10,22,40,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:.625rem .875rem;font-family:monospace;font-size:.75rem;color:#87929b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></div>
+      <button id="btn-copy-qr-link" class="btn btn-secondary btn-sm shrink-0">Copiar</button>
+    </div>
+
+    <div class="modal-footer" style="flex-direction:column;gap:.5rem">
+      <button id="btn-gerar-nova-rodada" class="btn btn-secondary w-full" style="display:none">
+        <span class="material-symbols-outlined text-[16px]">refresh</span>
+        Gerar QR para 2ª Contagem
+      </button>
+      <button id="btn-regenerar-token" class="btn btn-secondary w-full">
+        <span class="material-symbols-outlined text-[16px]">autorenew</span>
+        Regenerar Token
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Confirm Concluir ── -->
+<div id="modal-concluir" class="modal-backdrop">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <span class="modal-title">Concluir sessão</span>
+      <button class="modal-close" id="btn-close-concluir">✕</button>
+    </div>
+
+    <!-- Pré-conclusão -->
+    <div id="concluir-pre">
+      <p style="font-size:.875rem;color:#bcc8d1;margin-bottom:1rem;line-height:1.6">
+        Tem certeza que deseja concluir esta sessão? Após a conclusão, os operadores não poderão mais registrar contagens.
+      </p>
+      <div id="concluir-stats-preview" style="background:rgba(10,22,40,0.8);border-radius:8px;padding:.875rem;margin-bottom:1rem;font-size:.8125rem;display:flex;gap:1.5rem;flex-wrap:wrap"></div>
+      <div style="background:rgba(143,214,255,0.06);border:1px solid rgba(143,214,255,0.2);border-radius:8px;padding:.75rem .875rem;margin-bottom:1.25rem;font-size:.8125rem;color:#8fd6ff;display:flex;align-items:flex-start;gap:.5rem">
+        <span class="material-symbols-outlined" style="font-size:16px;flex-shrink:0;margin-top:1px">info</span>
+        <span>Ao concluir, serão gerados automaticamente o <strong>PDF Executivo</strong> e o <strong>Excel Completo</strong> com análise de erros, acertos e impacto financeiro.</span>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-concluir-cancel" class="btn btn-secondary">Cancelar</button>
+        <button id="btn-concluir-confirm" class="btn btn-success">
+          <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1">check_circle</span>
+          Confirmar conclusão
+        </button>
+      </div>
+    </div>
+
+    <!-- Pós-conclusão: links de download -->
+    <div id="concluir-pos" style="display:none">
+      <div style="text-align:center;margin-bottom:1.25rem">
+        <span class="material-symbols-outlined" style="font-size:40px;color:#10eb8a;display:block;margin-bottom:.5rem" >check_circle</span>
+        <div style="font-weight:600;color:#d7e3fc;font-size:1rem;margin-bottom:.25rem">Sessão concluída com sucesso!</div>
+        <div style="font-size:.8125rem;color:#bcc8d1">Faça o download dos relatórios finais abaixo.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem">
+        <a id="btn-download-relatorio-pdf" class="btn btn-secondary" style="text-decoration:none;justify-content:center" target="_blank">
+          <span class="material-symbols-outlined text-[18px]" style="color:#ffb4ab">picture_as_pdf</span>
+          <span>Relatório Final PDF</span>
+          <span style="font-size:.6875rem;color:#3d4850;margin-left:auto">Executivo + IA + Financeiro</span>
+        </a>
+        <a id="btn-download-relatorio-excel" class="btn btn-secondary" style="text-decoration:none;justify-content:center" target="_blank">
+          <span class="material-symbols-outlined text-[18px]" style="color:#10eb8a">table_chart</span>
+          <span>Relatório Final Excel</span>
+          <span style="font-size:.6875rem;color:#3d4850;margin-left:auto">Múltiplas abas + Recomendações</span>
+        </a>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-concluir-fechar" class="btn btn-primary w-full">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Upload Planilha ── -->
+<div id="modal-upload" class="modal-backdrop">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title">Importar planilha base</span>
+      <button class="modal-close" id="btn-close-upload">✕</button>
+    </div>
+    <p style="font-size:.8125rem;color:#bcc8d1;margin-bottom:1rem;line-height:1.5">
+      Selecione um arquivo <strong>.xlsx</strong> ou <strong>.csv</strong> com as colunas <code>codigo</code> e <code>quantidade</code>.
+    </p>
+    <div class="dropzone" id="dropzone">
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none"/>
+      <div class="dropzone-icon">
+        <span class="material-symbols-outlined text-[32px]">upload_file</span>
+      </div>
+      <div style="font-weight:500;margin-bottom:.25rem" id="dropzone-label">Arraste o arquivo aqui</div>
+      <div style="font-size:.75rem;color:#3d4850">ou clique para selecionar (.xlsx, .csv)</div>
+    </div>
+    <div id="upload-validation-report" class="validation-report" style="display:none"></div>
+    <div style="margin-top:1.25rem;display:none;gap:.75rem;align-items:center" id="upload-action-row">
+      <button id="btn-analisar-importar" class="btn btn-primary" disabled>
+        <span id="upload-btn-spinner" class="spinner-sm" style="display:none"></span>
+        Analisar e importar
+      </button>
+      <span id="upload-status-text" style="font-size:.8125rem;color:#3d4850"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Análise IA ── -->
+<div id="modal-analise" class="modal-backdrop">
+  <div class="modal" style="max-width:720px;width:95vw;max-height:90vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="modal-header" style="flex-shrink:0">
+      <span class="modal-title" style="display:flex;align-items:center;gap:.5rem">
+        <span class="material-symbols-outlined text-[15px]" style="color:#d2bbff">psychology</span>
+        Análise de Inteligência Artificial
+      </span>
+      <button class="modal-close" id="btn-close-analise">✕</button>
+    </div>
+
+    <div id="analise-loading" style="text-align:center;padding:3rem 1rem;flex-shrink:0">
+      <div class="spinner" style="margin:0 auto 1rem;width:40px;height:40px"></div>
+      <div style="color:#8fd6ff;font-size:.9375rem;font-weight:500;margin-bottom:.375rem">Analisando sessão com IA...</div>
+      <div style="color:#3d4850;font-size:.8125rem">Isso pode levar alguns segundos</div>
+    </div>
+
+    <div id="analise-content" style="display:none;flex:1;overflow-y:auto;padding:1.25rem;gap:1.25rem;flex-direction:column">
+      <!-- Badges: modelo + risco -->
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center" id="analise-badges"></div>
+
+      <!-- Resumo executivo -->
+      <div style="background:rgba(143,214,255,0.05);border:1px solid rgba(143,214,255,0.15);border-radius:12px;padding:1.25rem">
+        <div style="font-size:.6875rem;font-weight:700;letter-spacing:.1em;color:#8fd6ff;text-transform:uppercase;margin-bottom:.625rem">Resumo Executivo</div>
+        <p id="analise-resumo" style="font-size:.9375rem;color:#d7e3fc;line-height:1.75;margin:0"></p>
+      </div>
+
+      <!-- Padrões + Críticos em grid -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem" id="analise-grid-2col">
+        <div id="analise-padroes-block" style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:1rem">
+          <div style="font-size:.6875rem;font-weight:700;letter-spacing:.1em;color:#bcc8d1;text-transform:uppercase;margin-bottom:.75rem;display:flex;align-items:center;gap:.375rem">
+            <span class="material-symbols-outlined" style="font-size:14px">pattern</span>
+            Padrões Detectados
+          </div>
+          <div id="analise-padroes" style="display:flex;flex-direction:column;gap:.5rem"></div>
+        </div>
+        <div id="analise-criticos-block" style="background:rgba(255,180,171,0.05);border:1px solid rgba(255,180,171,0.15);border-radius:12px;padding:1rem">
+          <div style="font-size:.6875rem;font-weight:700;letter-spacing:.1em;color:#ffb4ab;text-transform:uppercase;margin-bottom:.75rem;display:flex;align-items:center;gap:.375rem">
+            <span class="material-symbols-outlined" style="font-size:14px">priority_high</span>
+            Itens Críticos
+          </div>
+          <div id="analise-criticos" style="display:flex;flex-direction:column;gap:.625rem"></div>
+        </div>
+      </div>
+
+      <!-- Recomendações -->
+      <div id="analise-recs-block" style="background:rgba(16,235,138,0.04);border:1px solid rgba(16,235,138,0.15);border-radius:12px;padding:1rem">
+        <div style="font-size:.6875rem;font-weight:700;letter-spacing:.1em;color:#10eb8a;text-transform:uppercase;margin-bottom:.75rem;display:flex;align-items:center;gap:.375rem">
+          <span class="material-symbols-outlined" style="font-size:14px">lightbulb</span>
+          Recomendações
+        </div>
+        <div id="analise-recs" style="display:flex;flex-direction:column;gap:.625rem"></div>
+      </div>
+    </div>
+
+    <div id="analise-error" style="display:none;padding:1.25rem" class="alert alert-error">
+      <span class="material-symbols-outlined text-[14px]" style="flex-shrink:0">error</span>
+      <span id="analise-error-msg">Falha ao analisar. Tente novamente.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Chat IA ── -->
+<div id="modal-chat" class="modal-backdrop">
+  <div class="modal modal-lg" style="display:flex;flex-direction:column;max-height:85vh">
+    <div class="modal-header">
+      <span class="modal-title" style="display:flex;align-items:center;gap:.5rem">
+        <span class="material-symbols-outlined text-[15px]">chat</span>
+        Chat IA
+      </span>
+      <button class="modal-close" id="btn-close-chat">✕</button>
+    </div>
+    <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0"></div>
+    <div id="chat-typing" style="display:none;padding:.5rem 0;font-size:.75rem;color:#3d4850">
+      <span class="spinner-sm" style="display:inline-block;vertical-align:middle;margin-right:.375rem"></span>
+      IA respondendo...
+    </div>
+    <div class="chat-input-row" style="margin-top:.75rem">
+      <input id="chat-input" class="chat-input" type="text" placeholder="Pergunte sobre esta sessão..." autocomplete="off"/>
+      <button id="btn-chat-send" class="btn btn-primary btn-sm">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import {
+  buscarSessao, statsSessao, listarItens, listarContagens,
+  concluirSessao, uploadPlanilha, validarPlanilha,
+  analisarSessao, chatSessao, rodadasSessao,
+  exportarCompleto, exportarDivergencias, exportarPDF, exportarEtiquetas,
+  exportarRelatorioFinalPDF, exportarRelatorioFinalExcel,
+  valorEstoqueSessao,
+} from '/static/js/api.js'
+import { SessionWS } from '/static/js/ws.js'
+
+// ── State
+const sessaoId = location.pathname.split('/').pop()
+let sessao = null, stats = null, itens = [], contagens = []
+let liveEvents = []
+let chatHistory = []
+let ws = null
+let itensLoaded = false
+let currentFilter = 'todos'
+let currentSearch = ''
+let selectedFile = null
+let uploadValidated = false
+
+// ── Utilities
+function formatDate(iso) {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  const pad = n => String(n).padStart(2, '0')
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function timeAgo(iso) {
+  if (!iso) return ''
+  const diff = Date.now() - new Date(iso).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'agora'
+  if (mins < 60) return `${mins}min atrás`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h atrás`
+  return `${Math.floor(hours/24)}d atrás`
+}
+
+const OP_COLORS = ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899']
+function operatorColor(name) {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return OP_COLORS[h % OP_COLORS.length]
+}
+
+function operatorInitials(name) {
+  return name.trim().split(/\s+/).map(p => p[0]).join('').slice(0,2).toUpperCase() || '?'
+}
+
+function toast(msg, type = 'info') {
+  const icons = { success:'✓', error:'✕', warning:'⚠', info:'ℹ' }
+  const el = document.createElement('div')
+  el.className = `toast toast-${type} animate-enter`
+  el.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ'}</span><span>${msg}</span>`
+  document.getElementById('toast-container').appendChild(el)
+  setTimeout(() => el.remove(), 4000)
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open') }
+function closeModal(id) { document.getElementById(id).classList.remove('open') }
+
+// ── Render Header
+function renderHeader() {
+  if (!sessao) return
+  document.title = `${sessao.nome} — INVIQ`
+  document.getElementById('sessao-nome').textContent = sessao.nome
+
+  const badge = document.getElementById('status-badge')
+  const map = {
+    ativa: ['badge-ativa badge-dot-pulse', 'Ativa'],
+    concluida: ['badge-concluida', 'Concluída'],
+    cancelada: ['badge-cancelada', 'Cancelada']
+  }
+  const [cls, txt] = map[sessao.status] || ['', sessao.status]
+  badge.className = `badge badge-dot ${cls}`
+  badge.textContent = txt
+
+  document.getElementById('btn-concluir').style.display = sessao.status === 'ativa' ? '' : 'none'
+  document.getElementById('btn-upload-planilha').style.display = sessao.status === 'ativa' ? '' : 'none'
+}
+
+// ── Render Stats
+function renderStats() {
+  if (!stats) return
+  document.getElementById('stat-total').textContent = stats.total ?? '—'
+  document.getElementById('stat-conferidos').textContent = stats.conferidos ?? '—'
+  document.getElementById('stat-pendentes').textContent = stats.pendentes ?? '—'
+  document.getElementById('stat-divs').textContent = stats.divergencias ?? '—'
+  const pct = stats.percentual != null ? `${Math.round(stats.percentual)}%` : '—'
+  document.getElementById('stat-pct').textContent = pct
+  document.getElementById('progress-fill').style.width = `${stats.percentual ?? 0}%`
+  if (stats.total > 0) {
+    document.getElementById('planilha-item-count').textContent = `${stats.total} itens importados`
+  }
+}
+
+// ── Rodadas
+async function loadRodadas() {
+  try {
+    const data = await rodadasSessao(sessaoId)
+    renderRodadas(data)
+  } catch {}
+}
+
+function renderRodadas(data) {
+  const section = document.getElementById('rodadas-section')
+  const container = document.getElementById('rodadas-content')
+  if (!data || !data.rodadas || data.rodadas.length === 0) { section.style.display = 'none'; return }
+  section.style.display = ''
+  const roundLabel = { 1: '1ª Contagem', 2: '2ª Contagem', 3: '3ª Contagem' }
+
+  let html = '<div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.5rem">'
+  for (const r of data.rodadas) {
+    const divPct = r.total > 0 ? Math.round((r.divergencias / r.total) * 100) : 0
+    html += `
+      <div class="glass-panel rounded-xl border border-white/10" style="padding:1rem;flex:1;min-width:200px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem">
+          <span style="font-weight:600;font-size:.875rem;color:#d7e3fc">${roundLabel[r.numero] || `${r.numero}ª Contagem`}</span>
+          <span class="badge ${r.concluida ? 'badge-ativa' : 'badge-cancelada'}">${r.concluida ? 'Concluída' : 'Em andamento'}</span>
+        </div>
+        <div style="display:flex;gap:1rem;font-size:.8125rem">
+          <div><span style="color:#3d4850">Itens: </span><strong style="color:#d7e3fc">${r.total}</strong></div>
+          <div><span style="color:#3d4850">Diverg: </span><strong style="color:#ffb4ab">${r.divergencias}</strong></div>
+        </div>
+        ${r.divergencias > 0 ? `<div class="progress-bar" style="margin-top:.625rem"><div class="progress-bar-fill" style="width:${divPct}%;background:#ffb4ab"></div></div>` : ''}
+      </div>`
+  }
+  html += '</div>'
+
+  if (data.itens_segunda && data.itens_segunda.length > 0) {
+    html += `<div class="glass-panel rounded-xl border border-white/10" style="overflow:hidden">
+      <div style="padding:.875rem 1.25rem;font-size:.75rem;font-weight:600;color:#ffcc44;border-bottom:1px solid rgba(255,255,255,0.05)">↻ Itens para 2ª contagem (${data.itens_segunda.length})</div>
+      <div style="overflow-x:auto"><table class="table"><thead><tr><th>Código</th><th>Produto</th></tr></thead><tbody>`
+    for (const it of data.itens_segunda) {
+      html += `<tr><td><code>${escapeHtml(it.codigo)}</code></td><td>${escapeHtml(it.produto)}</td></tr>`
+    }
+    html += '</tbody></table></div></div>'
+  }
+
+  if (data.itens_terceira && data.itens_terceira.length > 0) {
+    html += `<div class="glass-panel rounded-xl border border-white/10" style="overflow:hidden">
+      <div style="padding:.875rem 1.25rem;font-size:.75rem;font-weight:600;color:#ffb4ab;border-bottom:1px solid rgba(255,255,255,0.05)">↻ Itens para 3ª contagem (${data.itens_terceira.length})</div>
+      <div style="overflow-x:auto"><table class="table"><thead><tr><th>Código</th><th>Produto</th></tr></thead><tbody>`
+    for (const it of data.itens_terceira) {
+      html += `<tr><td><code>${escapeHtml(it.codigo)}</code></td><td>${escapeHtml(it.produto)}</td></tr>`
+    }
+    html += '</tbody></table></div></div>'
+  }
+
+  container.innerHTML = html
+}
+
+// ── Chart
+function renderChart(conts) {
+  const canvas = document.getElementById('chart-canvas')
+  const emptyEl = document.getElementById('chart-empty')
+  if (!conts || conts.length === 0) { canvas.style.display = 'none'; emptyEl.style.display = 'block'; return }
+  canvas.style.display = 'block'; emptyEl.style.display = 'none'
+  const dpr = window.devicePixelRatio || 1
+  const rect = canvas.getBoundingClientRect()
+  canvas.width = rect.width * dpr
+  canvas.height = 180 * dpr
+  const ctx = canvas.getContext('2d')
+  ctx.scale(dpr, dpr)
+  const W = rect.width, H = 180
+  const buckets = {}
+  for (const c of conts) {
+    const d = new Date(c.timestamp || c.registrado_em || c.created_at)
+    const bucket = Math.floor(d.getTime() / (5 * 60000)) * 5 * 60000
+    if (!buckets[bucket]) buckets[bucket] = { ok: 0, div: 0 }
+    if (c.divergencia || c.status === 'divergente') buckets[bucket].div++
+    else buckets[bucket].ok++
+  }
+  const keys = Object.keys(buckets).sort()
+  if (keys.length === 0) { canvas.style.display = 'none'; emptyEl.style.display = 'block'; return }
+  const maxVal = Math.max(...keys.map(k => buckets[k].ok + buckets[k].div), 1)
+  const padL = 36, padR = 12, padT = 16, padB = 36
+  const chartW = W - padL - padR, chartH = H - padT - padB
+  const barGroupW = chartW / keys.length, barW = Math.max(4, barGroupW * 0.6)
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1
+  for (let i = 0; i <= 4; i++) { const y = padT + (chartH/4)*i; ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+chartW,y); ctx.stroke() }
+  keys.forEach((k, i) => {
+    const b = buckets[k], x = padL + i * barGroupW + (barGroupW-barW)/2
+    const totalH = ((b.ok+b.div)/maxVal)*chartH, okH=(b.ok/maxVal)*chartH, divH=(b.div/maxVal)*chartH
+    if (b.div>0) { ctx.fillStyle='#ef444490'; ctx.beginPath(); ctx.roundRect(x,padT+chartH-totalH,barW,divH,[3,3,0,0]); ctx.fill() }
+    if (b.ok>0) { ctx.fillStyle='#8fd6ffcc'; ctx.beginPath(); ctx.roundRect(x,padT+chartH-totalH+divH,barW,okH,b.div>0?0:[3,3,0,0]); ctx.fill() }
+    if (keys.length<=12||i%2===0) {
+      const d=new Date(parseInt(k)), label=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='10px system-ui'; ctx.textAlign='center'; ctx.fillText(label,x+barW/2,H-8)
+    }
+  })
+  ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.font='10px system-ui'; ctx.textAlign='right'
+  for (let i=0;i<=4;i++) { const val=Math.round((maxVal/4)*(4-i)),y=padT+(chartH/4)*i; ctx.fillText(val,padL-4,y+4) }
+}
+
+// ── Operators
+function renderOperators(conts) {
+  const list = document.getElementById('operators-list')
+  const opMap = {}
+  for (const c of conts) {
+    const name = c.operador || 'Anônimo'
+    if (!opMap[name]) opMap[name] = { total: 0, divs: 0, lastSeen: null }
+    opMap[name].total++
+    if (c.divergencia || c.status === 'divergente') opMap[name].divs++
+    const t = c.timestamp || c.registrado_em || c.created_at
+    if (!opMap[name].lastSeen || t > opMap[name].lastSeen) opMap[name].lastSeen = t
+  }
+  const sorted = Object.entries(opMap).sort((a,b)=>b[1].total-a[1].total).slice(0,5)
+  if (sorted.length === 0) {
+    list.innerHTML = '<div class="table-placeholder"><div style="color:#3d4850;font-size:.8125rem">Nenhum operador ainda</div></div>'; return
+  }
+  list.innerHTML = sorted.map(([name, o]) => `
+    <div class="operator-row">
+      <div class="operator-row-left">
+        <div class="operator-avatar" style="background:${operatorColor(name)}22;color:${operatorColor(name)}">${operatorInitials(name)}</div>
+        <div><div style="font-weight:500;font-size:.8125rem;color:#d7e3fc">${name}</div><div class="op-stat">${timeAgo(o.lastSeen)}</div></div>
+      </div>
+      <div style="text-align:right"><div style="font-weight:600;font-size:.875rem;color:#d7e3fc">${o.total}</div><div class="op-stat" style="color:${o.divs>0?'#ffb4ab':'#3d4850'}">${o.divs} div.</div></div>
+    </div>`).join('')
+}
+
+// ── Live Feed
+function renderLiveFeed() {
+  const section = document.getElementById('live-section')
+  const feed = document.getElementById('live-feed')
+  if (liveEvents.length === 0) { section.style.display = 'none'; return }
+  section.style.display = ''
+  feed.innerHTML = liveEvents.slice(0,20).map(ev => {
+    const name = ev.operador || 'Anônimo'
+    const isDiv = ev.tipo === 'divergencia_detectada' || ev.divergencia
+    const color = operatorColor(name)
+    return `
+      <div class="p-2 border-b border-white/5 flex flex-col gap-1 hover:bg-white/5 transition-colors animate-enter">
+        <div class="flex justify-between items-center">
+          <span class="text-code-sm font-code-sm text-primary" style="font-family:'JetBrains Mono',monospace;font-size:12px">${ev.codigo||'—'}</span>
+          <span class="text-label-md font-label-md ${isDiv?'text-error':'text-tertiary-container'}">${isDiv?'DIV':'OK'}</span>
+        </div>
+        <div class="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant" style="font-size:12px">
+          <span>Q: ${ev.quantidade_encontrada??ev.qtd??'—'} ${name !== 'Anônimo' ? `· ${name}` : ''}</span>
+          <span style="font-size:10px;color:#3d4850">${timeAgo(ev.timestamp||ev.registrado_em)}</span>
+        </div>
+      </div>`
+  }).join('')
+}
+
+// ── Render Itens Table
+function renderItens(filter, search) {
+  const container = document.getElementById('itens-container')
+  let filtered = itens
+  if (filter && filter !== 'todos') {
+    filtered = filtered.filter(it => {
+      const st = (it.status||'').toLowerCase()
+      if (filter==='ok') return st==='ok'||st==='conferido'
+      if (filter==='divergente') return st==='divergente'
+      if (filter==='ajuste') return st==='para ajuste'||it.para_ajuste
+      if (filter==='pendente') return st==='pendente'||!it.status||st==='nao_conferido'
+      return true
+    })
+  }
+  if (search && search.trim()) {
+    const q = search.trim().toLowerCase()
+    filtered = filtered.filter(it => (it.codigo||'').toLowerCase().includes(q)||(it.produto||it.descricao||it.nome||'').toLowerCase().includes(q))
+  }
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state"><span class="material-symbols-outlined" style="font-size:32px;color:#3d4850;display:block;margin-bottom:.375rem">search_off</span><div class="empty-state-text">Nenhum item encontrado</div></div>'; return
+  }
+  const statusLabel = { ok:'OK', conferido:'OK', divergente:'DIV', 'para ajuste':'AJUSTE', pendente:'Pendente', nao_conferido:'Pendente' }
+  const statusClass = { ok:'status-ok', conferido:'status-ok', divergente:'status-div', 'para ajuste':'', pendente:'status-pend', nao_conferido:'status-pend' }
+  const statusInline = { 'para ajuste': 'background:rgba(210,187,255,0.15);color:#d2bbff;border:1px solid rgba(210,187,255,0.35);border-radius:4px;padding:2px 6px;font-size:.6875rem;font-weight:700;letter-spacing:.04em' }
+  container.innerHTML = `
+    <div class="table-wrap" style="border-radius:0;border:none;border-top:1px solid rgba(255,255,255,0.05)">
+      <table>
+        <thead><tr><th>Código</th><th>Produto</th><th>Base</th><th>Contado</th><th>Dif.</th><th>Status</th><th>Atualizado</th></tr></thead>
+        <tbody>${filtered.map(it => {
+          const nome=it.produto||it.descricao||it.nome||'—'
+          const base=it.quantidade_base??it.quantidade??'—'
+          const cont=it.quantidade_encontrada??'—'
+          const dif=(it.diferenca!=null)?(it.diferenca>0?`+${it.diferenca}`:it.diferenca):'—'
+          const st=(it.status||'pendente').toLowerCase()
+          const difColor=it.diferenca>0?'#ffcc44':it.diferenca<0?'#ffb4ab':'#10eb8a'
+          return `<tr>
+            <td><span class="font-mono" style="font-family:'JetBrains Mono',monospace;color:#8fd6ff">${escapeHtml(it.codigo)}</span></td>
+            <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(nome)}</td>
+            <td>${base}</td>
+            <td style="font-weight:${cont!=='—'?'600':'400'}">${cont}</td>
+            <td style="color:${it.diferenca!=null?difColor:'#3d4850'}">${dif}</td>
+            <td><span class="${statusClass[st]||'status-pend'}" ${statusInline[st]?`style="${statusInline[st]}"`:''}>${statusLabel[st]||it.status||'—'}</span></td>
+            <td style="white-space:nowrap;color:#3d4850">${timeAgo(it.timestamp||it.atualizado_em||it.updated_at)}</td>
+          </tr>`
+        }).join('')}</tbody>
+      </table>
+    </div>`
+}
+
+// ── Export links
+function setupExportLinks() {
+  document.getElementById('btn-export-completo').href = exportarCompleto(sessaoId)
+  document.getElementById('btn-export-divs').href = exportarDivergencias(sessaoId)
+  document.getElementById('btn-export-pdf').href = exportarPDF(sessaoId)
+  document.getElementById('btn-export-etiquetas').href = exportarEtiquetas(sessaoId)
+  document.getElementById('btn-export-relatorio-final-pdf').href = exportarRelatorioFinalPDF(sessaoId)
+  document.getElementById('btn-export-relatorio-final-excel').href = exportarRelatorioFinalExcel(sessaoId)
+}
+
+// ── Mobile link (com token)
+async function setupMobileLink() {
+  try {
+    const data = await fetch(`/api/sessoes/${sessaoId}/token-acesso`).then(r => r.json())
+    const token = data.token || ''
+    const url = `${window.location.origin}/mobile/${sessaoId}?token=${token}`
+    const linkEl = document.getElementById('mobile-link-text')
+    if (linkEl) linkEl.textContent = url
+    document.getElementById('btn-copy-link').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(url); toast('Link copiado!', 'success') }
+      catch { toast('Não foi possível copiar.', 'error') }
+    })
+  } catch {
+    // fallback sem token
+    const url = `${window.location.origin}/mobile/${sessaoId}`
+    const linkEl = document.getElementById('mobile-link-text')
+    if (linkEl) linkEl.textContent = url
+    document.getElementById('btn-copy-link').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(url); toast('Link copiado!', 'success') }
+      catch { toast('Não foi possível copiar.', 'error') }
+    })
+  }
+}
+
+// ── WS handler
+function handleWsEvent(ev) {
+  if (ev.tipo === '_connected') {
+    document.getElementById('ws-dot').className = 'ws-dot ws-connected'
+    document.getElementById('ws-label').textContent = 'Ao vivo'
+    statsSessao(sessaoId).then(s => { stats = s; renderStats() }).catch(()=>{})
+    loadRodadas(); return
+  }
+  if (ev.tipo === '_disconnected') {
+    document.getElementById('ws-dot').className = 'ws-dot ws-disconnected'
+    document.getElementById('ws-label').textContent = 'Reconectando...'; return
+  }
+  if (ev.tipo === 'progresso_atualizado') {
+    // Busca stats completos (inclui divergencias reais, que não vêm no evento de progresso)
+    statsSessao(sessaoId).then(s => { stats = s; renderStats() }).catch(() => {})
+    return
+  }
+  if (ev.tipo === 'rodada_completa') {
+    loadRodadas()
+    statsSessao(sessaoId).then(s => { stats = s; renderStats() }).catch(() => {})
+    const banner = document.getElementById('banner-rodada')
+    const rodada = ev.rodada_concluida || 1
+    const divs = ev.divergencias_pendentes || 0
+    const proxima = ev.proxima_rodada_necessaria
+    const tudoOk = ev.tudo_concluido
+    if (banner) {
+      banner.classList.remove('hidden')
+      const titulo = document.getElementById('banner-titulo')
+      const sub = document.getElementById('banner-subtitulo')
+      const icon = document.getElementById('banner-icon')
+      const btnQr = document.getElementById('banner-btn-qr')
+      if (tudoOk) {
+        banner.style.borderColor = 'rgba(16,235,138,0.4)'
+        icon.style.background = 'rgba(16,235,138,0.15)'
+        icon.innerHTML = '<span class="material-symbols-outlined text-[20px]" style="color:#10eb8a;font-variation-settings:\'FILL\' 1">inventory_2</span>'
+        titulo.textContent = 'Inventário Concluído!'
+        sub.textContent = 'Todas as rodadas foram finalizadas. Você pode concluir a sessão.'
+        btnQr.style.display = 'none'
+      } else if (proxima) {
+        banner.style.borderColor = 'rgba(143,214,255,0.4)'
+        icon.style.background = 'rgba(143,214,255,0.15)'
+        icon.innerHTML = '<span class="material-symbols-outlined text-[20px] text-primary" style="font-variation-settings:\'FILL\' 1">refresh</span>'
+        titulo.textContent = `Rodada ${rodada} Concluída — ${divs} item${divs !== 1 ? 's' : ''} para recontagem`
+        sub.textContent = `Gere o QR Code da ${rodada + 1}ª rodada e compartilhe com os operadores.`
+        btnQr.style.display = ''
+        // Abre modal e carrega diretamente a rodada seguinte — sem dupla chamada ao carregarQR
+        btnQr.onclick = async () => {
+          openModal('modal-qr')
+          await carregarQR(rodada + 1)
+        }
+      } else {
+        banner.style.borderColor = 'rgba(210,187,255,0.4)'
+        icon.style.background = 'rgba(210,187,255,0.15)'
+        icon.innerHTML = '<span class="material-symbols-outlined text-[20px] text-secondary" style="font-variation-settings:\'FILL\' 1">task_alt</span>'
+        titulo.textContent = `Rodada ${rodada} Concluída`
+        sub.textContent = divs > 0 ? `${divs} item${divs !== 1 ? 's' : ''} confirmado${divs !== 1 ? 's' : ''} como divergente${divs !== 1 ? 's' : ''} — entrarão para ajuste.` : 'Todos os itens conferidos sem divergência.'
+        btnQr.style.display = 'none'
+      }
+      toast(`Rodada ${rodada} concluída!${proxima ? ` ${divs} items para rodada ${rodada+1}.` : ''}`, 'success')
+    }
+    return
+  }
+  if (ev.tipo === 'contagem_registrada' || ev.tipo === 'divergencia_detectada') {
+    const evWithTime = { ...ev, timestamp: ev.timestamp || new Date().toISOString() }
+    liveEvents.unshift(evWithTime)
+    if (liveEvents.length > 20) liveEvents.length = 20
+    renderLiveFeed()
+    if (itensLoaded && ev.codigo) {
+      const idx = itens.findIndex(it => it.codigo === ev.codigo)
+      if (idx >= 0) {
+        const novoStatus = ev.para_ajuste ? 'Para Ajuste' : ev.divergencia ? 'Divergente' : 'OK'
+        itens[idx]={...itens[idx],quantidade_encontrada:ev.quantidade_encontrada??itens[idx].quantidade_encontrada,diferenca:ev.diferenca??itens[idx].diferenca,status:novoStatus,para_ajuste:ev.para_ajuste??false,rodada:ev.rodada??itens[idx].rodada,timestamp:evWithTime.timestamp}
+        renderItens(currentFilter,currentSearch)
+      }
+    }
+    if (ev.codigo) {
+      const cidx=contagens.findIndex(c=>c.codigo===ev.codigo)
+      if(cidx>=0) contagens[cidx]={...contagens[cidx],...evWithTime}; else contagens.push(evWithTime)
+      renderChart(contagens); renderOperators(contagens)
+    }
+    statsSessao(sessaoId).then(s=>{stats=s;renderStats()}).catch(()=>{})
+    loadRodadas()
+  }
+}
+
+// ── Concluir
+function openConcluir() {
+  // Reseta modal para estado pré-conclusão
+  document.getElementById('concluir-pre').style.display = ''
+  document.getElementById('concluir-pos').style.display = 'none'
+  const btn = document.getElementById('btn-concluir-confirm')
+  btn.disabled = false
+  btn.innerHTML = '<span class="material-symbols-outlined text-[16px]" style="font-variation-settings:\'FILL\' 1">check_circle</span> Confirmar conclusão'
+
+  const preview = document.getElementById('concluir-stats-preview')
+  if (stats) {
+    preview.innerHTML = `<span style="color:#d7e3fc">${stats.total} itens</span><span style="color:#10eb8a">${stats.conferidos} conferidos</span><span style="color:#ffcc44">${stats.pendentes} pendentes</span><span style="color:#ffb4ab">${stats.divergencias} diverg.</span>`
+  }
+  openModal('modal-concluir')
+}
+
+document.getElementById('btn-concluir').addEventListener('click', openConcluir)
+document.getElementById('btn-close-concluir').addEventListener('click', () => closeModal('modal-concluir'))
+document.getElementById('btn-concluir-cancel').addEventListener('click', () => closeModal('modal-concluir'))
+document.getElementById('btn-concluir-fechar').addEventListener('click', () => closeModal('modal-concluir'))
+document.getElementById('btn-concluir-confirm').addEventListener('click', async () => {
+  const btn = document.getElementById('btn-concluir-confirm')
+  btn.disabled = true
+  btn.innerHTML = '<span class="spinner-sm" style="display:inline-block;vertical-align:middle;margin-right:.375rem"></span>Concluindo...'
+  try {
+    await concluirSessao(sessaoId)
+    sessao.status = 'concluida'
+    renderHeader()
+    if(ws) ws.disconnect()
+    // Mostra painel pós-conclusão com links de download
+    document.getElementById('concluir-pre').style.display = 'none'
+    document.getElementById('concluir-pos').style.display = ''
+    document.getElementById('btn-download-relatorio-pdf').href = exportarRelatorioFinalPDF(sessaoId)
+    document.getElementById('btn-download-relatorio-excel').href = exportarRelatorioFinalExcel(sessaoId)
+    toast('Sessão concluída! Relatórios prontos para download.', 'success')
+  } catch(e) {
+    toast(e.message||'Erro ao concluir.','error')
+    btn.disabled = false
+    btn.innerHTML = '<span class="material-symbols-outlined text-[16px]" style="font-variation-settings:\'FILL\' 1">check_circle</span>Confirmar conclusão'
+  }
+})
+
+// ── Upload
+document.getElementById('btn-upload-planilha').addEventListener('click', () => openModal('modal-upload'))
+document.getElementById('btn-close-upload').addEventListener('click', () => closeModal('modal-upload'))
+const dropzone = document.getElementById('dropzone')
+const fileInput = document.getElementById('file-input')
+dropzone.addEventListener('click', () => fileInput.click())
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over') })
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'))
+dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('drag-over'); const f=e.dataTransfer.files[0]; if(f) setSelectedFile(f) })
+fileInput.addEventListener('change', () => { if(fileInput.files[0]) setSelectedFile(fileInput.files[0]) })
+
+function setSelectedFile(f) {
+  selectedFile=f; uploadValidated=false; dropzone.classList.add('has-file')
+  document.getElementById('dropzone-label').textContent=f.name
+  document.getElementById('upload-validation-report').style.display='none'
+  document.getElementById('upload-action-row').style.display='flex'
+  document.getElementById('btn-analisar-importar').disabled=false
+  document.getElementById('upload-status-text').textContent=''
+}
+
+document.getElementById('btn-analisar-importar').addEventListener('click', async () => {
+  if(!selectedFile) return
+  const btn=document.getElementById('btn-analisar-importar'),spinner=document.getElementById('upload-btn-spinner'),statusText=document.getElementById('upload-status-text'),reportEl=document.getElementById('upload-validation-report')
+  btn.disabled=true; spinner.style.display='inline-block'; statusText.textContent='Validando com IA...'
+  try {
+    let canImport=true
+    try {
+      const validation=await validarPlanilha(sessaoId,selectedFile)
+      const validationIssues=validation.problemas||validation.issues||[]
+      const podeImportar=validation.valido||validation.pode_importar_com_avisos||validation.pode_importar
+      if(validationIssues.length>0){reportEl.style.display='block';reportEl.innerHTML=`<div style="font-size:.8125rem;font-weight:600;margin-bottom:.5rem;color:${podeImportar?'#ffcc44':'#ffb4ab'}">${podeImportar?'Avisos encontrados':'Planilha inválida'}</div><div>${validationIssues.map(issue=>`<div class="validation-issue"><span>${podeImportar?'!':'✕'}</span><span>${typeof issue==='string'?issue:(issue.mensagem||issue.message||JSON.stringify(issue))}</span></div>`).join('')}</div>`}
+      if(!podeImportar){canImport=false;btn.disabled=false;spinner.style.display='none';statusText.textContent='';return}
+    } catch(e){}
+    if(canImport){
+      statusText.textContent='Importando...'
+      const result=await uploadPlanilha(sessaoId,selectedFile)
+      toast(`Planilha importada: ${result.total||result.itens_importados||0} itens`,'success')
+      const [newStats,newItens]=await Promise.all([statsSessao(sessaoId),listarItens(sessaoId)])
+      stats=newStats; itens=newItens; renderStats(); renderItens(currentFilter,currentSearch); closeModal('modal-upload'); selectedFile=null; uploadValidated=false
+      loadValorEstoque()  // atualiza painel financeiro após importar planilha
+    }
+  } catch(e) { toast(e.message||'Erro ao importar.','error') }
+  finally { btn.disabled=false; spinner.style.display='none'; statusText.textContent='' }
+})
+
+// ── AI Analysis
+document.getElementById('btn-ai-analise').addEventListener('click', async () => {
+  openModal('modal-analise')
+  document.getElementById('analise-loading').style.display='block'
+  document.getElementById('analise-content').style.display='none'
+  document.getElementById('analise-error').style.display='none'
+  try {
+    const result=await analisarSessao(sessaoId)
+    document.getElementById('analise-loading').style.display='none'
+    document.getElementById('analise-content').style.display='flex'
+    const badgesEl=document.getElementById('analise-badges')
+    const risco=result.risco||result.nivel_risco, fonte=result.fonte||result.model
+    badgesEl.innerHTML=''
+    if(fonte) badgesEl.innerHTML+=`<span class="badge badge-ia" style="background:rgba(210,187,255,0.15);color:#d2bbff;border-color:rgba(210,187,255,0.3)">${fonte}</span>`
+    if(risco){
+      const riscoMap={alto:{cls:'',style:'background:rgba(255,180,171,0.15);color:#ffb4ab;border-color:rgba(255,180,171,0.3)'},medio:{cls:'',style:'background:rgba(255,204,68,0.15);color:#ffcc44;border-color:rgba(255,204,68,0.3)'},baixo:{cls:'',style:'background:rgba(16,235,138,0.1);color:#10eb8a;border-color:rgba(16,235,138,0.25)'}}
+      const r=riscoMap[risco]||{cls:'',style:''}
+      badgesEl.innerHTML+=`<span class="badge" style="${r.style}">Risco ${risco.charAt(0).toUpperCase()+risco.slice(1)}</span>`
+    }
+    document.getElementById('analise-resumo').textContent=result.resumo||result.summary||result.relatorio_executivo||''
+    const padroes=result.padroes||result.patterns||[]
+    const padroesBlock=document.getElementById('analise-padroes-block')
+    const gridEl=document.getElementById('analise-grid-2col')
+    if(padroes.length>0){
+      padroesBlock.style.display=''
+      document.getElementById('analise-padroes').innerHTML=padroes.map(p=>`
+        <div style="display:flex;gap:.5rem;align-items:flex-start;font-size:.875rem;color:#bcc8d1;line-height:1.5">
+          <span style="color:#8fd6ff;flex-shrink:0;margin-top:2px">▸</span>
+          <span>${typeof p==='string'?p:(p.descricao||p.text||JSON.stringify(p))}</span>
+        </div>`).join('')
+    } else { padroesBlock.style.display='none' }
+    const criticos=result.itens_criticos||result.critical_items||[]
+    const criticosBlock=document.getElementById('analise-criticos-block')
+    if(criticos.length>0){
+      criticosBlock.style.display=''
+      document.getElementById('analise-criticos').innerHTML=criticos.map(it=>`
+        <div style="background:rgba(255,180,171,0.06);border:1px solid rgba(255,180,171,0.15);border-radius:8px;padding:.625rem .75rem">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:.8125rem;font-weight:700;color:#ffb4ab;margin-bottom:.25rem">${it.codigo||it.code||'—'}</div>
+          <div style="font-size:.8125rem;color:#bcc8d1;line-height:1.4">${it.motivo||it.reason||it.descricao||''}</div>
+        </div>`).join('')
+    } else { criticosBlock.style.display='none' }
+    if(!padroes.length && !criticos.length) gridEl.style.display='none'; else gridEl.style.display=''
+    const recs=result.recomendacoes||result.recommendations||[]
+    const recsBlock=document.getElementById('analise-recs-block')
+    if(recs.length>0){
+      recsBlock.style.display=''
+      document.getElementById('analise-recs').innerHTML=recs.map((r,i)=>`
+        <div style="display:flex;gap:.75rem;align-items:flex-start;font-size:.875rem;color:#d7e3fc;line-height:1.6">
+          <span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:rgba(16,235,138,0.15);border:1px solid rgba(16,235,138,0.3);display:flex;align-items:center;justify-content:center;font-size:.6875rem;font-weight:700;color:#10eb8a;margin-top:2px">${i+1}</span>
+          <span>${typeof r==='string'?r:(r.texto||r.text||JSON.stringify(r))}</span>
+        </div>`).join('')
+    } else { recsBlock.style.display='none' }
+  } catch(e) {
+    document.getElementById('analise-loading').style.display='none'
+    document.getElementById('analise-error').style.display='flex'
+    document.getElementById('analise-error-msg').textContent=e.message||'Falha ao analisar.'
+  }
+})
+document.getElementById('btn-close-analise').addEventListener('click', () => closeModal('modal-analise'))
+
+// ── Chat IA
+document.getElementById('btn-ai-chat').addEventListener('click', () => {
+  openModal('modal-chat')
+  if(chatHistory.length===0){renderChatMessages();appendChatMsg('assistant','Olá! Sou o assistente de inventário. Posso responder perguntas sobre esta sessão, divergências e padrões. O que deseja saber?')}
+})
+document.getElementById('btn-close-chat').addEventListener('click', () => closeModal('modal-chat'))
+
+function escapeHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+
+function renderChatMessages() {
+  const el=document.getElementById('chat-messages')
+  el.innerHTML=chatHistory.map(m=>`<div class="chat-msg ${m.role}"><div class="chat-bubble">${escapeHtml(m.content).replace(/\n/g,'<br>')}</div></div>`).join('')
+  el.scrollTop=el.scrollHeight
+}
+
+function appendChatMsg(role,content) {
+  chatHistory.push({role,content})
+  if (chatHistory.length > 100) chatHistory.splice(0, chatHistory.length - 100)
+  renderChatMessages()
+}
+
+async function sendChat() {
+  const input=document.getElementById('chat-input'), msg=input.value.trim()
+  if(!msg) return; input.value=''
+  appendChatMsg('user',msg)
+  document.getElementById('chat-typing').style.display='block'
+  document.getElementById('btn-chat-send').disabled=true
+  try {
+    const historico=chatHistory.slice(0,-1).map(m=>({role:m.role,content:m.content}))
+    const result=await chatSessao(sessaoId,msg,historico)
+    appendChatMsg('assistant',result.resposta||result.response||result.content||'(sem resposta)')
+  } catch(e) { appendChatMsg('assistant',`Erro: ${e.message}`) }
+  finally { document.getElementById('chat-typing').style.display='none'; document.getElementById('btn-chat-send').disabled=false; document.getElementById('chat-messages').scrollTop=9999 }
+}
+
+document.getElementById('btn-chat-send').addEventListener('click', sendChat)
+document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()} })
+
+// ── Filter & Search
+document.getElementById('filter-row').addEventListener('click', e => {
+  const btn=e.target.closest('.filter-btn'); if(!btn) return
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active'); currentFilter=btn.dataset.filter
+  if(itensLoaded) renderItens(currentFilter,currentSearch)
+})
+
+let searchTimeout
+document.getElementById('search-itens').addEventListener('input', e => {
+  currentSearch=e.target.value; clearTimeout(searchTimeout)
+  searchTimeout=setTimeout(()=>{if(itensLoaded) renderItens(currentFilter,currentSearch)},250)
+})
+
+// ── Lazy Load Itens
+function setupLazyItens() {
+  const sentinel=document.getElementById('itens-sentinel'), loadingText=document.getElementById('itens-loading-text')
+  if(stats&&stats.total>0&&loadingText) loadingText.textContent=`${stats.total} itens — rolar para carregar`
+  const observer=new IntersectionObserver(async(entries)=>{
+    if(!entries[0].isIntersecting||itensLoaded) return; observer.disconnect()
+    const placeholder=document.getElementById('itens-loading-placeholder')
+    placeholder.innerHTML='<div class="spinner" style="margin:0 auto"></div>'
+    try {
+      const [fetchedItens,fetchedConts]=await Promise.all([listarItens(sessaoId),listarContagens(sessaoId)])
+      itens=fetchedItens||[]
+      if(!contagens.length){contagens=fetchedConts||[];renderChart(contagens);renderOperators(contagens)}
+      itensLoaded=true; renderItens(currentFilter,currentSearch)
+    } catch(e) { document.getElementById('itens-container').innerHTML='<div class="empty-state"><div class="empty-state-text">Erro ao carregar itens</div></div>' }
+  },{threshold:0.1})
+  observer.observe(sentinel)
+}
+
+// ── Valor Estoque (painel financeiro)
+let valorEstoque = null
+
+function fmt(valor) {
+  if (valor == null) return '—'
+  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+function renderValorEstoque() {
+  const painel = document.getElementById('painel-financeiro')
+  const semDados = document.getElementById('fin-sem-dados')
+  const tabelas = document.getElementById('fin-tabelas')
+  if (!painel) return
+
+  painel.classList.remove('hidden')
+
+  if (!valorEstoque || !valorEstoque.tem_dados_financeiros) {
+    semDados.classList.remove('hidden')
+    tabelas.classList.add('hidden')
+    document.getElementById('fin-status-badge').textContent = 'Sem dados financeiros'
+    document.getElementById('fin-status-badge').style.cssText = 'color:#3d4850;border-color:#3d4850'
+    return
+  }
+
+  semDados.classList.add('hidden')
+
+  const { valor_inicial, valor_final, diferenca, percentual_variacao,
+          itens_com_valor, itens_sem_valor, maiores_perdas, maiores_ganhos } = valorEstoque
+
+  // cards
+  document.getElementById('fin-valor-inicial').textContent = fmt(valor_inicial)
+  document.getElementById('fin-valor-final').textContent = fmt(valor_final)
+  document.getElementById('fin-itens-com-valor').textContent =
+    `${itens_com_valor} iten${itens_com_valor !== 1 ? 's' : ''} com valor`
+    + (itens_sem_valor > 0 ? ` · ${itens_sem_valor} sem valor` : '')
+
+  const varEl = document.getElementById('fin-variacao')
+  const varPct = document.getElementById('fin-variacao-pct')
+  const sinal = diferenca >= 0 ? '+' : ''
+  varEl.textContent = `${sinal}${fmt(diferenca)}`
+  varEl.style.color = diferenca < 0 ? '#ffb4ab' : diferenca > 0 ? '#10eb8a' : '#bcc8d1'
+  varPct.textContent = `${sinal}${percentual_variacao.toFixed(2)}% do estoque`
+
+  // badge
+  const badge = document.getElementById('fin-status-badge')
+  if (diferenca < 0) {
+    badge.textContent = `Perda de ${fmt(Math.abs(diferenca))}`
+    badge.style.cssText = 'color:#ffb4ab;border-color:rgba(255,180,171,0.4);background:rgba(255,180,171,0.08)'
+  } else if (diferenca > 0) {
+    badge.textContent = `Ganho de ${fmt(diferenca)}`
+    badge.style.cssText = 'color:#10eb8a;border-color:rgba(16,235,138,0.4);background:rgba(16,235,138,0.08)'
+  } else {
+    badge.textContent = 'Sem variação'
+    badge.style.cssText = 'color:#bcc8d1;border-color:rgba(188,200,209,0.3)'
+  }
+
+  // tabelas de perdas/ganhos
+  const renderLinha = (item, tipo) => {
+    const cor = tipo === 'perda' ? '#ffb4ab' : '#10eb8a'
+    const sinalDelta = tipo === 'perda' ? '' : '+'
+    return `<div class="flex justify-between items-center py-xs border-b border-white/5 last:border-0">
+      <div class="flex flex-col min-w-0 flex-1">
+        <span class="text-code-sm font-code-sm truncate" style="color:#8fd6ff;font-family:'JetBrains Mono',monospace">${escapeHtml(item.codigo)}</span>
+        <span class="text-label-md font-label-md text-on-surface-variant truncate">${escapeHtml(item.produto || '')}</span>
+      </div>
+      <span class="text-code-sm font-code-sm ml-sm font-bold shrink-0" style="color:${cor}">${sinalDelta}${fmt(item.diferenca_valor)}</span>
+    </div>`
+  }
+
+  if (maiores_perdas.length > 0 || maiores_ganhos.length > 0) {
+    tabelas.classList.remove('hidden')
+    document.getElementById('fin-perdas').innerHTML =
+      maiores_perdas.length > 0
+        ? maiores_perdas.map(i => renderLinha(i, 'perda')).join('')
+        : '<span class="text-body-sm font-body-sm text-on-surface-variant">Nenhuma perda</span>'
+    document.getElementById('fin-ganhos').innerHTML =
+      maiores_ganhos.length > 0
+        ? maiores_ganhos.map(i => renderLinha(i, 'ganho')).join('')
+        : '<span class="text-body-sm font-body-sm text-on-surface-variant">Nenhum ganho</span>'
+  } else {
+    tabelas.classList.add('hidden')
+  }
+}
+
+async function loadValorEstoque() {
+  try {
+    valorEstoque = await valorEstoqueSessao(sessaoId)
+    renderValorEstoque()
+  } catch { /* endpoint pode não estar disponível em versões antigas */ }
+}
+
+// ── QR Code Acesso Mobile
+let _qrRodadaAtual = 1  // variável de estado para a rodada atual do modal — evita parsear DOM
+
+async function abrirModalQR() {
+  openModal('modal-qr')
+  await carregarQR()
+}
+
+async function carregarQR(rodada) {
+  try {
+    const url = rodada
+      ? `/api/sessoes/${sessaoId}/gerar-token?rodada=${rodada}`
+      : `/api/sessoes/${sessaoId}/token-acesso`
+    const method = rodada ? 'POST' : 'GET'
+    const res = await fetch(url, { method })
+    const data = await res.json()
+    const token = data.token || '----'
+    const rod = data.rodada || 1
+    _qrRodadaAtual = rod  // persiste rodada atual em variável de estado
+
+    document.getElementById('qr-token-display').textContent = token
+    document.getElementById('qr-rodada-badge').textContent = `${rod}ª Rodada`
+
+    const fullUrl = `${window.location.origin}${data.mobile_url}`
+    document.getElementById('qr-link-text').textContent = fullUrl
+
+    // Gera QR code como PNG pelo backend com URL absoluta (inclui domínio/IP)
+    const imgEl = document.getElementById('qr-code-img')
+    const baseUrl = encodeURIComponent(window.location.origin)
+    imgEl.src = `/api/sessoes/${sessaoId}/qrcode-acesso?base_url=${baseUrl}&_=${Date.now()}`
+
+    // Mostra botão "Gerar para 2ª Contagem" se houver divergências após R1
+    const btnRodada = document.getElementById('btn-gerar-nova-rodada')
+    if (sessao && sessao.status === 'ativa' && rod < 3) {
+      btnRodada.style.display = ''
+      btnRodada.textContent = `Gerar QR para ${rod + 1}ª Contagem`
+      btnRodada.onclick = () => carregarQR(rod + 1)
+    } else {
+      btnRodada.style.display = 'none'
+    }
+  } catch(e) {
+    toast('Erro ao carregar QR Code.', 'error')
+  }
+}
+
+document.getElementById('btn-mostrar-qr').addEventListener('click', abrirModalQR)
+document.getElementById('btn-close-qr').addEventListener('click', () => closeModal('modal-qr'))
+document.getElementById('btn-copy-qr-link').addEventListener('click', async () => {
+  const linkEl = document.getElementById('qr-link-text')
+  try { await navigator.clipboard.writeText(linkEl.textContent); toast('Link copiado!', 'success') }
+  catch { toast('Não foi possível copiar.', 'error') }
+})
+document.getElementById('btn-regenerar-token').addEventListener('click', async () => {
+  await carregarQR(_qrRodadaAtual)  // usa variável de estado — nunca parseia DOM
+  toast('Novo token gerado!', 'success')
+})
+
+// ── Init
+async function init() {
+  try {
+    const [sessaoData,statsData]=await Promise.all([buscarSessao(sessaoId),statsSessao(sessaoId).catch(()=>null)])
+    sessao=sessaoData; stats=statsData; renderHeader(); renderStats(); setupExportLinks(); setupLazyItens()
+    setupMobileLink().catch(()=>{})  // async — chamada não-bloqueante com erro tratado
+    listarContagens(sessaoId).then(conts=>{contagens=conts||[];renderChart(contagens);renderOperators(contagens)}).catch(()=>{})
+    loadRodadas()
+    loadValorEstoque()
+    ws=new SessionWS(sessaoId,handleWsEvent); ws.connect()
+  } catch(e) { document.getElementById('sessao-nome').textContent='Sessão não encontrada'; toast(e.message||'Erro ao carregar sessão.','error') }
+}
+
+document.getElementById('banner-btn-fechar')?.addEventListener('click', () => {
+  document.getElementById('banner-rodada')?.classList.add('hidden')
+})
+
+document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+  backdrop.addEventListener('click', e => { if(e.target===backdrop) backdrop.classList.remove('open') })
+})
+
+init()
+</script>
+</body>
+</html>
