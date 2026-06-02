@@ -22,8 +22,14 @@ async def websocket_sessao(websocket: WebSocket, sessao_id: str,
     Endpoint WebSocket para atualizações em tempo real de uma sessão.
     Rejeita conexões para sessões inexistentes antes de aceitar.
     """
-    # Valida sessão antes de aceitar para prevenir memory leak com IDs forjados
-    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    # Valida sessão antes de aceitar — previne memory leak com IDs forjados
+    try:
+        sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    except Exception as exc:
+        logger.error("WS: falha ao validar sessao=%s erro=%s", sessao_id, exc)
+        await websocket.close(code=1011, reason="Erro interno ao validar sessão")
+        return
+
     if not sessao:
         await websocket.close(code=4404, reason="Sessão não encontrada")
         logger.warning("WS rejeitado — sessao_id inexistente: %s", sessao_id)

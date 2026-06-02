@@ -118,6 +118,7 @@ class HistoricoContagemResponse(BaseModel):
     quantidade_encontrada: int
     quantidade_base: int
     divergencia: bool
+    para_ajuste: bool = False
     operador: Optional[str]
     observacao: Optional[str] = None
     rodada: int
@@ -132,6 +133,7 @@ class BuscaItemResponse(BaseModel):
     quantidade_base: int
     ja_contado: bool
     rodada_atual: int = 0
+    para_ajuste: bool = False
     contagem_anterior: Optional[ContagemResponse] = None
 
 
@@ -178,6 +180,7 @@ class ProgressoRodada(BaseModel):
     contados_rodada: int
     faltando: int
     completa: bool
+    tem_itens: bool = True
     divergencias: int
     proxima_rodada_necessaria: bool
     faltando_r1: int = 0

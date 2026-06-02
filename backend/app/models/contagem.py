@@ -42,6 +42,7 @@ class HistoricoContagem(Base):
     quantidade_encontrada = Column(Integer, nullable=False)
     quantidade_base = Column(Integer, nullable=False)
     divergencia = Column(Boolean, default=False)
+    para_ajuste = Column(Boolean, default=False, nullable=False, server_default="0")
     operador = Column(String, nullable=True)
     observacao = Column(String, nullable=True)
     rodada = Column(Integer, default=1, nullable=False)

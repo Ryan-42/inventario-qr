@@ -178,12 +178,12 @@ async def verificar_token_grupo(request: Request, sessao_id: str, token: str, db
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
 
-    # Verifica token de supervisor
-    if sessao.token_supervisor and sessao.token_supervisor == token:
+    # Verifica token de supervisor — hmac.compare_digest previne timing attack
+    if hmac.compare_digest(sessao.token_supervisor or "", token):
         return {"tipo": "supervisor", "valido": True, "grupo": None}
 
     # Verifica token geral da sessão
-    if sessao.token_acesso == token:
+    if hmac.compare_digest(sessao.token_acesso or "", token):
         return {"tipo": "geral", "valido": True, "grupo": None}
 
     # Verifica token de grupo
@@ -216,6 +216,8 @@ def lista_operador(sessao_id: str, token: str = "", rodada: int = 1,
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    if sessao.status == StatusSessao.cancelada:
+        raise HTTPException(status_code=409, detail="Sessão cancelada — lista indisponível")
 
     # Token obrigatório — valida contra token geral, grupo ou supervisor
     if not token:
@@ -223,7 +225,7 @@ def lista_operador(sessao_id: str, token: str = "", rodada: int = 1,
 
     token_valido = (
         hmac.compare_digest(sessao.token_acesso or "", token)
-        or (sessao.token_supervisor and hmac.compare_digest(sessao.token_supervisor, token))
+        or hmac.compare_digest(sessao.token_supervisor or "", token)
     )
     grupo = grupo_repo.buscar_grupo_por_token(db, sessao_id, token)
     if not token_valido and not grupo:
@@ -378,7 +380,7 @@ def itens_supervisor(sessao_id: str, token: str, db: Session = Depends(get_db)):
 
 @router.patch("/{sessao_id}/pausar")
 async def pausar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
-                        previsao_retomada: str = None, db: Session = Depends(get_db)):
+                        previsao_retomada: Optional[str] = None, db: Session = Depends(get_db)):
     """Pausa a sessão. Operadores veem tela 'Sessão Pausada' via WS."""
     from datetime import datetime, timezone
     sessao = sessao_repo.buscar_sessao(db, sessao_id)

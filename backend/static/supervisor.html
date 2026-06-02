@@ -199,17 +199,26 @@ async function validarTokenSupervisor(token) {
   } catch { return false }
 }
 
-// ── Load sessao info
+let sessaoInfo = null
+
+// ── Load sessao info — retorna false se sessão inválida ou encerrada
 async function carregarSessao() {
   try {
     const res = await fetch(`/api/sessoes/${sessaoId}`)
-    if (res.ok) {
-      const s = await res.json()
-      document.getElementById('token-sessao-nome').textContent = s.nome || sessaoId
-      document.getElementById('app-sessao-nome').textContent = s.nome || sessaoId
-      document.title = `Supervisor — ${s.nome || sessaoId}`
+    if (!res.ok) return false
+    const s = await res.json()
+    sessaoInfo = s
+    document.getElementById('token-sessao-nome').textContent = s.nome || sessaoId
+    document.getElementById('app-sessao-nome').textContent = s.nome || sessaoId
+    document.title = `Supervisor — ${s.nome || sessaoId}`
+    // Avisa se sessão não está mais ativa
+    if (s.status === 'cancelada' || s.status === 'concluida') {
+      const statusMsg = s.status === 'cancelada' ? 'cancelada' : 'concluída'
+      document.getElementById('token-sessao-nome').textContent =
+        `${s.nome || sessaoId} — Sessão ${statusMsg}`
     }
-  } catch {}
+    return true
+  } catch { return false }
 }
 
 // ── Load supervisor items

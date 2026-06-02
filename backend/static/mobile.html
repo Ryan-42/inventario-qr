@@ -1226,8 +1226,12 @@ function connectWS() {
       progressoAtual = { rodada_atual, faltando, total_rodada, contados_rodada, completa }
       atualizarBarraProgresso(progressoAtual)
       atualizarBotaoOffline()
-      // Invalida cache da lista para recarregar na próxima abertura
-      if (ev.tipo === 'contagem_deletada') listaCarregada = false
+      // Invalida cache da lista; aguarda 150ms para garantir que progresso
+      // já foi atualizado antes de recarregar (evita rodada desincronizada)
+      if (ev.tipo === 'contagem_deletada') {
+        listaCarregada = false
+        setTimeout(() => { if (listaCarregada === false) carregarLista() }, 150)
+      }
       return
     }
     if (ev.tipo === 'rodada_completa') {
@@ -1305,8 +1309,10 @@ const urlToken = new URLSearchParams(location.search).get('token') || ''
 let tokenValidado = false
 
 async function validarToken(tokenDigitado) {
+  // Evita request desnecessário com token vazio
+  if (!tokenDigitado || !tokenDigitado.trim()) return false
   try {
-    const res = await fetch(`/api/sessoes/${sessaoId}/verificar-grupo?token=${encodeURIComponent(tokenDigitado)}`)
+    const res = await fetch(`/api/sessoes/${sessaoId}/verificar-grupo?token=${encodeURIComponent(tokenDigitado.trim())}`)
     const data = await res.json()
     if (!data.valido) return false
     if (data.tipo === 'supervisor') {

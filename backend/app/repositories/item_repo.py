@@ -75,11 +75,10 @@ def registrar_contagem(
     operador: Optional[str] = None,
     observacao: Optional[str] = None,
 ) -> Contagem:
-    # Re-verifica que o item ainda existe (race condition: pode ter sido deletado)
-    item_atual = buscar_item(db, sessao_id, codigo)
-    if not item_atual:
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail=f"Item '{codigo}' não encontrado na base desta sessão")
+    # Verifica que o item ainda existe — protege contra race condition onde
+    # criar_itens_bulk() pode ter rodado entre a validação da route e aqui.
+    if not buscar_item(db, sessao_id, codigo):
+        raise LookupError(f"Item '{codigo}' não encontrado — foi removido durante a contagem")
 
     divergencia = quantidade_encontrada != quantidade_base
 
@@ -137,12 +136,15 @@ def registrar_contagem(
         )
         db.add(contagem)
 
+    # Captura para_ajuste do estado atual (existente ou recém criado)
+    _para_ajuste = nova_para_ajuste if existente else False
     historico = HistoricoContagem(
         sessao_id=sessao_id,
         codigo=codigo,
         quantidade_encontrada=quantidade_encontrada,
         quantidade_base=quantidade_base,
         divergencia=divergencia,
+        para_ajuste=_para_ajuste,
         operador=operador,
         observacao=observacao,
         rodada=rodada_final,
@@ -203,10 +205,11 @@ def calcular_progresso_rodada(db: Session, sessao_id: str) -> dict:
     total_itens = db.query(ItemBase).filter(ItemBase.sessao_id == sessao_id).count()
 
     # Guard: sessão sem itens — evita divisão por zero no frontend
+    # completa=False (não False) porque sessão vazia não tem inventário pronto
     if total_itens == 0:
         return {
             "rodada_atual": 1, "total_rodada": 0, "contados_rodada": 0,
-            "faltando": 0, "completa": True, "divergencias": 0,
+            "faltando": 0, "completa": False, "tem_itens": False, "divergencias": 0,
             "proxima_rodada_necessaria": False,
             "faltando_r1": 0, "faltando_r2": 0, "faltando_r3": 0,
             "divergencias_r1": 0, "divergencias_r2": 0, "divergencias_r3": 0,
@@ -265,9 +268,9 @@ def calcular_progresso_rodada(db: Session, sessao_id: str) -> dict:
         "contados_rodada": contados_rodada,
         "faltando": faltando,
         "completa": completa,
+        "tem_itens": True,
         "divergencias": divergencias,
         "proxima_rodada_necessaria": proxima_rodada_necessaria,
-        # granular para detectar transição de rodada
         "faltando_r1": faltando_r1,
         "faltando_r2": faltando_r2,
         "faltando_r3": faltando_r3,

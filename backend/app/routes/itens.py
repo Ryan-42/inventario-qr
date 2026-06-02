@@ -134,5 +134,6 @@ def buscar_item_por_codigo(sessao_id: str, codigo: str, db: Session = Depends(ge
         "quantidade_base": item.quantidade_base,
         "ja_contado": contagem is not None,
         "rodada_atual": contagem.rodada if contagem else 0,
+        "para_ajuste": bool(contagem.para_ajuste) if contagem else False,
         "contagem_anterior": contagem,
     }

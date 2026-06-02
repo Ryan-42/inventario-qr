@@ -56,15 +56,19 @@ async def registrar_contagem(request: Request,
     # Captura progresso ANTES da contagem para detectar transição de rodada
     progresso_antes = item_repo.calcular_progresso_rodada(db, sessao_id)
 
-    contagem = item_repo.registrar_contagem(
-        db=db,
-        sessao_id=sessao_id,
-        codigo=payload.codigo,
-        quantidade_encontrada=payload.quantidade_encontrada,
-        quantidade_base=item.quantidade_base,
-        operador=payload.operador,
-        observacao=payload.observacao,
-    )
+    try:
+        contagem = item_repo.registrar_contagem(
+            db=db,
+            sessao_id=sessao_id,
+            codigo=payload.codigo,
+            quantidade_encontrada=payload.quantidade_encontrada,
+            quantidade_base=item.quantidade_base,
+            operador=payload.operador,
+            observacao=payload.observacao,
+        )
+    except LookupError as exc:
+        # Item foi deletado entre a validação acima e o registro (race condition)
+        raise HTTPException(status_code=409, detail=str(exc))
 
     # Enriquece resposta com dados do item
     contagem.produto = item.produto

@@ -51,6 +51,7 @@ def _migrate_sqlite():
         _add_col_if_missing(conn, "sessoes", "pausada_em", "TIMESTAMP")
         _add_col_if_missing(conn, "sessoes", "previsao_retomada", "TEXT")
         _add_col_if_missing(conn, "sessoes", "token_admin", "TEXT")
+        _add_col_if_missing(conn, "historico_contagens", "para_ajuste", "INTEGER NOT NULL DEFAULT 0")
         # Cria tabela grupos_operador se não existir
         try:
             conn.execute(text("""
