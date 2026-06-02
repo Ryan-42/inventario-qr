@@ -10,6 +10,7 @@ from app.database import Base
 
 class StatusSessao(str, enum.Enum):
     ativa = "ativa"
+    pausada = "pausada"
     concluida = "concluida"
     cancelada = "cancelada"
 
@@ -29,7 +30,12 @@ class Sessao(Base):
     data_inicio = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     data_fim = Column(DateTime(timezone=True), nullable=True)
     token_acesso = Column(String, nullable=True, default=_gerar_token)
-    rodada_token = Column(Integer, nullable=True, default=1)  # rodada para qual o token é válido
+    rodada_token = Column(Integer, nullable=True, default=1)
+    token_admin = Column(String, nullable=True, default=lambda: secrets.token_hex(8).upper())  # token do criador do inventário
+    token_supervisor = Column(String, nullable=True)  # token do supervisor (acesso somente-leitura)
+    pausada_em = Column(DateTime(timezone=True), nullable=True)
+    previsao_retomada = Column(String, nullable=True)  # ex: "14:00"
 
     itens = relationship("ItemBase", back_populates="sessao", cascade="all, delete-orphan")
     contagens = relationship("Contagem", back_populates="sessao", cascade="all, delete-orphan")
+    grupos = relationship("GrupoOperador", back_populates="sessao", cascade="all, delete-orphan")

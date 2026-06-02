@@ -30,6 +30,11 @@ class ValidarItemsRequest(BaseModel):
     items: list[dict[str, Any]]
 
 
+_PROMPT_INJECTION_KEYWORDS = frozenset([
+    "ignore", "esqueça", "esquecer", "override", "instrução anterior",
+    "ignore previous", "forget", "system prompt", "jailbreak",
+])
+
 class ChatRequest(BaseModel):
     mensagem: str
     historico: list[dict[str, Any]] = []
@@ -65,9 +70,9 @@ def analisar_sessao(request: Request, sessao_id: str, db: Session = Depends(get_
     try:
         stats = sessao_repo.stats_sessao(db, sessao_id)
         divergencias = montar_divergencias(db, sessao_id)
-        itens_sample = montar_inventario_completo(db, sessao_id)
+        itens_sample = montar_inventario_completo(db, sessao_id)[:100]  # limite para IA
         valor_estoque = sessao_repo.calcular_valor_estoque(db, sessao_id)
-        return _analise_agent.analisar(sessao, stats, divergencias, itens_sample, valor_estoque)
+        return _analise_agent.analisar(sessao, stats, divergencias[:50], itens_sample, valor_estoque)
     except Exception as exc:
         logger.error("Falha no AnaliseAgent: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail="Erro interno na análise.") from exc
@@ -77,14 +82,20 @@ def analisar_sessao(request: Request, sessao_id: str, db: Session = Depends(get_
 @limiter.limit("30/minute")
 def chat_sessao(request: Request, sessao_id: str, payload: ChatRequest, db: Session = Depends(get_db)) -> dict:
     """Chat em linguagem natural sobre a sessão — responde perguntas sobre o inventário."""
+    # Prevenção básica de prompt injection
+    msg_lower = payload.mensagem.lower()
+    if any(kw in msg_lower for kw in _PROMPT_INJECTION_KEYWORDS):
+        raise HTTPException(status_code=400, detail="Mensagem contém conteúdo não permitido.")
+
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     try:
         stats = sessao_repo.stats_sessao(db, sessao_id)
         divergencias = montar_divergencias(db, sessao_id)
-        itens = montar_inventario_completo(db, sessao_id)
-        contagens_raw = item_repo.listar_contagens(db, sessao_id)
+        # Limita itens carregados em memória para não causar OOM em sessões grandes
+        itens = montar_inventario_completo(db, sessao_id)[:500]
+        contagens_raw = item_repo.listar_contagens(db, sessao_id, limit=500)  # amostra para IA
         contagens = [
             {
                 "codigo": c.codigo,
@@ -141,7 +152,9 @@ def alerta_sessao(request: Request, sessao_id: str, payload: AlertaRequest, db: 
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     try:
-        contagens_raw = item_repo.listar_contagens(db, sessao_id)
+        # Alerta agent precisa de todas as contagens para detectar padrões;
+        # limitamos a 1000 para proteger contra sessões enormes
+        contagens_raw = item_repo.listar_contagens(db, sessao_id, limit=1000)
         contagens = [
             {
                 "codigo": c.codigo,

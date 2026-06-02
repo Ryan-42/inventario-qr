@@ -358,16 +358,51 @@ tailwind.config = {
         <span class="material-symbols-outlined text-[18px]">close</span>
       </button>
     </div>
-    <div>
-      <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3d4850;display:block;margin-bottom:0.75rem" for="input-nome-sessao">Nome da Sessão</label>
-      <input id="input-nome-sessao" type="text" class="input" placeholder="Ex: Inventário Geral — Janeiro 2025" maxlength="120" autocomplete="off"/>
-      <p class="text-xs mt-2" style="color:#3d4850;font-size:0.75rem;margin-top:0.5rem">Escolha um nome descritivo para identificar esta contagem.</p>
+    <div class="flex flex-col gap-md">
+      <div>
+        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3d4850;display:block;margin-bottom:0.5rem" for="input-nome-sessao">Nome da Sessão</label>
+        <input id="input-nome-sessao" type="text" class="input" placeholder="Ex: Inventário Geral — Janeiro 2025" maxlength="120" autocomplete="off"/>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="modal-cancel-btn">Cancelar</button>
       <button class="btn btn-primary" id="modal-create-btn" disabled>
         <span id="modal-create-label">Criar Sessão</span>
         <span id="modal-create-spinner" class="spinner-sm hidden"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Token Admin (exibido após criação) -->
+<div class="modal-backdrop" id="modal-token-admin" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" style="display:flex;align-items:center;gap:.5rem">
+        <span class="material-symbols-outlined text-[18px]" style="color:#8fd6ff">key</span>
+        Token de Administrador
+      </span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+      <p style="font-size:.875rem;color:#bcc8d1;line-height:1.5">
+        Guarde este token — ele é a sua chave de acesso como administrador deste inventário. Você precisará dele para acessar o painel de controle.
+      </p>
+      <div style="background:#0b1629;border:1px solid rgba(143,214,255,0.3);border-radius:10px;padding:1rem;text-align:center">
+        <p style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3d4850;margin-bottom:.5rem">Seu Token Admin</p>
+        <p id="token-admin-display" style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;letter-spacing:.2em;color:#8fd6ff"></p>
+      </div>
+      <button id="btn-copiar-token" class="btn btn-secondary" style="width:100%;justify-content:center;gap:.5rem">
+        <span class="material-symbols-outlined text-[16px]">content_copy</span>
+        Copiar Token
+      </button>
+      <p style="font-size:.75rem;color:#ffb4ab;display:flex;align-items:flex-start;gap:.375rem">
+        <span class="material-symbols-outlined text-[14px]" style="color:#ffb4ab;flex-shrink:0;margin-top:1px">warning</span>
+        Este token não é exibido novamente. Anote-o agora.
+      </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="modal-token-ok-btn" style="width:100%;justify-content:center">
+        Entendi, acessar inventário
       </button>
     </div>
   </div>
@@ -380,6 +415,18 @@ import { listarSessoes, criarSessao } from '/static/js/api.js'
 let allSessions = []
 let activeFilter = 'todas'
 let searchQuery = ''
+
+// ── Token admin storage
+const ADMIN_TOKENS_KEY = 'inviq_admin_tokens'
+function getAdminTokens() {
+  try { return JSON.parse(localStorage.getItem(ADMIN_TOKENS_KEY) || '{}') } catch { return {} }
+}
+function setAdminToken(sessaoId, token) {
+  const tokens = getAdminTokens()
+  tokens[sessaoId] = token
+  localStorage.setItem(ADMIN_TOKENS_KEY, JSON.stringify(tokens))
+}
+function getAdminToken(sessaoId) { return getAdminTokens()[sessaoId] || null }
 
 // ── DOM refs
 const sessionsGrid     = document.getElementById('sessions-grid')
@@ -441,9 +488,11 @@ function renderCard(s) {
   const isAtiva = s.status === 'ativa'
   const isConcluida = s.status === 'concluida'
   const isCancelada = s.status === 'cancelada'
+  const isMinha = !!getAdminToken(s.id)
 
   const borderColor = isAtiva ? 'border-l-tertiary' : isConcluida ? 'border-l-outline' : 'border-l-error'
   const opacity = isConcluida ? 'opacity-80' : ''
+  const minhaBadge = isMinha ? `<div class="bg-primary/10 border border-primary/30 text-primary px-xs py-[2px] rounded font-code-sm text-[10px] uppercase flex items-center gap-1 shrink-0"><span class="material-symbols-outlined text-[11px]">key</span>Meu</div>` : ''
 
   let statusBadge
   if (isAtiva) {
@@ -477,6 +526,8 @@ function renderCard(s) {
     ? `<span class="text-code-sm font-code-sm text-outline-variant">ID: ${escapeHtml(s.codigo)}</span>`
     : ''
 
+  // XSS: todos os dados do servidor são escaped via escapeHtml() antes de ir para innerHTML.
+  // Nomes, códigos e textos dinâmicos nunca são inseridos diretamente como HTML.
   return `
     <div class="glass-panel rounded-xl overflow-hidden group session-card-stitch border-l-4 ${borderColor} hover:bg-white/[0.02] transition-colors flex flex-col animate-enter ${opacity}"
          role="button" tabindex="0" data-id="${escapeHtml(String(s.id))}" data-status="${escapeHtml(s.status || '')}">
@@ -485,6 +536,7 @@ function renderCard(s) {
           <div class="flex items-center gap-sm flex-wrap">
             <h3 class="text-body-lg font-body-lg font-semibold text-on-surface truncate">${escapeHtml(s.nome || 'Sessão sem nome')}</h3>
             ${statusBadge}
+            ${minhaBadge}
           </div>
           ${codigo}
         </div>
@@ -496,7 +548,7 @@ function renderCard(s) {
         ${progressBar}
         <div class="flex items-center gap-xs text-on-surface-variant">
           <span class="material-symbols-outlined text-[16px]">schedule</span>
-          <span class="text-body-sm font-body-sm text-[12px]">${formatDate(s.data_inicio || s.criado_em)}${s.total_itens != null ? ` • ${s.total_itens} itens` : ''}</span>
+          <span class="text-body-sm font-body-sm text-[12px]">${escapeHtml(formatDate(s.data_inicio || s.criado_em))}${s.total_itens != null ? ` • ${escapeHtml(String(s.total_itens))} itens` : ''}</span>
         </div>
       </div>
     </div>`
@@ -549,7 +601,10 @@ function renderGrid() {
   sessionsGrid.innerHTML = list.map(renderCard).join('')
   sessionsGrid.querySelectorAll('[data-id]').forEach(card => {
     const id = card.dataset.id
-    const navigate = () => { window.location.href = `/sessao/${id}` }
+    const navigate = () => {
+      const ta = getAdminToken(id)
+      window.location.href = ta ? `/sessao/${id}?ta=${encodeURIComponent(ta)}` : `/sessao/${id}`
+    }
     card.addEventListener('click', navigate)
     card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate() } })
   })
@@ -588,15 +643,26 @@ async function loadSessions() {
 }
 
 // ── Create
+let _sessaoCriadaId = null
+
 async function createSession(nome) {
   modalCreateBtn.disabled = true
   modalCreateLbl.textContent = 'Criando…'
   modalCreateSpinner.classList.remove('hidden')
   try {
     const sessao = await criarSessao(nome.trim())
-    toast(`Sessão "${sessao.nome || nome}" criada com sucesso!`, 'success')
+    // Armazena token_admin para esta sessão
+    if (sessao.token_admin) {
+      setAdminToken(sessao.id, sessao.token_admin)
+      _sessaoCriadaId = sessao.id
+    }
     closeModal()
     await loadSessions()
+    // Mostra modal do token admin
+    if (sessao.token_admin) {
+      document.getElementById('token-admin-display').textContent = sessao.token_admin
+      document.getElementById('modal-token-admin').classList.add('open')
+    }
   } catch (err) {
     toast('Erro ao criar sessão: ' + err.message, 'error')
     modalCreateBtn.disabled = false
@@ -630,6 +696,26 @@ modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) c
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalBackdrop.classList.contains('open')) closeModal() })
 document.getElementById('btn-nova-sessao-empty').addEventListener('click', openModal)
 document.getElementById('btn-retry').addEventListener('click', loadSessions)
+
+// ── Token admin modal
+document.getElementById('btn-copiar-token').addEventListener('click', async () => {
+  const txt = document.getElementById('token-admin-display').textContent
+  try {
+    await navigator.clipboard.writeText(txt)
+    const btn = document.getElementById('btn-copiar-token')
+    btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">check</span> Copiado!'
+    setTimeout(() => { btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">content_copy</span> Copiar Token' }, 2000)
+  } catch { toast('Não foi possível copiar — copie manualmente: ' + txt, 'warning') }
+})
+
+document.getElementById('modal-token-ok-btn').addEventListener('click', () => {
+  document.getElementById('modal-token-admin').classList.remove('open')
+  // Navega para a sessão recém-criada
+  if (_sessaoCriadaId) {
+    const ta = getAdminToken(_sessaoCriadaId)
+    window.location.href = ta ? `/sessao/${_sessaoCriadaId}?ta=${encodeURIComponent(ta)}` : `/sessao/${_sessaoCriadaId}`
+  }
+})
 
 // ── Filters
 document.getElementById('filter-row').querySelectorAll('.filter-pill').forEach(btn => {

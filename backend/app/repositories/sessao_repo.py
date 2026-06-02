@@ -31,16 +31,19 @@ def gerar_codigo_sessao(db: Session) -> str:
 
 
 def criar_sessao(db: Session, nome: str) -> Sessao:
-    codigo = gerar_codigo_sessao(db)
-    sessao = Sessao(nome=nome, codigo=codigo)
-    db.add(sessao)
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(status_code=409, detail="Conflito ao gerar código de sessão. Tente novamente.")
-    db.refresh(sessao)
-    return sessao
+    # Retry loop: em caso de race condition (dois requests simultâneos gerando o mesmo código),
+    # o segundo recebe IntegrityError e tenta novamente com o próximo número disponível.
+    for _ in range(5):
+        try:
+            codigo = gerar_codigo_sessao(db)
+            sessao = Sessao(nome=nome, codigo=codigo)
+            db.add(sessao)
+            db.commit()
+            db.refresh(sessao)
+            return sessao
+        except IntegrityError:
+            db.rollback()
+    raise HTTPException(status_code=409, detail="Conflito ao gerar código de sessão. Tente novamente.")
 
 
 def listar_sessoes(db: Session) -> list[Sessao]:
@@ -49,14 +52,14 @@ def listar_sessoes(db: Session) -> list[Sessao]:
 
 def listar_sessoes_com_stats(db: Session) -> list[dict]:
     from sqlalchemy import case
+    # COUNT(DISTINCT CASE(...)) não funciona corretamente no SQLite.
+    # Usa COUNT(CASE(...)) sem DISTINCT — correto pois contagens é UPSERT (1 por código).
     rows = (
         db.query(
             Sessao,
             func.count(func.distinct(ItemBase.id)).label("total_itens"),
             func.count(func.distinct(Contagem.id)).label("itens_contados"),
-            func.count(func.distinct(
-                case((Contagem.divergencia == True, Contagem.id), else_=None)  # noqa
-            )).label("total_divergencias"),
+            func.count(case((Contagem.divergencia == True, 1))).label("total_divergencias"),  # noqa
         )
         .outerjoin(ItemBase, ItemBase.sessao_id == Sessao.id)
         .outerjoin(Contagem, Contagem.sessao_id == Sessao.id)

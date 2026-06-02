@@ -6,6 +6,7 @@ from app.repositories import sessao_repo, item_repo
 from app.services.excel_service import importar_planilha
 from app.schemas import ItemBaseResponse, BuscaItemResponse, ItemComStatus
 from app.services.sessao_service import montar_inventario_completo
+from app.models.sessao import StatusSessao
 
 router = APIRouter(prefix="/sessoes", tags=["Itens"])
 
@@ -59,7 +60,7 @@ async def upload_planilha(
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
 
-    if sessao.status.value != "ativa":
+    if sessao.status != StatusSessao.ativa:
         raise HTTPException(
             status_code=409,
             detail=f"Sessão está '{sessao.status.value}' e não aceita novos uploads",
@@ -83,8 +84,27 @@ async def upload_planilha(
         raise
     except Exception as e:
         raise HTTPException(status_code=422, detail=f"Erro ao processar planilha: {str(e)}")
-    total = item_repo.criar_itens_bulk(db, sessao_id, itens)
 
+    if not itens:
+        raise HTTPException(
+            status_code=400,
+            detail="A planilha não contém itens válidos. Verifique se as colunas 'codigo', 'produto' e 'quantidade_base' estão presentes.",
+        )
+
+    if len(itens) > 50_000:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Planilha possui {len(itens)} itens. Máximo permitido: 50.000 por sessão.",
+        )
+
+    negativos = [i["codigo"] for i in itens if i.get("quantidade_base", 0) < 0]
+    if negativos:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Quantidade base negativa detectada nos itens: {', '.join(negativos[:5])}{'…' if len(negativos) > 5 else ''}",
+        )
+
+    total = item_repo.criar_itens_bulk(db, sessao_id, itens)
     return {"mensagem": f"{total} itens importados com sucesso", "total": total}
 
 

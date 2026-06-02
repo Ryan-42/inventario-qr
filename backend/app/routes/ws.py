@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import json
 import logging
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from sqlalchemy.orm import Session
 
+from app.database import get_db
+from app.repositories import sessao_repo
 from app.websockets.manager import manager
 
 logger = logging.getLogger(__name__)
@@ -12,15 +16,19 @@ router = APIRouter(prefix="/ws", tags=["WebSocket"])
 
 
 @router.websocket("/sessao/{sessao_id}")
-async def websocket_sessao(websocket: WebSocket, sessao_id: str) -> None:
+async def websocket_sessao(websocket: WebSocket, sessao_id: str,
+                           db: Session = Depends(get_db)) -> None:
     """
     Endpoint WebSocket para atualizações em tempo real de uma sessão.
-
-    Clientes conectam em:  ws://host/api/ws/sessao/{sessao_id}
-
-    O servidor envia mensagens JSON nos seguintes eventos:
-      - contagem_registrada: nova contagem adicionada à sessão
+    Rejeita conexões para sessões inexistentes antes de aceitar.
     """
+    # Valida sessão antes de aceitar para prevenir memory leak com IDs forjados
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        await websocket.close(code=4404, reason="Sessão não encontrada")
+        logger.warning("WS rejeitado — sessao_id inexistente: %s", sessao_id)
+        return
+
     await manager.connect(websocket, sessao_id)
     try:
         while True:
@@ -29,8 +37,16 @@ async def websocket_sessao(websocket: WebSocket, sessao_id: str) -> None:
             # qualquer outro texto é ignorado silenciosamente.
             data = await websocket.receive_text()
             raw = data.strip()
-            # Aceita tanto "ping" texto puro quanto JSON {"tipo":"ping"}
-            if raw.lower() == "ping" or '"ping"' in raw:
+            # Detecta ping corretamente: JSON {"tipo":"ping"} ou texto "ping"
+            is_ping = False
+            if raw.lower() == "ping":
+                is_ping = True
+            else:
+                try:
+                    is_ping = json.loads(raw).get("tipo") == "ping"
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+            if is_ping:
                 await websocket.send_text('{"tipo":"pong"}')
     except WebSocketDisconnect:
         logger.info("WebSocket desconectado normalmente — sessao=%s", sessao_id)

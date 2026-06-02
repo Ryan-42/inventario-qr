@@ -15,7 +15,7 @@ load_dotenv()
 
 from app.database import create_tables
 from app.limiter import limiter
-from app.routes import sessoes, itens, contagens, exports, ws, agentes
+from app.routes import sessoes, itens, contagens, exports, ws, agentes, grupos
 from app.websockets.manager import manager  # noqa: F401 — singleton inicializado aqui
 
 
@@ -53,6 +53,7 @@ app.include_router(itens.router, prefix="/api")
 app.include_router(contagens.router, prefix="/api")
 app.include_router(exports.router, prefix="/api")
 app.include_router(agentes.router, prefix="/api")
+app.include_router(grupos.router, prefix="/api")
 
 # Registra router WebSocket
 app.include_router(ws.router, prefix="/api")
@@ -83,3 +84,7 @@ if _STATIC.exists():
     @app.get("/mobile/{sessao_id}")
     def mobile_page(sessao_id: str):
         return FileResponse(str(_STATIC / "mobile.html"))
+
+    @app.get("/supervisor/{sessao_id}")
+    def supervisor_page(sessao_id: str):
+        return FileResponse(str(_STATIC / "supervisor.html"))

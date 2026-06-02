@@ -61,14 +61,21 @@ def importar_planilha(conteudo: bytes, filename: str = "") -> list[dict]:
     Aceita planilhas com nomes de colunas em diferentes formatos/idiomas
     (ex: DESCRICAO, ESTOQUE, SKU, stock, qty, etc.).
     """
+    _MAX_ROWS = 50_000
     try:
         fname = (filename or "").lower()
         if fname.endswith(".csv"):
-            df = pd.read_csv(io.BytesIO(conteudo), dtype=str)
+            df = pd.read_csv(io.BytesIO(conteudo), dtype=str, nrows=_MAX_ROWS + 1)
         else:
-            df = pd.read_excel(io.BytesIO(conteudo), engine="openpyxl")
+            df = pd.read_excel(io.BytesIO(conteudo), engine="openpyxl", nrows=_MAX_ROWS + 1)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erro ao ler arquivo: {str(e)}")
+
+    if len(df) > _MAX_ROWS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Planilha excede o limite de {_MAX_ROWS:,} linhas. Divida em partes menores.",
+        )
 
     # Remove colunas sem nome (ex: colunas extras de células mescladas)
     df = df.loc[:, ~df.columns.astype(str).str.match(r"^Unnamed")]
@@ -98,6 +105,13 @@ def importar_planilha(conteudo: bytes, filename: str = "") -> list[dict]:
         df["quantidade"] = pd.to_numeric(df["quantidade"], errors="raise").astype(int)
     except (ValueError, TypeError):
         raise HTTPException(status_code=422, detail="Coluna de quantidade deve conter apenas números inteiros.")
+
+    if (df["quantidade"] < 0).any():
+        negativos = df.loc[df["quantidade"] < 0, "codigo"].astype(str).head(5).tolist()
+        raise HTTPException(
+            status_code=422,
+            detail=f"Quantidade negativa detectada nos itens: {', '.join(negativos)}. Valores de estoque devem ser ≥ 0.",
+        )
 
     # Converte valor_estoque para float (opcional)
     tem_valor = "valor_estoque" in df.columns

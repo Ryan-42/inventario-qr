@@ -7,7 +7,7 @@ from app.models.sessao import StatusSessao
 # ── Sessão ──────────────────────────────────────────────────────────────────
 
 class SessaoCreate(BaseModel):
-    nome: str = Field(..., max_length=200)
+    nome: str = Field(..., max_length=120)
 
     @field_validator("nome")
     @classmethod
@@ -30,6 +30,11 @@ class SessaoResponse(BaseModel):
     total_divergencias: int = 0
 
     model_config = {"from_attributes": True}
+
+
+class SessaoCreateResponse(SessaoResponse):
+    """Resposta da criação de sessão — inclui token_admin (retornado apenas uma vez)."""
+    token_admin: str
 
 
 class SessaoStats(BaseModel):
@@ -94,6 +99,7 @@ class ContagemResponse(BaseModel):
     codigo: str
     quantidade_encontrada: int
     divergencia: bool
+    para_ajuste: bool = False
     operador: Optional[str]
     observacao: Optional[str] = None
     timestamp: datetime

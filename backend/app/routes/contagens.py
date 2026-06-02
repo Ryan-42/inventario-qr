@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
 from app.schemas import ContagemCreate, ContagemResponse, HistoricoContagemResponse
+from app.models.sessao import StatusSessao
 from app.websockets.manager import manager
 
 logger = logging.getLogger(__name__)
@@ -18,16 +20,21 @@ router = APIRouter(prefix="/sessoes", tags=["Contagens"])
 @router.get("/{sessao_id}/contagens", response_model=list[ContagemResponse])
 def listar_contagens_sessao(
     sessao_id: str,
+    skip: int = 0,
+    limit: int = 500,
     db: Session = Depends(get_db),
 ):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    return item_repo.listar_contagens(db, sessao_id)
+    # Paginação real via SQLAlchemy — não carrega tudo em memória
+    limit_safe = max(1, min(limit, 2000))  # caps entre 1 e 2000
+    return item_repo.listar_contagens(db, sessao_id, skip=skip, limit=limit_safe)
 
 
 @router.post("/{sessao_id}/contagens", response_model=ContagemResponse, status_code=201)
-async def registrar_contagem(
+@limiter.limit("150/minute")
+async def registrar_contagem(request: Request,
     sessao_id: str,
     payload: ContagemCreate,
     background_tasks: BackgroundTasks,
@@ -36,7 +43,7 @@ async def registrar_contagem(
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    if sessao.status.value != "ativa":
+    if sessao.status != StatusSessao.ativa:
         raise HTTPException(
             status_code=409,
             detail=f"Sessão está '{sessao.status.value}' e não aceita novas contagens",
@@ -133,18 +140,30 @@ def listar_historico(sessao_id: str, codigo: str | None = None, db: Session = De
 
 
 @router.delete("/{sessao_id}/contagens/{codigo}", status_code=204)
-def deletar_contagem(sessao_id: str, codigo: str, db: Session = Depends(get_db)):
-    """Remove a contagem atual de um item (mantém historico). Libera o item para recontagem."""
+async def deletar_contagem(sessao_id: str, codigo: str,
+                           background_tasks: BackgroundTasks,
+                           db: Session = Depends(get_db)):
+    """Remove a contagem atual de um item (mantém histórico). Libera o item para recontagem."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    if sessao.status.value != "ativa":
+    if sessao.status != StatusSessao.ativa:
         raise HTTPException(status_code=409, detail=f"Sessão está '{sessao.status.value}'")
     contagem = item_repo.buscar_contagem(db, sessao_id, codigo)
     if not contagem:
         raise HTTPException(status_code=404, detail=f"Contagem do item '{codigo}' não encontrada")
     db.delete(contagem)
     db.commit()
+    # Notifica operadores mobile em tempo real que o item voltou para "não contado"
+    progresso = item_repo.calcular_progresso_rodada(db, sessao_id)
+    background_tasks.add_task(_broadcast_safe, sessao_id, {
+        "tipo": "contagem_deletada",
+        "codigo": codigo,
+        "rodada_atual": progresso["rodada_atual"],
+        "faltando": progresso["faltando"],
+        "total_rodada": progresso["total_rodada"],
+        "contados_rodada": progresso["contados_rodada"],
+    })
 
 
 async def _broadcast_safe(sessao_id: str, data: dict) -> None:

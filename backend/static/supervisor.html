@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html class="dark" lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<meta name="theme-color" content="#071325"/>
+<title>Supervisor — INVIQ</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="/static/css/app.css" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface-tint":"#7ad0ff","on-secondary":"#3f008e","secondary":"#d2bbff",
+        "outline-variant":"#3d4850","error-container":"#93000a","surface":"#071325",
+        "surface-container":"#142032","tertiary":"#10eb8a","primary-fixed-dim":"#7ad0ff",
+        "surface-variant":"#2a3548","error":"#ffb4ab","surface-bright":"#2e394d",
+        "inverse-surface":"#d7e3fc","on-surface":"#d7e3fc","primary":"#8fd6ff",
+        "surface-container-high":"#1f2a3d","background":"#071325","primary-container":"#00bfff",
+        "primary-fixed":"#c3e8ff","surface-container-low":"#101c2e","surface-container-highest":"#2a3548",
+        "on-secondary-container":"#c9aeff","secondary-container":"#6001d1",
+        "on-tertiary-container":"#00502b","on-primary":"#003549","tertiary-fixed-dim":"#00e384",
+        "tertiary-fixed":"#5affa2","on-tertiary":"#00391d","on-background":"#d7e3fc",
+        "inverse-on-surface":"#253144","on-primary-fixed":"#001e2c","secondary-fixed":"#eaddff",
+        "outline":"#87929b","surface-container-lowest":"#030e20","on-surface-variant":"#bcc8d1",
+        "tertiary-container":"#00cc76"
+      },
+      spacing: { gutter:"24px",base:"4px",sm:"8px",md:"16px","margin-desktop":"48px",xs:"4px",lg:"24px",xl:"40px","margin-mobile":"16px" },
+      fontSize: {
+        "headline-md":["24px",{"lineHeight":"32px","fontWeight":"600"}],
+        "body-sm":["14px",{"lineHeight":"20px","fontWeight":"400"}],
+        "code-sm":["12px",{"lineHeight":"16px","fontWeight":"500"}],
+        "body-md":["16px",{"lineHeight":"24px","fontWeight":"400"}],
+        "label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],
+        "code-md":["14px",{"lineHeight":"20px","fontWeight":"500"}]
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { font-family:'Inter',sans-serif; background:#071325; color:#d7e3fc; scrollbar-width:thin; }
+  .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; font-family:'Material Symbols Outlined'; display:inline-block; vertical-align:middle; }
+  @keyframes pulse-ring { 0%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(16,235,138,0.7)}70%{transform:scale(1);box-shadow:0 0 0 6px rgba(16,235,138,0)}100%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(16,235,138,0)} }
+  .animate-pulse-ring { animation: pulse-ring 2s cubic-bezier(0.215,0.61,0.355,1) infinite; }
+  .ws-dot { width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0; }
+  .ws-connected { background:#10eb8a; }
+  .ws-disconnected { background:#3d4850; }
+  #state-token { position:fixed;inset:0;z-index:50;background:#071325;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem; }
+  #state-aguardando { position:fixed;inset:0;z-index:50;background:#071325;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center; }
+  .hidden { display:none !important; }
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:#2a3548;border-radius:4px; }
+</style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+
+<!-- ═══ STATE: TOKEN ═══ -->
+<div id="state-token">
+  <div class="w-full max-w-[360px] flex flex-col items-center gap-lg">
+    <div class="w-20 h-20 bg-surface-container border border-secondary/30 rounded-2xl flex items-center justify-center shadow-lg shadow-secondary/10">
+      <span class="material-symbols-outlined text-[40px] text-secondary" style="font-variation-settings:'FILL' 1">supervisor_account</span>
+    </div>
+    <div class="text-center">
+      <h2 class="font-bold text-on-background mb-1" style="font-size:22px">Acesso Supervisor</h2>
+      <p id="token-sessao-nome" class="text-body-sm text-on-surface-variant"></p>
+    </div>
+    <div class="w-full flex flex-col gap-sm">
+      <label class="text-label-md text-on-surface-variant uppercase tracking-widest text-center">Token de Supervisor</label>
+      <input id="token-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="off"
+        maxlength="8" placeholder="Ex: A3B9C2D1"
+        class="w-full rounded-2xl py-4 px-4 focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all text-center font-bold tracking-widest uppercase"
+        style="background:#fff;color:#111;border:2px solid rgba(210,187,255,0.4);font-family:'JetBrains Mono',monospace;font-size:1.5rem;letter-spacing:.2em"/>
+      <p id="token-erro" class="hidden text-center text-body-sm" style="color:#ffb4ab">Token inválido. Solicite ao administrador.</p>
+    </div>
+    <button id="btn-validar-token"
+      class="w-full py-4 bg-secondary text-on-secondary rounded-2xl text-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(210,187,255,0.2)] active:scale-[0.98] transition-all">
+      <span class="material-symbols-outlined text-[20px] align-middle mr-1">arrow_forward</span>
+      Entrar como Supervisor
+    </button>
+  </div>
+</div>
+
+<!-- ═══ STATE: AGUARDANDO R1 ═══ -->
+<div id="state-aguardando" class="hidden">
+  <div class="w-20 h-20 bg-surface-container border border-white/10 rounded-2xl flex items-center justify-center mb-6">
+    <span class="material-symbols-outlined text-[40px] text-on-surface-variant" style="font-variation-settings:'FILL' 1">hourglass_top</span>
+  </div>
+  <h2 class="font-bold text-on-background mb-2" style="font-size:22px">Aguardando 1ª Rodada</h2>
+  <p id="aguardando-msg" class="text-body-sm text-on-surface-variant max-w-[280px] leading-relaxed">O acesso do supervisor é liberado após a conclusão da 1ª rodada de contagem.</p>
+  <div id="aguardando-progresso" class="mt-6 w-full max-w-[300px] bg-surface-container border border-white/10 rounded-2xl p-md text-center">
+    <p class="text-label-md text-on-surface-variant uppercase tracking-wider mb-1">Progresso R1</p>
+    <p id="aguardando-contagem" class="text-body-md text-on-surface">—</p>
+  </div>
+  <button id="btn-atualizar" class="mt-6 px-lg py-sm bg-transparent border border-secondary/40 text-secondary rounded-xl text-label-md uppercase tracking-wider hover:bg-secondary/10 active:scale-95 transition-all">
+    <span class="material-symbols-outlined text-[16px] align-middle mr-1">refresh</span>
+    Atualizar
+  </button>
+</div>
+
+<!-- ═══ MAIN APP ═══ -->
+<div id="state-app" class="hidden min-h-screen flex flex-col">
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-background/90 backdrop-blur-xl border-b border-white/5 px-margin-mobile py-md flex items-center justify-between gap-md">
+    <div class="flex items-center gap-sm">
+      <div class="w-8 h-8 bg-secondary/10 border border-secondary/30 rounded-lg flex items-center justify-center">
+        <span class="material-symbols-outlined text-[18px] text-secondary" style="font-variation-settings:'FILL' 1">supervisor_account</span>
+      </div>
+      <div>
+        <p class="text-label-md text-on-surface-variant uppercase tracking-wider">Supervisor</p>
+        <p id="app-sessao-nome" class="font-semibold text-on-surface" style="font-size:15px;line-height:1.2"></p>
+      </div>
+    </div>
+    <div class="flex items-center gap-sm">
+      <div class="flex items-center gap-1.5 bg-surface-variant/40 px-2.5 py-1.5 rounded-full border border-white/5">
+        <div id="ws-dot" class="ws-dot ws-disconnected animate-pulse-ring"></div>
+        <span id="ws-label" class="text-[10px] text-tertiary tracking-wider uppercase">Sync</span>
+      </div>
+      <button id="btn-refresh" class="w-9 h-9 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-secondary transition-colors active:scale-95">
+        <span class="material-symbols-outlined text-[18px]">refresh</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Stats bar -->
+  <div class="px-margin-mobile py-sm border-b border-white/5 bg-surface-container/40 flex gap-md overflow-x-auto">
+    <div class="flex flex-col gap-0.5 shrink-0">
+      <span class="text-label-md text-on-surface-variant uppercase tracking-wider" style="font-size:10px">Divergentes</span>
+      <span id="stat-divergentes" class="font-bold text-error" style="font-size:20px;font-family:'JetBrains Mono',monospace">—</span>
+    </div>
+    <div class="w-px bg-white/5 shrink-0"></div>
+    <div class="flex flex-col gap-0.5 shrink-0">
+      <span class="text-label-md text-on-surface-variant uppercase tracking-wider" style="font-size:10px">Para Ajuste</span>
+      <span id="stat-ajuste" class="font-bold text-secondary" style="font-size:20px;font-family:'JetBrains Mono',monospace">—</span>
+    </div>
+    <div class="w-px bg-white/5 shrink-0"></div>
+    <div class="flex flex-col gap-0.5 shrink-0">
+      <span class="text-label-md text-on-surface-variant uppercase tracking-wider" style="font-size:10px">Atualizado</span>
+      <span id="stat-atualizado" class="font-bold text-on-surface-variant" style="font-size:20px;font-family:'JetBrains Mono',monospace">—</span>
+    </div>
+  </div>
+
+  <!-- Banner: somente leitura -->
+  <div class="px-margin-mobile py-sm">
+    <div class="bg-secondary/5 border border-secondary/20 rounded-xl px-md py-sm flex items-center gap-sm">
+      <span class="material-symbols-outlined text-secondary text-[18px] shrink-0">visibility</span>
+      <p class="text-code-sm text-on-surface-variant">Modo supervisor — visualização somente leitura. Itens divergentes com localização.</p>
+    </div>
+  </div>
+
+  <!-- Search -->
+  <div class="px-margin-mobile pb-sm">
+    <div class="relative">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+      <input id="sup-search" type="text" inputmode="text" placeholder="Buscar código, produto ou local..."
+        class="w-full rounded-xl py-2.5 pl-9 pr-4 focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all text-body-sm"
+        style="background:#fff;color:#111;border:1px solid rgba(0,0,0,0.15)"/>
+    </div>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="px-margin-mobile pb-sm flex gap-2 overflow-x-auto">
+    <button class="sup-filter-btn active px-md py-xs rounded-full text-label-md uppercase tracking-wider border border-secondary text-secondary bg-secondary/10 shrink-0" data-filter="todos">Todos</button>
+    <button class="sup-filter-btn px-md py-xs rounded-full text-label-md uppercase tracking-wider border border-outline-variant text-on-surface-variant bg-surface-variant/30 hover:text-on-surface transition-colors shrink-0" data-filter="divergente">Divergente</button>
+    <button class="sup-filter-btn px-md py-xs rounded-full text-label-md uppercase tracking-wider border border-outline-variant text-on-surface-variant bg-surface-variant/30 hover:text-on-surface transition-colors shrink-0" data-filter="para_ajuste">Para Ajuste</button>
+  </div>
+
+  <!-- Items list -->
+  <div id="sup-items" class="flex-1 px-margin-mobile pb-8 flex flex-col gap-2 overflow-y-auto">
+    <div id="sup-loading" class="flex flex-col items-center justify-center py-16 gap-3">
+      <div class="w-10 h-10 border-4 border-surface-container-high border-t-secondary rounded-full animate-spin"></div>
+      <span class="text-code-sm text-on-surface-variant uppercase tracking-widest">Carregando...</span>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { SessionWS } from '/static/js/ws.js'
+
+const sessaoId = location.pathname.split('/').pop()
+const urlToken = new URLSearchParams(location.search).get('token') || ''
+let tokenSupervisor = ''
+let itensData = []
+let filtroAtual = 'todos'
+let searchQuery = ''
+let ws = null
+
+// ── Token validation
+async function validarTokenSupervisor(token) {
+  try {
+    const res = await fetch(`/api/sessoes/${sessaoId}/verificar-grupo?token=${encodeURIComponent(token)}`)
+    const data = await res.json()
+    return data.valido && data.tipo === 'supervisor'
+  } catch { return false }
+}
+
+// ── Load sessao info
+async function carregarSessao() {
+  try {
+    const res = await fetch(`/api/sessoes/${sessaoId}`)
+    if (res.ok) {
+      const s = await res.json()
+      document.getElementById('token-sessao-nome').textContent = s.nome || sessaoId
+      document.getElementById('app-sessao-nome').textContent = s.nome || sessaoId
+      document.title = `Supervisor — ${s.nome || sessaoId}`
+    }
+  } catch {}
+}
+
+// ── Load supervisor items
+async function carregarItens() {
+  const loading = document.getElementById('sup-loading')
+  if (loading) loading.style.display = ''
+  try {
+    const res = await fetch(`/api/sessoes/${sessaoId}/itens-supervisor?token=${encodeURIComponent(tokenSupervisor)}`)
+    if (!res.ok) throw new Error('Erro ao carregar')
+    const data = await res.json()
+
+    if (!data.ativo) {
+      // R1 ainda não concluída
+      document.getElementById('state-app').classList.add('hidden')
+      const agtEl = document.getElementById('state-aguardando')
+      agtEl.classList.remove('hidden')
+      // Tenta carregar progresso para mostrar
+      try {
+        const p = await fetch(`/api/sessoes/${sessaoId}/progresso`)
+        if (p.ok) {
+          const prog = await p.json()
+          document.getElementById('aguardando-contagem').textContent =
+            `${prog.contados_rodada || 0} / ${prog.total_rodada || 0} itens contados na R1`
+        }
+      } catch {}
+      return
+    }
+
+    itensData = data.itens || []
+    atualizarStats()
+    renderItens()
+  } catch(e) {
+    const cont = document.getElementById('sup-items')
+    if (cont) cont.innerHTML = `<div class="py-8 text-center text-body-sm text-error">Erro ao carregar itens. Tente novamente.</div>`
+  } finally {
+    if (loading) loading.style.display = 'none'
+  }
+}
+
+function atualizarStats() {
+  const divergentes = itensData.filter(i => !i.para_ajuste).length
+  const ajuste = itensData.filter(i => i.para_ajuste).length
+  const agora = new Date().toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })
+  document.getElementById('stat-divergentes').textContent = divergentes
+  document.getElementById('stat-ajuste').textContent = ajuste
+  document.getElementById('stat-atualizado').textContent = agora
+}
+
+function filtrarItens() {
+  let lista = itensData
+  if (filtroAtual === 'divergente') lista = lista.filter(i => !i.para_ajuste)
+  if (filtroAtual === 'para_ajuste') lista = lista.filter(i => i.para_ajuste)
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase()
+    lista = lista.filter(i =>
+      (i.codigo||'').toLowerCase().includes(q) ||
+      (i.produto||'').toLowerCase().includes(q) ||
+      (i.local_fisico||'').toLowerCase().includes(q)
+    )
+  }
+  return lista
+}
+
+function renderItens() {
+  const cont = document.getElementById('sup-items')
+  const loading = document.getElementById('sup-loading')
+  if (!cont) return
+  if (loading) loading.style.display = 'none'
+
+  const lista = filtrarItens()
+  if (lista.length === 0) {
+    cont.innerHTML = `<div class="flex flex-col items-center justify-center py-16 gap-3 text-center">
+      <span class="material-symbols-outlined text-[48px] text-on-surface-variant/40">check_circle</span>
+      <p class="text-body-sm text-on-surface-variant">Nenhum item divergente encontrado</p>
+    </div>`
+    return
+  }
+
+  // Agrupa por local_fisico
+  const grupos = {}
+  for (const item of lista) {
+    const loc = item.local_fisico || 'Sem local'
+    if (!grupos[loc]) grupos[loc] = []
+    grupos[loc].push(item)
+  }
+
+  cont.innerHTML = Object.entries(grupos).map(([loc, items]) => `
+    <div class="flex flex-col gap-2">
+      <div class="flex items-center gap-2 mt-3 mb-1">
+        <span class="material-symbols-outlined text-[16px] text-secondary">place</span>
+        <span class="text-label-md text-secondary uppercase tracking-widest font-bold">${esc(loc)}</span>
+        <span class="text-code-sm text-on-surface-variant">(${items.length})</span>
+      </div>
+      ${items.map(item => {
+        const isAjuste = item.para_ajuste
+        const badgeClass = isAjuste
+          ? 'bg-secondary/10 border-secondary/30 text-secondary'
+          : 'bg-error/10 border-error/30 text-error'
+        const badgeText = isAjuste ? 'Para Ajuste' : 'Divergente'
+        return `
+        <div class="bg-surface-container border border-white/8 rounded-xl p-md flex flex-col gap-sm">
+          <div class="flex items-start justify-between gap-sm">
+            <div class="flex flex-col gap-0.5 min-w-0 flex-1">
+              <span class="text-code-sm text-primary" style="font-family:'JetBrains Mono',monospace">${esc(item.codigo)}</span>
+              <span class="text-body-sm text-on-surface truncate font-medium">${esc(item.produto)}</span>
+            </div>
+            <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-1 rounded-full border ${badgeClass} shrink-0">${badgeText}</span>
+          </div>
+          <div class="flex items-center gap-md text-code-sm text-on-surface-variant flex-wrap">
+            <div class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">place</span>
+              <span>${esc(item.local_fisico || '—')}</span>
+            </div>
+            ${item.operador ? `<div class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">person</span><span>${esc(item.operador)}</span></div>` : ''}
+            <div class="flex items-center gap-1">
+              <span class="material-symbols-outlined text-[14px]">repeat</span>
+              <span>R${item.rodada || 1}</span>
+            </div>
+          </div>
+        </div>`
+      }).join('')}
+    </div>`).join('')
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+
+// ── WS
+function conectarWS() {
+  ws = new SessionWS(sessaoId, ev => {
+    const dot = document.getElementById('ws-dot'), lbl = document.getElementById('ws-label')
+    if (ev.tipo === '_connected') {
+      if (dot) dot.className = 'ws-dot ws-connected animate-pulse-ring'
+      if (lbl) lbl.textContent = 'Ao vivo'
+      return
+    }
+    if (ev.tipo === '_disconnected') {
+      if (dot) dot.className = 'ws-dot ws-disconnected'
+      if (lbl) lbl.textContent = 'Sync'
+      return
+    }
+    if (ev.tipo === 'contagem_registrada' || ev.tipo === 'progresso_atualizado' || ev.tipo === 'rodada_completa') {
+      carregarItens()
+    }
+    if (ev.tipo === 'sessao_status_alterado') {
+      carregarItens()
+    }
+  })
+  ws.connect()
+}
+
+// ── Filters + search
+document.querySelectorAll('.sup-filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sup-filter-btn').forEach(b => {
+      b.classList.remove('active','border-secondary','text-secondary','bg-secondary/10')
+      b.classList.add('border-outline-variant','text-on-surface-variant','bg-surface-variant/30')
+    })
+    btn.classList.add('active','border-secondary','text-secondary','bg-secondary/10')
+    btn.classList.remove('border-outline-variant','text-on-surface-variant','bg-surface-variant/30')
+    filtroAtual = btn.dataset.filter
+    renderItens()
+  })
+})
+
+document.getElementById('sup-search').addEventListener('input', e => {
+  searchQuery = e.target.value.trim()
+  renderItens()
+})
+
+document.getElementById('btn-refresh').addEventListener('click', carregarItens)
+document.getElementById('btn-atualizar').addEventListener('click', carregarItens)
+
+// ── Token input
+document.getElementById('btn-validar-token').addEventListener('click', async () => {
+  const inp = document.getElementById('token-input')
+  const token = (inp.value || '').trim().toUpperCase()
+  if (!token) return
+  const btn = document.getElementById('btn-validar-token')
+  btn.disabled = true; btn.textContent = 'Verificando...'
+  const ok = await validarTokenSupervisor(token)
+  btn.disabled = false
+  btn.innerHTML = '<span class="material-symbols-outlined text-[20px] align-middle mr-1">arrow_forward</span>Entrar como Supervisor'
+  if (ok) {
+    tokenSupervisor = token
+    document.getElementById('state-token').classList.add('hidden')
+    document.getElementById('state-app').classList.remove('hidden')
+    conectarWS()
+    carregarItens()
+  } else {
+    document.getElementById('token-erro').classList.remove('hidden')
+    inp.select()
+  }
+})
+
+document.getElementById('token-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-validar-token').click()
+})
+
+// ── Init
+async function init() {
+  await carregarSessao()
+  if (urlToken) {
+    const ok = await validarTokenSupervisor(urlToken)
+    if (ok) {
+      tokenSupervisor = urlToken
+      document.getElementById('state-token').classList.add('hidden')
+      document.getElementById('state-app').classList.remove('hidden')
+      conectarWS()
+      carregarItens()
+      return
+    } else {
+      document.getElementById('token-input').value = urlToken
+    }
+  }
+  // Mostra tela de token
+}
+
+init()
+</script>
+</body>
+</html>

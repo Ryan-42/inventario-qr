@@ -1,6 +1,9 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 from app.database import get_db
 from app.repositories import sessao_repo
@@ -15,7 +18,7 @@ XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
 
 
 def _tentar_analise_ia(db, sessao) -> dict | None:
-    """Tenta rodar análise IA; retorna None silenciosamente se falhar."""
+    """Tenta rodar análise IA; loga o erro e retorna None se falhar."""
     try:
         from app.agents.analise import AnaliseAgent
         from app.repositories.sessao_repo import stats_sessao, calcular_valor_estoque
@@ -26,7 +29,8 @@ def _tentar_analise_ia(db, sessao) -> dict | None:
         divergencias_lista = montar_divergencias(db, sessao.id)
         try:
             ve = calcular_valor_estoque(db, sessao.id)
-        except Exception:
+        except Exception as exc_ve:
+            logger.warning("Cálculo de valor de estoque falhou — sessao=%s erro=%s", sessao.id, exc_ve)
             ve = None
 
         result = AnaliseAgent().analisar(
@@ -37,7 +41,8 @@ def _tentar_analise_ia(db, sessao) -> dict | None:
             valor_estoque=ve,
         )
         return result if isinstance(result, dict) else None
-    except Exception:
+    except Exception as exc:
+        logger.error("AnaliseAgent falhou — sessao=%s erro=%s", sessao.id, exc, exc_info=True)
         return None
 
 

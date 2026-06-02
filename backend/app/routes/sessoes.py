@@ -1,10 +1,14 @@
 import secrets
-from fastapi import APIRouter, Depends, HTTPException, Response
+import hmac
+from urllib.parse import urlparse
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
-from app.schemas import SessaoCreate, SessaoResponse, SessaoStats, RodadasInfo, ProgressoRodada, ValorEstoqueStats
+from app.schemas import SessaoCreate, SessaoResponse, SessaoCreateResponse, SessaoStats, RodadasInfo, ProgressoRodada, ValorEstoqueStats
+from app.models.sessao import StatusSessao
 
 router = APIRouter(prefix="/sessoes", tags=["Sessões"])
 
@@ -14,9 +18,34 @@ def listar_sessoes(db: Session = Depends(get_db)):
     return sessao_repo.listar_sessoes_com_stats(db)
 
 
-@router.post("/", response_model=SessaoResponse, status_code=201)
+@router.post("/", response_model=SessaoCreateResponse, status_code=201)
 def criar_sessao(payload: SessaoCreate, db: Session = Depends(get_db)):
-    return sessao_repo.criar_sessao(db, nome=payload.nome)
+    sessao = sessao_repo.criar_sessao(db, nome=payload.nome)
+    return {
+        "id": sessao.id,
+        "codigo": sessao.codigo,
+        "nome": sessao.nome,
+        "status": sessao.status,
+        "data_inicio": sessao.data_inicio,
+        "data_fim": sessao.data_fim,
+        "total_itens": 0,
+        "itens_contados": 0,
+        "total_divergencias": 0,
+        "token_admin": sessao.token_admin,
+    }
+
+
+@router.get("/{sessao_id}/verificar-admin")
+@limiter.limit("15/minute")
+async def verificar_admin(request: Request, sessao_id: str, token: str, db: Session = Depends(get_db)):
+    """Verifica se o token_admin é válido para esta sessão."""
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    # hmac.compare_digest evita timing attack
+    valido = hmac.compare_digest(sessao.token_admin or "", token)
+    return {"valido": valido}
+
 
 
 @router.get("/{sessao_id}", response_model=SessaoResponse)
@@ -36,18 +65,28 @@ def stats_sessao(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{sessao_id}/concluir", response_model=SessaoResponse)
-def concluir_sessao(sessao_id: str, db: Session = Depends(get_db)):
+async def concluir_sessao(sessao_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     sessao = sessao_repo.concluir_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    from app.websockets.manager import manager
+    background_tasks.add_task(manager.broadcast, sessao_id, {
+        "tipo": "sessao_status_alterado", "status": "concluida",
+        "mensagem": "O inventário foi concluído pelo administrador.",
+    })
     return sessao
 
 
 @router.patch("/{sessao_id}/cancelar", response_model=SessaoResponse)
-def cancelar_sessao(sessao_id: str, db: Session = Depends(get_db)):
+async def cancelar_sessao(sessao_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     sessao = sessao_repo.cancelar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    from app.websockets.manager import manager
+    background_tasks.add_task(manager.broadcast, sessao_id, {
+        "tipo": "sessao_status_alterado", "status": "cancelada",
+        "mensagem": "O inventário foi cancelado pelo administrador.",
+    })
     return sessao
 
 
@@ -80,6 +119,7 @@ def get_token_acesso(sessao_id: str, db: Session = Depends(get_db)):
         token = secrets.token_hex(4).upper()
         sessao.token_acesso = token
         db.commit()
+        db.refresh(sessao)  # evita DetachedInstanceError ao acessar rodada_token após commit
     rodada = sessao.rodada_token or 1
     mobile_url = f"/mobile/{sessao_id}?token={token}"
     return {"token": token, "rodada": rodada, "mobile_url": mobile_url}
@@ -102,13 +142,23 @@ def gerar_novo_token(sessao_id: str, rodada: int = 1, db: Session = Depends(get_
 
 
 @router.get("/{sessao_id}/verificar-token")
-def verificar_token(sessao_id: str, token: str, db: Session = Depends(get_db)):
+@limiter.limit("15/minute")
+async def verificar_token(request: Request, sessao_id: str, token: str, db: Session = Depends(get_db)):
     """Verifica se um token de acesso é válido para a sessão."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    valido = (sessao.token_acesso == token)
+    valido = hmac.compare_digest(sessao.token_acesso or "", token)
     return {"valido": valido, "rodada": sessao.rodada_token or 1}
+
+
+def _validar_base_url(base_url: str) -> None:
+    """Garante que base_url usa scheme http ou https (previne phishing via javascript:)."""
+    if not base_url:
+        return
+    parsed = urlparse(base_url)
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="base_url deve usar http ou https")
 
 
 @router.get("/{sessao_id}/qrcode-acesso")
@@ -118,6 +168,7 @@ def qrcode_acesso(sessao_id: str, base_url: str = "", db: Session = Depends(get_
     """
     import qrcode as qrcode_lib
     from io import BytesIO
+    _validar_base_url(base_url)
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")

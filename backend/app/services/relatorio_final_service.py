@@ -4,7 +4,7 @@ Inclui erros, acertos, orientações de melhoria e impacto financeiro.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any
 
@@ -69,7 +69,12 @@ def _calcular_duracao(inicio: Any, fim: Any) -> str:
         if isinstance(fim, str):
             fim = datetime.fromisoformat(fim.replace("Z", "+00:00"))
         if fim is None:
-            fim = datetime.now()
+            fim = datetime.now(timezone.utc)
+        # Garante que ambos são timezone-aware para subtração segura
+        if hasattr(inicio, 'tzinfo') and inicio.tzinfo is None:
+            inicio = inicio.replace(tzinfo=timezone.utc)
+        if hasattr(fim, 'tzinfo') and fim.tzinfo is None:
+            fim = fim.replace(tzinfo=timezone.utc)
         delta = fim - inicio
         h, rem = divmod(int(delta.total_seconds()), 3600)
         m = rem // 60
@@ -416,12 +421,12 @@ def gerar_relatorio_final_excel(
     cols_divs = cols_itens + ["diferenca_valor"]
     df_divs = pd.DataFrame(divs).reindex(columns=cols_divs) if divs else pd.DataFrame(columns=cols_divs)
     if not df_divs.empty:
-        # Popula coluna de impacto financeiro por código
-        if valor_estoque and valor_estoque.get("tem_dados_financeiros"):
-            val_map: dict[str, float] = {}
-            for hit in (valor_estoque.get("maiores_perdas", []) + valor_estoque.get("maiores_ganhos", [])):
-                val_map[hit["codigo"]] = hit.get("diferenca_valor", 0)
-            df_divs["diferenca_valor"] = df_divs["codigo"].map(val_map)
+        # "diferenca_valor" já vem populado no dict de cada item (de montar_inventario_completo).
+        # NÃO usar maiores_perdas/maiores_ganhos que são truncados ao top-5 — isso deixaria
+        # NaN para todos os outros itens divergentes.
+        # O campo já está em cols_divs; apenas garante que a série existe.
+        if "diferenca_valor" not in df_divs.columns:
+            df_divs["diferenca_valor"] = None
         df_divs.columns = ["Código", "Produto", "Base", "Contado", "Diferença", "Status",
                            "Operador", "Rodada", "Observação", "Local", "Data/Hora", "Impacto (R$)"]
 

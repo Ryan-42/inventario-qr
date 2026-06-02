@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, ForeignKey, UniqueConstraint, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import uuid
@@ -11,6 +11,8 @@ class Contagem(Base):
     __tablename__ = "contagens"
     __table_args__ = (
         UniqueConstraint("sessao_id", "codigo", name="uq_contagens_sessao_codigo"),
+        Index("ix_contagens_sessao_divergencia", "sessao_id", "divergencia"),
+        Index("ix_contagens_sessao_rodada", "sessao_id", "rodada"),
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))

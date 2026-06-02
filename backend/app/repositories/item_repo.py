@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import Optional
 
 from app.models.item_base import ItemBase
@@ -13,19 +14,34 @@ def criar_itens_bulk(db: Session, sessao_id: str, itens: list[dict]) -> int:
     # Remove itens anteriores para permitir reimport sem duplicatas.
     # Contagens são preservadas (FK para sessao_id, não para item_id).
     db.query(ItemBase).filter(ItemBase.sessao_id == sessao_id).delete()
-    objetos = [
-        ItemBase(
+    objetos = []
+    for item in itens:
+        # Normaliza local_fisico: strip + uppercase para evitar duplicatas de apresentação
+        local = item.get("local_fisico")
+        if local:
+            local = local.strip().upper()
+        # valor_estoque deve ser positivo ou None
+        valor = item.get("valor_estoque")
+        if valor is not None and float(valor) < 0:
+            valor = None
+        objetos.append(ItemBase(
             sessao_id=sessao_id,
             codigo=item["codigo"],
             produto=item["produto"],
             quantidade_base=item["quantidade_base"],
-            local_fisico=item.get("local_fisico"),
-            valor_estoque=item.get("valor_estoque"),
+            local_fisico=local,
+            valor_estoque=valor,
+        ))
+    try:
+        db.add_all(objetos)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=409,
+            detail="Conflito ao importar planilha: dois ou mais itens com o mesmo código. Verifique duplicatas e tente novamente.",
         )
-        for item in itens
-    ]
-    db.add_all(objetos)
-    db.commit()
     return len(objetos)
 
 
@@ -59,26 +75,45 @@ def registrar_contagem(
     operador: Optional[str] = None,
     observacao: Optional[str] = None,
 ) -> Contagem:
+    # Re-verifica que o item ainda existe (race condition: pode ter sido deletado)
+    item_atual = buscar_item(db, sessao_id, codigo)
+    if not item_atual:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=f"Item '{codigo}' não encontrado na base desta sessão")
+
     divergencia = quantidade_encontrada != quantidade_base
 
     existente = buscar_contagem(db, sessao_id, codigo)
     if existente:
-        # Avança rodada somente se a nova quantidade é DIFERENTE da anterior.
-        # Mesma quantidade confirmada (mesmo divergente) → fica na rodada atual como "Para Ajuste".
         mesma_qtd_anterior = (quantidade_encontrada == existente.quantidade_encontrada)
+
         if existente.divergencia and not mesma_qtd_anterior:
+            # Item era divergente e nova quantidade é diferente → avança para próxima rodada
             nova_rodada = existente.rodada + 1
-        else:
+        elif not existente.divergencia and divergencia:
+            # Item era OK mas nova contagem diverge → volta a requerer R2 (trata como R1 divergente)
+            # Mantém rodada atual para não falsamente "avançar" — o item entra na fila de R2
             nova_rodada = existente.rodada
+        else:
+            # Mesma quantidade (confirma estado anterior), ou item continua OK → mantém rodada
+            nova_rodada = existente.rodada
+
         rodada_final = min(nova_rodada, 3)
 
         # "Para Ajuste" quando:
-        # 1. Confirmação da mesma quantidade divergente (operador confirma o erro)
-        # 2. Chegou à rodada 3 e ainda diverge (sem mais rodadas)
+        # 1. Confirmação da mesma quantidade divergente (dois registros confirmam o erro)
+        # 2. Chegou à rodada 3 e ainda diverge (sem mais rodadas disponíveis)
         nova_para_ajuste = (
             (divergencia and mesma_qtd_anterior and existente.divergencia)
             or (rodada_final == 3 and divergencia)
         )
+
+        # Se já estava "para_ajuste" E item ainda diverge → mantém flag
+        # Se já estava "para_ajuste" mas agora está OK → limpa (correção bem-sucedida)
+        if existente.para_ajuste and divergencia:
+            nova_para_ajuste = True
+        elif existente.para_ajuste and not divergencia:
+            nova_para_ajuste = False  # item foi corrigido
 
         existente.rodada = rodada_final
         existente.quantidade_encontrada = quantidade_encontrada
@@ -102,7 +137,7 @@ def registrar_contagem(
         )
         db.add(contagem)
 
-    db.add(HistoricoContagem(
+    historico = HistoricoContagem(
         sessao_id=sessao_id,
         codigo=codigo,
         quantidade_encontrada=quantidade_encontrada,
@@ -111,8 +146,13 @@ def registrar_contagem(
         operador=operador,
         observacao=observacao,
         rodada=rodada_final,
-    ))
-    db.commit()
+    )
+    try:
+        db.add(historico)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
     db.refresh(contagem)
     return contagem
 
@@ -129,8 +169,19 @@ def listar_historico(db: Session, sessao_id: str, codigo: str | None = None) -> 
     return q.order_by(HistoricoContagem.timestamp.asc()).all()
 
 
-def listar_contagens(db: Session, sessao_id: str) -> list[Contagem]:
-    return db.query(Contagem).filter(Contagem.sessao_id == sessao_id).order_by(Contagem.timestamp.asc()).all()
+def listar_contagens(db: Session, sessao_id: str,
+                     skip: int = 0, limit: int | None = None) -> list[Contagem]:
+    """
+    Retorna contagens da sessão com paginação opcional.
+    limit=None (default) → carrega tudo (uso interno em cálculos).
+    limit=N → retorna no máximo N registros.
+    """
+    q = db.query(Contagem).filter(Contagem.sessao_id == sessao_id).order_by(Contagem.timestamp.asc())
+    if skip:
+        q = q.offset(skip)
+    if limit is not None:
+        q = q.limit(limit)
+    return q.all()
 
 
 def listar_divergencias(db: Session, sessao_id: str) -> list[Contagem]:
@@ -150,6 +201,17 @@ def calcular_progresso_rodada(db: Session, sessao_id: str) -> dict:
       - Rodada 3: apenas itens que ainda divergiram na rodada 2 (máximo 3 rodadas).
     """
     total_itens = db.query(ItemBase).filter(ItemBase.sessao_id == sessao_id).count()
+
+    # Guard: sessão sem itens — evita divisão por zero no frontend
+    if total_itens == 0:
+        return {
+            "rodada_atual": 1, "total_rodada": 0, "contados_rodada": 0,
+            "faltando": 0, "completa": True, "divergencias": 0,
+            "proxima_rodada_necessaria": False,
+            "faltando_r1": 0, "faltando_r2": 0, "faltando_r3": 0,
+            "divergencias_r1": 0, "divergencias_r2": 0, "divergencias_r3": 0,
+        }
+
     contagens = db.query(Contagem).filter(Contagem.sessao_id == sessao_id).all()
     n = len(contagens)
 
@@ -184,9 +246,10 @@ def calcular_progresso_rodada(db: Session, sessao_id: str) -> dict:
         faltando = faltando_r3
         divergencias = divergencias_r3
     else:
+        # Inventário completo: todas as rodadas zeraram
         rodada_atual = max((c.rodada for c in contagens), default=1)
-        total_rodada = total_itens
-        contados_rodada = n
+        total_rodada = n          # escopo = todos os itens contados
+        contados_rodada = n       # todos foram contados (progresso = 100%)
         faltando = 0
         divergencias = sum(1 for c in contagens if c.divergencia)
 

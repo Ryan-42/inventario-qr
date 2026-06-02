@@ -2,11 +2,22 @@ from __future__ import annotations
 
 import json
 import logging
+from decimal import Decimal
+from datetime import datetime, date
 from typing import Dict, Set
 
 from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
+
+
+def _json_serial(obj):
+    """Serializa tipos não-nativos do JSON de forma explícita (sem silenciar erros)."""
+    if isinstance(obj, Decimal):
+        return float(round(obj, 2))
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    raise TypeError(f"Tipo não serializável: {type(obj)!r}")
 
 
 class ConnectionManager:
@@ -22,6 +33,8 @@ class ConnectionManager:
         if sessao_id not in self._connections:
             self._connections[sessao_id] = set()
         self._connections[sessao_id].add(websocket)
+        # Remove sessões sem conexões acumuladas (limpeza preventiva de memory leak)
+        self._cleanup_empty()
         logger.info("WS conectado — sessao=%s total=%d", sessao_id, len(self._connections[sessao_id]))
 
     def disconnect(self, websocket: WebSocket, sessao_id: str) -> None:
@@ -33,13 +46,24 @@ class ConnectionManager:
                 del self._connections[sessao_id]
         logger.info("WS desconectado — sessao=%s", sessao_id)
 
+    def _cleanup_empty(self) -> None:
+        """Remove sessões sem conexões ativas para evitar acúmulo de chaves vazias."""
+        vazias = [k for k, v in self._connections.items() if not v]
+        for k in vazias:
+            del self._connections[k]
+
     async def broadcast(self, sessao_id: str, data: dict) -> None:
         """Envia JSON para todos os clients da sessão. Ignora falhas individuais."""
         grupo = self._connections.get(sessao_id)
         if not grupo:
             return
 
-        payload = json.dumps(data, ensure_ascii=False, default=str)
+        try:
+            payload = json.dumps(data, ensure_ascii=False, default=_json_serial)
+        except TypeError as exc:
+            logger.error("WS broadcast: falha ao serializar dados — sessao=%s erro=%s", sessao_id, exc)
+            return
+
         mortos: list[WebSocket] = []
 
         for ws in list(grupo):

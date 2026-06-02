@@ -50,17 +50,23 @@ export class SessionWS {
     this._ws.onmessage = (e) => {
       try {
         const data = JSON.parse(e.data)
-        if (data.tipo === 'pong') return // silently drop heartbeat responses
+        if (data.tipo === 'pong') return
         this._onEvent(data)
-      } catch {}
+      } catch (err) {
+        console.error('[INVIQ WS] Falha ao parsear mensagem:', err.message, '| raw:', e.data?.slice?.(0, 200))
+        // Notifica o handler sem quebrar o fluxo
+        this._onEvent({ tipo: '_parse_error', message: 'Mensagem inválida recebida do servidor' })
+      }
     }
-    this._ws.onclose = () => {
+    this._ws.onclose = (ev) => {
       this._connected = false
       clearInterval(this._heartbeatTimer)
-      this._onEvent({ tipo: '_disconnected' })
+      this._onEvent({ tipo: '_disconnected', code: ev.code })
       if (!this._intentionalClose) this._scheduleReconnect()
     }
-    this._ws.onerror = () => {}
+    this._ws.onerror = (err) => {
+      console.warn('[INVIQ WS] Erro na conexão WebSocket:', err)
+    }
   }
 
   _scheduleReconnect() {

@@ -783,10 +783,10 @@ function renderOperators(conts) {
   list.innerHTML = sorted.map(([name, o]) => `
     <div class="operator-row">
       <div class="operator-row-left">
-        <div class="operator-avatar" style="background:${operatorColor(name)}22;color:${operatorColor(name)}">${operatorInitials(name)}</div>
-        <div><div style="font-weight:500;font-size:.8125rem;color:#d7e3fc">${name}</div><div class="op-stat">${timeAgo(o.lastSeen)}</div></div>
+        <div class="operator-avatar" style="background:${escapeHtml(operatorColor(name))}22;color:${escapeHtml(operatorColor(name))}">${escapeHtml(operatorInitials(name))}</div>
+        <div><div style="font-weight:500;font-size:.8125rem;color:#d7e3fc">${escapeHtml(name)}</div><div class="op-stat">${escapeHtml(timeAgo(o.lastSeen))}</div></div>
       </div>
-      <div style="text-align:right"><div style="font-weight:600;font-size:.875rem;color:#d7e3fc">${o.total}</div><div class="op-stat" style="color:${o.divs>0?'#ffb4ab':'#3d4850'}">${o.divs} div.</div></div>
+      <div style="text-align:right"><div style="font-weight:600;font-size:.875rem;color:#d7e3fc">${escapeHtml(String(o.total))}</div><div class="op-stat" style="color:${o.divs>0?'#ffb4ab':'#3d4850'}">${escapeHtml(String(o.divs))} div.</div></div>
     </div>`).join('')
 }
 
@@ -797,18 +797,19 @@ function renderLiveFeed() {
   if (liveEvents.length === 0) { section.style.display = 'none'; return }
   section.style.display = ''
   feed.innerHTML = liveEvents.slice(0,20).map(ev => {
-    const name = ev.operador || 'Anônimo'
+    const name = escapeHtml(ev.operador || 'Anônimo')
+    const codigo = escapeHtml(ev.codigo || '—')
+    const qtd = ev.quantidade_encontrada ?? ev.qtd ?? '—'
     const isDiv = ev.tipo === 'divergencia_detectada' || ev.divergencia
-    const color = operatorColor(name)
     return `
       <div class="p-2 border-b border-white/5 flex flex-col gap-1 hover:bg-white/5 transition-colors animate-enter">
         <div class="flex justify-between items-center">
-          <span class="text-code-sm font-code-sm text-primary" style="font-family:'JetBrains Mono',monospace;font-size:12px">${ev.codigo||'—'}</span>
+          <span class="text-code-sm font-code-sm text-primary" style="font-family:'JetBrains Mono',monospace;font-size:12px">${codigo}</span>
           <span class="text-label-md font-label-md ${isDiv?'text-error':'text-tertiary-container'}">${isDiv?'DIV':'OK'}</span>
         </div>
         <div class="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant" style="font-size:12px">
-          <span>Q: ${ev.quantidade_encontrada??ev.qtd??'—'} ${name !== 'Anônimo' ? `· ${name}` : ''}</span>
-          <span style="font-size:10px;color:#3d4850">${timeAgo(ev.timestamp||ev.registrado_em)}</span>
+          <span>Q: ${qtd} ${name !== 'Anônimo' ? `· ${name}` : ''}</span>
+          <span style="font-size:10px;color:#3d4850">${escapeHtml(timeAgo(ev.timestamp||ev.registrado_em))}</span>
         </div>
       </div>`
   }).join('')
