@@ -83,6 +83,7 @@ def registrar_contagem(
     divergencia = quantidade_encontrada != quantidade_base
 
     existente = buscar_contagem(db, sessao_id, codigo)
+    nova_para_ajuste = False  # inicializado aqui para evitar UnboundLocalError no branch else
     if existente:
         mesma_qtd_anterior = (quantidade_encontrada == existente.quantidade_encontrada)
 

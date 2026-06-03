@@ -1,7 +1,7 @@
 import secrets
 import hmac
 from urllib.parse import urlparse
-from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -19,7 +19,8 @@ def listar_sessoes(db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=SessaoCreateResponse, status_code=201)
-def criar_sessao(payload: SessaoCreate, db: Session = Depends(get_db)):
+@limiter.limit("20/hour")
+async def criar_sessao(request: Request, payload: SessaoCreate, db: Session = Depends(get_db)):
     sessao = sessao_repo.criar_sessao(db, nome=payload.nome)
     return {
         "id": sessao.id,

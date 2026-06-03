@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.sessao import StatusSessao
 from app.repositories import sessao_repo
 from app.websockets.manager import manager
 
@@ -33,6 +34,10 @@ async def websocket_sessao(websocket: WebSocket, sessao_id: str,
     if not sessao:
         await websocket.close(code=4404, reason="Sessão não encontrada")
         logger.warning("WS rejeitado — sessao_id inexistente: %s", sessao_id)
+        return
+
+    if sessao.status == StatusSessao.cancelada:
+        await websocket.close(code=4409, reason="Sessão cancelada")
         return
 
     await manager.connect(websocket, sessao_id)

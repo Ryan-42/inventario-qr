@@ -1,0 +1,53 @@
+version: "3.9"
+
+# Override de produção — usar com:
+# docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Diferenças em relação ao dev:
+# - Sem --reload
+# - gunicorn com múltiplos workers
+# - Credenciais via variáveis de ambiente (não hardcoded)
+# - APP_ENV=production
+# - Sem volumes de código-fonte (imagem imutável)
+# - Redis com senha
+# - Restart automático
+
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-inventario_qr}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    ports: []  # Não expor banco externamente em produção
+
+  redis:
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    restart: unless-stopped
+    ports: []  # Não expor Redis externamente em produção
+
+  backend:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-inventario_qr}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      SECRET_KEY: ${SECRET_KEY}
+      APP_ENV: production
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    command: >
+      gunicorn app.main:app
+        --workers ${GUNICORN_WORKERS:-2}
+        --worker-class uvicorn.workers.UvicornWorker
+        --bind 0.0.0.0:8000
+        --timeout 120
+        --keep-alive 5
+        --access-logfile -
+        --error-logfile -
+    volumes: []  # Sem volume de código — imagem imutável em produção
+    restart: unless-stopped
+
+  # Remover serviço frontend (estático servido pelo backend)
+  frontend:
+    profiles: ["dev-only"]  # Não sobe em produção
