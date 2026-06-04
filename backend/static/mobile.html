@@ -752,16 +752,19 @@ function renderRecentes() {
   const listEl = document.getElementById('recentes-list')
   if (!list.length) { container.classList.add('hidden'); return }
   container.classList.remove('hidden')
-  listEl.innerHTML = list.map(c => `
-    <button class="recente-chip px-3 py-1.5 bg-surface-container-high border border-white/10 rounded-xl text-code-sm font-code-sm text-primary hover:border-primary/40 hover:bg-primary/10 transition-colors active:scale-95"
-      data-code="${c}">${c}</button>`).join('')
-  listEl.querySelectorAll('.recente-chip').forEach(btn => {
+  listEl.innerHTML = ''
+  list.forEach(c => {
+    const btn = document.createElement('button')
+    btn.className = 'recente-chip px-3 py-1.5 bg-surface-container-high border border-white/10 rounded-xl text-code-sm font-code-sm text-primary hover:border-primary/40 hover:bg-primary/10 transition-colors active:scale-95'
+    btn.dataset.code = c
+    btn.textContent = c  // textContent evita XSS com códigos de barra lidos do localStorage
     btn.addEventListener('click', () => {
       const input = document.getElementById('manual-code-input')
       input.value = btn.dataset.code
       input.dispatchEvent(new Event('input'))
       input.focus()
     })
+    listEl.appendChild(btn)
   })
 }
 function showState(name) {

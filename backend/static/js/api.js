@@ -15,13 +15,28 @@ async function apiFetch(path, options = {}) {
   return res.json()
 }
 
+// ── Admin token (localStorage, chave compartilhada com index.html) ──
+const _ADMIN_KEY = 'inviq_admin_tokens'
+export function getAdminToken(sessaoId) {
+  try { return JSON.parse(localStorage.getItem(_ADMIN_KEY) || '{}')[sessaoId] || '' } catch { return '' }
+}
+export function setAdminToken(sessaoId, token) {
+  try {
+    const t = JSON.parse(localStorage.getItem(_ADMIN_KEY) || '{}')
+    t[sessaoId] = token
+    localStorage.setItem(_ADMIN_KEY, JSON.stringify(t))
+  } catch {}
+}
+
 // ── Sessions ────────────────────────────────────────────────────────
 export const listarSessoes = () => apiFetch('/sessoes')
 export const criarSessao = (nome) => apiFetch('/sessoes', { method: 'POST', body: JSON.stringify({ nome }) })
 export const buscarSessao = (id) => apiFetch(`/sessoes/${id}`)
 export const statsSessao = (id) => apiFetch(`/sessoes/${id}/stats`)
-export const concluirSessao = (id) => apiFetch(`/sessoes/${id}/concluir`, { method: 'PATCH' })
-export const cancelarSessao = (id) => apiFetch(`/sessoes/${id}/cancelar`, { method: 'PATCH' })
+export const concluirSessao = (id, adminToken) =>
+  apiFetch(`/sessoes/${id}/concluir?token_admin=${encodeURIComponent(adminToken || getAdminToken(id))}`, { method: 'PATCH' })
+export const cancelarSessao = (id, adminToken) =>
+  apiFetch(`/sessoes/${id}/cancelar?token_admin=${encodeURIComponent(adminToken || getAdminToken(id))}`, { method: 'PATCH' })
 export const rodadasSessao = (id) => apiFetch(`/sessoes/${id}/rodadas`)
 
 // ── Items ────────────────────────────────────────────────────────────
@@ -35,7 +50,9 @@ export const registrarContagem = (sessaoId, payload) =>
 export async function uploadPlanilha(sessaoId, file) {
   const form = new FormData()
   form.append('file', file)
-  const res = await fetch(`${BASE}/sessoes/${sessaoId}/upload`, { method: 'POST', body: form })
+  const tok = encodeURIComponent(getAdminToken(sessaoId))
+  const res = await fetch(`${BASE}/sessoes/${sessaoId}/upload?token_admin=${tok}`,
+    { method: 'POST', body: form })
   if (!res.ok) {
     let detail = `HTTP ${res.status}`
     try { const j = await res.json(); detail = j.detail || detail } catch {}
@@ -67,9 +84,13 @@ export const alertaSessao = (sessaoId, payload) =>
 export const valorEstoqueSessao = (sessaoId) => apiFetch(`/sessoes/${sessaoId}/valor-estoque`)
 export const progressoSessao   = (sessaoId) => apiFetch(`/sessoes/${sessaoId}/progresso`)
 
-export const exportarCompleto = (sessaoId) => `${BASE}/sessoes/${sessaoId}/exportar/completo`
-export const exportarDivergencias = (sessaoId) => `${BASE}/sessoes/${sessaoId}/exportar/divergencias`
-export const exportarPDF = (sessaoId) => `${BASE}/sessoes/${sessaoId}/exportar/pdf`
-export const exportarEtiquetas = (sessaoId) => `${BASE}/sessoes/${sessaoId}/exportar/etiquetas`
-export const exportarRelatorioFinalPDF = (sessaoId) => `${BASE}/sessoes/${sessaoId}/exportar/relatorio-final-pdf`
-export const exportarRelatorioFinalExcel = (sessaoId) => `${BASE}/sessoes/${sessaoId}/exportar/relatorio-final-excel`
+function _exportUrl(sessaoId, path) {
+  const tok = encodeURIComponent(getAdminToken(sessaoId))
+  return `${BASE}/sessoes/${sessaoId}/exportar/${path}?token_admin=${tok}`
+}
+export const exportarCompleto          = (sessaoId) => _exportUrl(sessaoId, 'completo')
+export const exportarDivergencias      = (sessaoId) => _exportUrl(sessaoId, 'divergencias')
+export const exportarPDF               = (sessaoId) => _exportUrl(sessaoId, 'pdf')
+export const exportarEtiquetas         = (sessaoId) => _exportUrl(sessaoId, 'etiquetas')
+export const exportarRelatorioFinalPDF = (sessaoId) => _exportUrl(sessaoId, 'relatorio-final-pdf')
+export const exportarRelatorioFinalExcel = (sessaoId) => _exportUrl(sessaoId, 'relatorio-final-excel')

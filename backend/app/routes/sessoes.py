@@ -4,6 +4,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks
 from sqlalchemy.orm import Session
 
+from app.auth import verificar_token_admin as _verificar_token_admin
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
@@ -51,10 +52,10 @@ async def verificar_admin(request: Request, sessao_id: str, token: str, db: Sess
 
 @router.get("/{sessao_id}", response_model=SessaoResponse)
 def buscar_sessao(sessao_id: str, db: Session = Depends(get_db)):
-    sessao = sessao_repo.buscar_sessao(db, sessao_id)
-    if not sessao:
+    sessao_dict = sessao_repo.buscar_sessao_com_stats(db, sessao_id)
+    if not sessao_dict:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    return sessao
+    return sessao_dict
 
 
 @router.get("/{sessao_id}/stats", response_model=SessaoStats)
@@ -65,30 +66,69 @@ def stats_sessao(sessao_id: str, db: Session = Depends(get_db)):
     return sessao_repo.stats_sessao(db, sessao_id)
 
 
+
 @router.patch("/{sessao_id}/concluir", response_model=SessaoResponse)
-async def concluir_sessao(sessao_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    sessao = sessao_repo.concluir_sessao(db, sessao_id)
+async def concluir_sessao(sessao_id: str, token_admin: str,
+                          background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    _verificar_token_admin(sessao, token_admin)
+
+    if sessao.status != StatusSessao.ativa:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Sessão está '{sessao.status.value}' e não pode ser concluída.",
+        )
+
+    progresso = item_repo.calcular_progresso_rodada(db, sessao_id)
+    # Default False = assume sem itens se chave ausente (proteção defensiva)
+    if not progresso.get("tem_itens", False):
+        raise HTTPException(status_code=422, detail="Nenhum item importado. Importe a planilha antes de concluir.")
+    if not progresso["completa"]:
+        partes = []
+        if progresso["faltando_r1"] > 0:
+            partes.append(f"{progresso['faltando_r1']} item(s) ainda não foram contados")
+        if progresso["faltando_r2"] > 0:
+            partes.append(f"{progresso['faltando_r2']} item(s) divergentes aguardam recontagem")
+        raise HTTPException(
+            status_code=422,
+            detail=f"Não é possível concluir: {'; '.join(partes) or 'inventário incompleto'}. "
+                   "Todos os itens devem estar Certo ou Para Ajuste.",
+        )
+
+    concluido = sessao_repo.concluir_sessao(db, sessao_id)
+    if not concluido:
+        raise HTTPException(status_code=409, detail="Sessão não pôde ser concluída (conflito). Tente novamente.")
     from app.websockets.manager import manager
     background_tasks.add_task(manager.broadcast, sessao_id, {
         "tipo": "sessao_status_alterado", "status": "concluida",
         "mensagem": "O inventário foi concluído pelo administrador.",
     })
-    return sessao
+    # Retorna dict com stats reais em vez do ORM sem os campos calculados
+    return sessao_repo.buscar_sessao_com_stats(db, sessao_id) or concluido
 
 
 @router.patch("/{sessao_id}/cancelar", response_model=SessaoResponse)
-async def cancelar_sessao(sessao_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
-    sessao = sessao_repo.cancelar_sessao(db, sessao_id)
-    if not sessao:
+async def cancelar_sessao(sessao_id: str, token_admin: str,
+                          background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    sessao_atual = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao_atual:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    _verificar_token_admin(sessao_atual, token_admin)
+    if sessao_atual.status == StatusSessao.concluida:
+        raise HTTPException(status_code=409, detail="Sessão já concluída não pode ser cancelada.")
+    if sessao_atual.status == StatusSessao.cancelada:
+        raise HTTPException(status_code=409, detail="Sessão já está cancelada.")
+    cancelado = sessao_repo.cancelar_sessao(db, sessao_id)
+    if not cancelado:
+        raise HTTPException(status_code=409, detail="Sessão não pôde ser cancelada. Tente novamente.")
     from app.websockets.manager import manager
     background_tasks.add_task(manager.broadcast, sessao_id, {
         "tipo": "sessao_status_alterado", "status": "cancelada",
         "mensagem": "O inventário foi cancelado pelo administrador.",
     })
-    return sessao
+    return sessao_repo.buscar_sessao_com_stats(db, sessao_id) or cancelado
 
 
 @router.get("/{sessao_id}/valor-estoque", response_model=ValorEstoqueStats)
@@ -127,19 +167,20 @@ def get_token_acesso(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{sessao_id}/gerar-token")
-def gerar_novo_token(sessao_id: str, rodada: int = 1, db: Session = Depends(get_db)):
-    """Gera um novo token de acesso (invalida o anterior). Usado para cada nova rodada."""
+def gerar_novo_token(sessao_id: str, token_admin: str, rodada: int = 1, db: Session = Depends(get_db)):
+    """Gera um novo token de acesso (invalida o anterior). Requer token_admin."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    _verificar_token_admin(sessao, token_admin)
     if sessao.status.value != "ativa":
         raise HTTPException(status_code=409, detail="Sessão não está ativa")
-    token = secrets.token_hex(4).upper()
+    token = secrets.token_hex(8).upper()
     sessao.token_acesso = token
-    sessao.rodada_token = rodada
+    sessao.rodada_token = max(1, rodada)
     db.commit()
     mobile_url = f"/mobile/{sessao_id}?token={token}"
-    return {"token": token, "rodada": rodada, "mobile_url": mobile_url}
+    return {"token": token, "rodada": sessao.rodada_token, "mobile_url": mobile_url}
 
 
 @router.get("/{sessao_id}/verificar-token")
@@ -198,25 +239,30 @@ def rodadas_sessao(sessao_id: str, db: Session = Depends(get_db)):
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
 
-    contagens = item_repo.listar_contagens(db, sessao_id)
-    itens = item_repo.listar_itens(db, sessao_id)
-    itens_map = {i.codigo: i for i in itens}
-    total_itens = len(itens)
+    # Limite de segurança: carrega até 10k contagens para o resumo de rodadas.
+    # Para sessões maiores o endpoint /progresso é mais eficiente (usa SQL agregado).
+    contagens = item_repo.listar_contagens(db, sessao_id, limit=10_000)
+    total_itens = item_repo.contar_itens(db, sessao_id)
 
-    # Agrupa contagens por rodada
+    # Agrupa contagens por rodada — conta apenas DIVERGENTES ativos (não para_ajuste)
     por_rodada: dict[int, dict] = {}
     for c in contagens:
         r = getattr(c, "rodada", 1) or 1
         d = por_rodada.setdefault(r, {"total": 0, "divergencias": 0})
         d["total"] += 1
-        if c.divergencia:
+        # Divergência pendente = divergente E não confirmado como para_ajuste
+        if c.divergencia and not getattr(c, 'para_ajuste', False):
             d["divergencias"] += 1
 
     rodada_maxima = max(por_rodada.keys(), default=0)
-
     total_contagens = sum(d["total"] for d in por_rodada.values())
-    r1_pendentes = por_rodada.get(1, {"divergencias": 0})["divergencias"]
-    r2_pendentes = por_rodada.get(2, {"divergencias": 0})["divergencias"]
+
+    # pendentes_recontagem = itens divergentes sem para_ajuste (consistente com /progresso)
+    pendentes_recontagem = sum(
+        1 for c in contagens
+        if c.divergencia and not getattr(c, 'para_ajuste', False)
+    )
+    r1_pendentes = pendentes_recontagem
 
     resumos = [
         {
@@ -225,44 +271,38 @@ def rodadas_sessao(sessao_id: str, db: Session = Depends(get_db)):
             "divergencias": d["divergencias"],
             "concluida": (
                 total_contagens == total_itens if r == 1
-                else r1_pendentes == 0 if r == 2
-                else r2_pendentes == 0
+                else r1_pendentes == 0
             ),
         }
         for r, d in sorted(por_rodada.items())
     ]
 
-    # Itens divergentes da rodada 1 → precisam de 2ª contagem
-    divergentes_r1 = [
-        c for c in contagens if (getattr(c, "rodada", 1) or 1) == 1 and c.divergencia
+    # Itens divergentes ativos (qualquer rodada) que precisam de recontagem
+    divergentes_ativos = [
+        c for c in contagens
+        if c.divergencia and not getattr(c, 'para_ajuste', False)
     ]
+    # Busca produto e quantidade_base apenas para os itens necessários (evita carregar tudo)
+    codigos_divergentes = {c.codigo for c in divergentes_ativos}
+    itens_map = {}
+    if codigos_divergentes:
+        itens_lista = item_repo.buscar_itens_por_codigos(db, sessao_id, list(codigos_divergentes))
+        itens_map = {i.codigo: i for i in itens_lista}
+
+    proxima_rodada = rodada_maxima + 1 if rodada_maxima > 0 else 2
     itens_segunda = [
         {
             "codigo": c.codigo,
             "produto": itens_map[c.codigo].produto if c.codigo in itens_map else c.codigo,
             "quantidade_base": itens_map[c.codigo].quantidade_base if c.codigo in itens_map else 0,
-            "rodada": 2,
+            "rodada": proxima_rodada,
         }
-        for c in divergentes_r1
-    ]
-
-    # Itens divergentes da rodada 2 → precisam de 3ª contagem
-    divergentes_r2 = [
-        c for c in contagens if (getattr(c, "rodada", 1) or 1) == 2 and c.divergencia
-    ]
-    itens_terceira = [
-        {
-            "codigo": c.codigo,
-            "produto": itens_map[c.codigo].produto if c.codigo in itens_map else c.codigo,
-            "quantidade_base": itens_map[c.codigo].quantidade_base if c.codigo in itens_map else 0,
-            "rodada": 3,
-        }
-        for c in divergentes_r2
+        for c in divergentes_ativos
     ]
 
     return {
         "rodada_maxima": rodada_maxima,
         "rodadas": resumos,
         "itens_segunda": itens_segunda,
-        "itens_terceira": itens_terceira,
+        "itens_terceira": [],  # subsumido em itens_segunda (sem rodada fixa)
     }

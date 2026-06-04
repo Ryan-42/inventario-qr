@@ -1,11 +1,14 @@
 from contextlib import asynccontextmanager
 import logging
+import logging.config
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, PlainTextResponse, JSONResponse
+from starlette.types import ASGIApp, Receive, Scope, Send
+from starlette.datastructures import MutableHeaders
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from dotenv import load_dotenv
@@ -19,6 +22,11 @@ from app.limiter import limiter
 from app.routes import sessoes, itens, contagens, exports, ws, agentes, grupos
 from app.websockets.manager import manager  # noqa: F401 — singleton inicializado aqui
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s — %(message)s",
+    datefmt="%Y-%m-%dT%H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 _APP_ENV = os.getenv("APP_ENV", "development")
@@ -51,6 +59,43 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+class SecurityHeadersMiddleware:
+    """
+    Middleware ASGI puro que adiciona headers de segurança sem bufferizar responses.
+    Ao contrário de BaseHTTPMiddleware, intercepta diretamente o evento 'http.response.start'
+    e modifica os headers antes de enviá-los — não consome o body, preserva streaming.
+    """
+    def __init__(self, app: ASGIApp, is_prod: bool = False) -> None:
+        self.app = app
+        self._headers = [
+            (b"x-content-type-options", b"nosniff"),
+            (b"x-frame-options", b"DENY"),
+            (b"referrer-policy", b"strict-origin-when-cross-origin"),
+            (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
+        ]
+        if is_prod:
+            self._headers.append(
+                (b"strict-transport-security", b"max-age=63072000; includeSubDomains; preload")
+            )
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        async def send_with_headers(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                for name, value in self._headers:
+                    headers.append(name.decode(), value.decode())
+            await send(message)
+
+        await self.app(scope, receive, send_with_headers)
+
+
+app.add_middleware(SecurityHeadersMiddleware, is_prod=_IS_PROD)
 
 # CORS — suporta múltiplas origens via ALLOWED_ORIGINS (separadas por vírgula)
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:8000")

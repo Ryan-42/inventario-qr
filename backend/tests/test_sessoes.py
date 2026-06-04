@@ -36,14 +36,27 @@ def test_buscar_sessao_inexistente(client):
     assert r.status_code == 404
 
 
-def test_concluir_sessao(client, sessao):
-    r = client.patch(f"/api/sessoes/{sessao['id']}/concluir")
+def test_concluir_sessao(client, sessao_com_itens):
+    """Sessão só pode ser concluída quando todos os itens são CERTO ou PARA_AJUSTE."""
+    sid = sessao_com_itens["id"]
+    tok = sessao_com_itens["token_admin"]
+    # Tenta concluir sem contar nenhum item — deve falhar (sem token também falha por auth)
+    r_sem_itens = client.patch(f"/api/sessoes/{sid}/concluir?token_admin={tok}")
+    assert r_sem_itens.status_code == 422
+
+    # Conta todos os itens com quantidade correta
+    for codigo, qtd in [("ABC-001", 10), ("ABC-002", 5), ("ABC-003", 20)]:
+        client.post(f"/api/sessoes/{sid}/contagens",
+                    json={"codigo": codigo, "quantidade_encontrada": qtd})
+    # Agora pode concluir
+    r = client.patch(f"/api/sessoes/{sid}/concluir?token_admin={tok}")
     assert r.status_code == 200
     assert r.json()["status"] == "concluida"
 
 
 def test_cancelar_sessao(client, sessao):
-    r = client.patch(f"/api/sessoes/{sessao['id']}/cancelar")
+    tok = sessao["token_admin"]
+    r = client.patch(f"/api/sessoes/{sessao['id']}/cancelar?token_admin={tok}")
     assert r.status_code == 200
     assert r.json()["status"] == "cancelada"
 

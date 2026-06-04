@@ -16,8 +16,8 @@ class StatusSessao(str, enum.Enum):
 
 
 def _gerar_token() -> str:
-    """Gera um token alfanumérico de 8 caracteres maiúsculos."""
-    return secrets.token_hex(4).upper()
+    """Gera um token alfanumérico de 16 caracteres maiúsculos (8 bytes = 2^64 combinações)."""
+    return secrets.token_hex(8).upper()
 
 
 class Sessao(Base):

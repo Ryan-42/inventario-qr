@@ -18,6 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
 
+from app.auth import verificar_token_admin
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo, grupo_repo
@@ -243,13 +244,13 @@ def lista_operador(sessao_id: str, token: str = "", rodada: int = 1,
         contagem = contagens_map.get(item.codigo)
 
         # Rodada 1: todos os itens não contados do grupo
-        # Rodada 2+: apenas divergentes pendentes de recontagem
+        # Rodada 2+: itens DIVERGENTES ativos (qualquer rodada < atual, sem para_ajuste)
         if rodada == 1:
             if contagem is not None:
                 continue  # já contado, não aparece na lista
         else:
-            rodada_esperada = rodada - 1
-            if not (contagem and contagem.rodada == rodada_esperada and contagem.divergencia
+            # Pendentes de recontagem = divergente E não para_ajuste (independente da rodada exata)
+            if not (contagem and contagem.divergencia
                     and not getattr(contagem, 'para_ajuste', False)):
                 continue
 
@@ -355,8 +356,11 @@ def itens_supervisor(sessao_id: str, token: str, db: Session = Depends(get_db)):
     resultado = []
     for item in itens:
         contagem = contagens_map.get(item.codigo)
+        # Supervisor vê apenas DIVERGENTES ativos — PARA_AJUSTE já está resolvido
         if not contagem or not contagem.divergencia:
-            continue  # supervisor só vê divergentes
+            continue
+        if getattr(contagem, 'para_ajuste', False):
+            continue  # já aceito para ajuste — não precisa de ação do supervisor
 
         resultado.append({
             "codigo": item.codigo,
@@ -379,13 +383,14 @@ def itens_supervisor(sessao_id: str, token: str, db: Session = Depends(get_db)):
 # ── Pausa e retomada ──────────────────────────────────────────────────────────
 
 @router.patch("/{sessao_id}/pausar")
-async def pausar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
+async def pausar_sessao(sessao_id: str, token_admin: str, background_tasks: BackgroundTasks,
                         previsao_retomada: Optional[str] = None, db: Session = Depends(get_db)):
     """Pausa a sessão. Operadores veem tela 'Sessão Pausada' via WS."""
     from datetime import datetime, timezone
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    verificar_token_admin(sessao, token_admin)
     if sessao.status != StatusSessao.ativa:
         raise HTTPException(status_code=409, detail="Sessão não está ativa")
     sessao.status = StatusSessao.pausada
@@ -402,18 +407,23 @@ async def pausar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
 
 
 @router.patch("/{sessao_id}/retomar")
-async def retomar_sessao(sessao_id: str, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def retomar_sessao(sessao_id: str, token_admin: str, background_tasks: BackgroundTasks,
+                         db: Session = Depends(get_db)):
     """Retoma a sessão pausada. Gera novo token de acesso e avisa operadores via WS."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    verificar_token_admin(sessao, token_admin)
     if sessao.status != StatusSessao.pausada:
         raise HTTPException(status_code=409, detail="Sessão não está pausada")
     sessao.status = StatusSessao.ativa
     sessao.pausada_em = None
     sessao.previsao_retomada = None
     # Gera novo token (operadores com token antigo de pausa não entram)
-    sessao.token_acesso = secrets.token_hex(4).upper()
+    # Mantém rodada_token atual — operadores voltam à mesma rodada que estava antes da pausa
+    sessao.token_acesso = secrets.token_hex(8).upper()
+    if not sessao.rodada_token:
+        sessao.rodada_token = 1
     db.commit()
     db.refresh(sessao)
     background_tasks.add_task(manager.broadcast, sessao_id, {

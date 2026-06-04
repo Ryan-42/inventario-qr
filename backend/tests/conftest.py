@@ -5,6 +5,7 @@ garantindo que todas as sessions vejam as mesmas tabelas.
 """
 from __future__ import annotations
 
+import os
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -13,6 +14,11 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.database import Base, get_db
+from app.limiter import limiter
+
+# SlowAPI lê RATELIMIT_ENABLED do env e armazena como string (truthy mesmo quando 'false').
+# Forçamos o boolean False diretamente para desabilitar o rate limiter em testes.
+limiter.enabled = False
 
 engine_test = create_engine(
     "sqlite://",
@@ -72,8 +78,9 @@ def sessao_com_itens(client, sessao):
     wb.save(buf)
     buf.seek(0)
 
+    tok = sessao["token_admin"]
     r = client.post(
-        f"/api/sessoes/{sessao['id']}/upload",
+        f"/api/sessoes/{sessao['id']}/upload?token_admin={tok}",
         files={"file": ("itens.xlsx", buf,
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
     )

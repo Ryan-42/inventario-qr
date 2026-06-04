@@ -1,0 +1,53 @@
+# Banco de dados local
+*.db
+*.sqlite
+*.sqlite3
+
+# Ambiente virtual Python
+venv/
+.venv/
+env/
+
+# Variáveis de ambiente (NUNCA incluir na imagem)
+.env
+.env.*
+!.env.example
+
+# Cache e compilados Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Testes
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+*.xml
+
+# Logs locais
+*.log
+uvicorn.log
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Alembic (migrations não precisam estar na imagem — rodar via entrypoint)
+# alembic/   # manter para poder rodar upgrade head no startup
+
+# Node (se houver build frontend)
+node_modules/
+
+# Documentação
+*.md
+docs/

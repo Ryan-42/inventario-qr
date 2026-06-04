@@ -12,7 +12,9 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./inventario.db")
 
 # SQLite precisa de check_same_thread=False para funcionar com FastAPI
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+# pool_pre_ping=True: testa a conexão antes de cada uso para recuperar de idle timeouts
+# e restarts do PostgreSQL sem lançar erros OperationalError inesperados.
+engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
@@ -76,7 +78,7 @@ def _migrate_sqlite():
             import secrets
             rows = conn.execute(text("SELECT id FROM sessoes WHERE token_acesso IS NULL")).fetchall()
             for row in rows:
-                tok = secrets.token_hex(4).upper()
+                tok = secrets.token_hex(8).upper()
                 conn.execute(text("UPDATE sessoes SET token_acesso = :tok, rodada_token = 1 WHERE id = :id"), {"tok": tok, "id": row[0]})
             if rows:
                 conn.commit()

@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from sqlalchemy.orm import Session
 
+from app.auth import verificar_token_admin
 from app.database import get_db
+from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
 from app.services.excel_service import importar_planilha
 from app.schemas import ItemBaseResponse, BuscaItemResponse, ItemComStatus
@@ -51,14 +53,18 @@ async def validar_planilha(
 
 
 @router.post("/{sessao_id}/upload", status_code=201)
+@limiter.limit("10/hour")
 async def upload_planilha(
+    request: Request,
     sessao_id: str,
+    token_admin: str,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    verificar_token_admin(sessao, token_admin)
 
     if sessao.status != StatusSessao.ativa:
         raise HTTPException(

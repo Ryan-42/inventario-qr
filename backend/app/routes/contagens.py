@@ -105,25 +105,33 @@ async def registrar_contagem(request: Request,
         "completa": progresso_depois["completa"],
     })
 
-    # ── Detecta transição de rodada: antes tinha ≥1 faltando, agora chegou a 0.
+    # ── Detecta transição de fase: antes tinha ≥1 faltando, agora chegou a 0.
     # Usar > 0 (não == 1) cobre concorrência: dois operadores contando os últimos
     # dois itens simultaneamente — ambos veem faltando=2 no "antes", mas apenas
     # o último commit vê faltando=0 no "depois" e dispara o evento.
-    for rodada_num, campo in [(1, "faltando_r1"), (2, "faltando_r2"), (3, "faltando_r3")]:
+    #
+    # Fases:
+    #  - faltando_r1: todos os itens devem ter pelo menos uma contagem (Contagem 1)
+    #  - faltando_r2: todos os itens divergentes devem ser resolvidos (CERTO ou PARA_AJUSTE)
+    #    Não há cap de rodadas — um item permanece DIVERGENTE até bater com a base ou
+    #    confirmar o mesmo erro anterior; só então passa para a fase seguinte.
+    for rodada_num, campo in [(1, "faltando_r1"), (2, "faltando_r2")]:
         if progresso_antes[campo] > 0 and progresso_depois[campo] == 0:
-            div_campo = f"divergencias_r{rodada_num}"
-            divs = progresso_depois[div_campo]
-            proxima_necessaria = divs > 0 and rodada_num < 3
-            tudo_concluido = not proxima_necessaria and progresso_depois["faltando"] == 0
+            if rodada_num == 1:
+                divs = progresso_depois["divergencias_r1"]
+            else:
+                divs = progresso_depois["divergencias_r2"]
+            proxima_necessaria = (rodada_num == 1 and divs > 0)
+            tudo_concluido = progresso_depois["completa"]
             background_tasks.add_task(_broadcast_safe, sessao_id, {
                 "tipo": "rodada_completa",
                 "rodada_concluida": rodada_num,
                 "divergencias_pendentes": divs,
-                "proxima_rodada": rodada_num + 1 if proxima_necessaria else None,
+                "proxima_rodada": 2 if proxima_necessaria else None,
                 "proxima_rodada_necessaria": proxima_necessaria,
                 "tudo_concluido": tudo_concluido,
             })
-            break  # só uma rodada pode completar por vez
+            break  # só uma fase pode completar por vez
 
     if contagem.divergencia:
         background_tasks.add_task(
@@ -135,16 +143,25 @@ async def registrar_contagem(request: Request,
 
 
 @router.get("/{sessao_id}/historico", response_model=list[HistoricoContagemResponse])
-def listar_historico(sessao_id: str, codigo: str | None = None, db: Session = Depends(get_db)):
-    """Retorna histórico append-only de todas as contagens da sessão (ou de um código específico)."""
+def listar_historico(
+    sessao_id: str,
+    codigo: str | None = None,
+    limit: int = 500,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+):
+    """Retorna histórico append-only de todas as contagens da sessão (ou de um código específico).
+    Paginado: máximo 2000 registros por chamada."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    return item_repo.listar_historico(db, sessao_id, codigo=codigo)
+    limit_safe = max(1, min(limit, 2000))
+    return item_repo.listar_historico(db, sessao_id, codigo=codigo, limit=limit_safe, offset=offset)
 
 
 @router.delete("/{sessao_id}/contagens/{codigo}", status_code=204)
-async def deletar_contagem(sessao_id: str, codigo: str,
+@limiter.limit("60/minute")
+async def deletar_contagem(request: Request, sessao_id: str, codigo: str,
                            background_tasks: BackgroundTasks,
                            db: Session = Depends(get_db)):
     """Remove a contagem atual de um item (mantém histórico). Libera o item para recontagem."""

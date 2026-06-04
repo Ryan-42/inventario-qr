@@ -52,14 +52,15 @@ def listar_sessoes(db: Session) -> list[Sessao]:
 
 def listar_sessoes_com_stats(db: Session) -> list[dict]:
     from sqlalchemy import case
-    # COUNT(DISTINCT CASE(...)) não funciona corretamente no SQLite.
-    # Usa COUNT(CASE(...)) sem DISTINCT — correto pois contagens é UPSERT (1 por código).
+    # O JOIN duplo (ItemBase + Contagem via sessao_id) cria um produto cartesiano.
+    # Para evitar over-count, usamos COUNT(DISTINCT id) em todos os campos agregados.
+    # COUNT(DISTINCT CASE(condition, id)) conta IDs únicos que satisfazem a condição.
     rows = (
         db.query(
             Sessao,
             func.count(func.distinct(ItemBase.id)).label("total_itens"),
             func.count(func.distinct(Contagem.id)).label("itens_contados"),
-            func.count(case((Contagem.divergencia == True, 1))).label("total_divergencias"),  # noqa
+            func.count(func.distinct(case((Contagem.divergencia == True, Contagem.id)))).label("total_divergencias"),  # noqa
         )
         .outerjoin(ItemBase, ItemBase.sessao_id == Sessao.id)
         .outerjoin(Contagem, Contagem.sessao_id == Sessao.id)
@@ -88,18 +89,59 @@ def buscar_sessao(db: Session, sessao_id: str) -> Optional[Sessao]:
     return db.query(Sessao).filter(Sessao.id == sessao_id).first()
 
 
+def buscar_sessao_com_stats(db: Session, sessao_id: str) -> Optional[dict]:
+    """Busca uma sessão por ID com stats calculadas via SQL — O(1) ao contrário de listar_todas."""
+    from sqlalchemy import case
+    row = (
+        db.query(
+            Sessao,
+            func.count(func.distinct(ItemBase.id)).label("total_itens"),
+            func.count(func.distinct(Contagem.id)).label("itens_contados"),
+            func.count(func.distinct(case((Contagem.divergencia == True, Contagem.id)))).label("total_divergencias"),  # noqa
+        )
+        .filter(Sessao.id == sessao_id)
+        .outerjoin(ItemBase, ItemBase.sessao_id == Sessao.id)
+        .outerjoin(Contagem, Contagem.sessao_id == Sessao.id)
+        .group_by(Sessao.id)
+        .first()
+    )
+    if not row:
+        return None
+    sessao, total_itens, itens_contados, total_divergencias = row
+    return {
+        "id": sessao.id,
+        "codigo": sessao.codigo,
+        "nome": sessao.nome,
+        "status": sessao.status,
+        "data_inicio": sessao.data_inicio,
+        "data_fim": sessao.data_fim,
+        "total_itens": total_itens or 0,
+        "itens_contados": itens_contados or 0,
+        "total_divergencias": int(total_divergencias or 0),
+    }
+
+
 def concluir_sessao(db: Session, sessao_id: str) -> Optional[Sessao]:
     sessao = buscar_sessao(db, sessao_id)
-    if sessao:
+    # Só transiciona de 'ativa' → 'concluida'. Impede reverter cancelamentos ou duplicar conclusões.
+    if sessao and sessao.status == StatusSessao.ativa:
         sessao.status = StatusSessao.concluida
         sessao.data_fim = datetime.now(timezone.utc)
         db.commit()
         db.refresh(sessao)
-    return sessao
+        return sessao
+    # Retorna None se não houve transição (status diferente de ativa ou não encontrada)
+    return None
 
 
 def cancelar_sessao(db: Session, sessao_id: str) -> Optional[Sessao]:
     sessao = buscar_sessao(db, sessao_id)
+    # Não cancela sessões já concluídas (evita reverter inventário fechado)
+    # Idempotente para sessões já canceladas: retorna None para que a rota retorne 409
+    if sessao and sessao.status == StatusSessao.cancelada:
+        return None  # já cancelada — sinaliza para a rota que não houve transição
+    if sessao and sessao.status not in (StatusSessao.ativa, StatusSessao.pausada):
+        return None  # concluida ou outro estado terminal — não cancelar
     if sessao:
         sessao.status = StatusSessao.cancelada
         sessao.data_fim = datetime.now(timezone.utc)

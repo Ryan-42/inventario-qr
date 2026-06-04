@@ -62,7 +62,7 @@ def montar_inventario_completo(db: Session, sessao_id: str) -> list[dict]:
                 "rodada": None,
                 "timestamp": None,
                 "valor_estoque": item.valor_estoque,
-                "valor_unitario": round(unit_price, 4) if unit_price else None,
+                "valor_unitario": round(unit_price, 4) if unit_price is not None else None,
                 "valor_final": None,
                 "diferenca_valor": None,
             })

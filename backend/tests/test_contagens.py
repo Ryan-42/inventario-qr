@@ -42,9 +42,12 @@ def test_registrar_contagem_sessao_inexistente(client):
 
 def test_contagem_bloqueada_sessao_concluida(client, sessao_com_itens):
     sid = sessao_com_itens["id"]
-    # Conclui sessão
-    client.patch(f"/api/sessoes/{sid}/concluir")
-    # Tenta registrar contagem
+    tok = sessao_com_itens["token_admin"]
+    _registrar(client, sid, "ABC-001", 10)
+    _registrar(client, sid, "ABC-002", 5)
+    _registrar(client, sid, "ABC-003", 20)
+    r_c = client.patch(f"/api/sessoes/{sid}/concluir?token_admin={tok}")
+    assert r_c.status_code == 200, r_c.json()
     r = _registrar(client, sid, "ABC-001", 10)
     assert r.status_code == 409
     assert "concluida" in r.json()["detail"]
@@ -52,7 +55,8 @@ def test_contagem_bloqueada_sessao_concluida(client, sessao_com_itens):
 
 def test_contagem_bloqueada_sessao_cancelada(client, sessao_com_itens):
     sid = sessao_com_itens["id"]
-    client.patch(f"/api/sessoes/{sid}/cancelar")
+    tok = sessao_com_itens["token_admin"]
+    client.patch(f"/api/sessoes/{sid}/cancelar?token_admin={tok}")
     r = _registrar(client, sid, "ABC-001", 10)
     assert r.status_code == 409
     assert "cancelada" in r.json()["detail"]

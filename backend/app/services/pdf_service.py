@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any
 
@@ -228,7 +228,7 @@ def gerar_relatorio_pdf(sessao: Any, stats: dict, itens: list[dict]) -> bytes:
     # ── Footer ────────────────────────────────────────────────────────────────
     story.append(Spacer(1, 6 * mm))
     story.append(HRFlowable(width="100%", thickness=0.5, color=_SLATE_200, spaceAfter=3 * mm))
-    now = datetime.now().strftime("%d/%m/%Y às %H:%M")
+    now = datetime.now(timezone.utc).strftime("%d/%m/%Y às %H:%M UTC")
     story.append(Paragraph(f"Relatório gerado em {now} · Inventário QR", s_footer))
 
     doc.build(story)

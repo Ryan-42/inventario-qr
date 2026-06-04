@@ -572,7 +572,7 @@ import {
   analisarSessao, chatSessao, rodadasSessao,
   exportarCompleto, exportarDivergencias, exportarPDF, exportarEtiquetas,
   exportarRelatorioFinalPDF, exportarRelatorioFinalExcel,
-  valorEstoqueSessao,
+  valorEstoqueSessao, progressoSessao,
 } from '/static/js/api.js'
 import { SessionWS } from '/static/js/ws.js'
 
@@ -622,7 +622,14 @@ function toast(msg, type = 'info') {
   const icons = { success:'✓', error:'✕', warning:'⚠', info:'ℹ' }
   const el = document.createElement('div')
   el.className = `toast toast-${type} animate-enter`
-  el.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ'}</span><span>${msg}</span>`
+  // Usar textContent para o ícone e span separado para evitar XSS via msg
+  const iconSpan = document.createElement('span')
+  iconSpan.className = 'toast-icon'
+  iconSpan.textContent = icons[type] || 'ℹ'
+  const msgSpan = document.createElement('span')
+  msgSpan.textContent = msg
+  el.appendChild(iconSpan)
+  el.appendChild(msgSpan)
   document.getElementById('toast-container').appendChild(el)
   setTimeout(() => el.remove(), 4000)
 }
@@ -930,33 +937,35 @@ function handleWsEvent(ev) {
       const icon = document.getElementById('banner-icon')
       const btnQr = document.getElementById('banner-btn-qr')
       if (tudoOk) {
+        // Todos os itens são CERTO ou PARA_AJUSTE — inventário pronto para fechar
         banner.style.borderColor = 'rgba(16,235,138,0.4)'
         icon.style.background = 'rgba(16,235,138,0.15)'
         icon.innerHTML = '<span class="material-symbols-outlined text-[20px]" style="color:#10eb8a;font-variation-settings:\'FILL\' 1">inventory_2</span>'
-        titulo.textContent = 'Inventário Concluído!'
-        sub.textContent = 'Todas as rodadas foram finalizadas. Você pode concluir a sessão.'
+        titulo.textContent = 'Inventário Pronto para Conclusão!'
+        sub.textContent = 'Todos os itens estão Certo ou Para Ajuste. Clique em "Concluir Sessão" para finalizar.'
         btnQr.style.display = 'none'
       } else if (proxima) {
+        // Contagem 1 concluída com divergências — operadores precisam recontar
         banner.style.borderColor = 'rgba(143,214,255,0.4)'
         icon.style.background = 'rgba(143,214,255,0.15)'
         icon.innerHTML = '<span class="material-symbols-outlined text-[20px] text-primary" style="font-variation-settings:\'FILL\' 1">refresh</span>'
-        titulo.textContent = `Rodada ${rodada} Concluída — ${divs} item${divs !== 1 ? 's' : ''} para recontagem`
-        sub.textContent = `Gere o QR Code da ${rodada + 1}ª rodada e compartilhe com os operadores.`
+        titulo.textContent = `Contagem ${rodada} Concluída — ${divs} item${divs !== 1 ? 's' : ''} para recontagem`
+        sub.textContent = `Gere o QR Code de recontagem e compartilhe com os operadores. Itens só avançam quando batem com a base (Certo) ou confirmam o mesmo erro (Para Ajuste).`
         btnQr.style.display = ''
-        // Abre modal e carrega diretamente a rodada seguinte — sem dupla chamada ao carregarQR
         btnQr.onclick = async () => {
           openModal('modal-qr')
-          await carregarQR(rodada + 1)
+          await carregarQR(2)
         }
       } else {
+        // Recontagem finalizada sem divergências restantes
         banner.style.borderColor = 'rgba(210,187,255,0.4)'
         icon.style.background = 'rgba(210,187,255,0.15)'
         icon.innerHTML = '<span class="material-symbols-outlined text-[20px] text-secondary" style="font-variation-settings:\'FILL\' 1">task_alt</span>'
-        titulo.textContent = `Rodada ${rodada} Concluída`
-        sub.textContent = divs > 0 ? `${divs} item${divs !== 1 ? 's' : ''} confirmado${divs !== 1 ? 's' : ''} como divergente${divs !== 1 ? 's' : ''} — entrarão para ajuste.` : 'Todos os itens conferidos sem divergência.'
+        titulo.textContent = `Contagem ${rodada} Concluída`
+        sub.textContent = 'Todos os itens conferidos sem divergência.'
         btnQr.style.display = 'none'
       }
-      toast(`Rodada ${rodada} concluída!${proxima ? ` ${divs} items para rodada ${rodada+1}.` : ''}`, 'success')
+      toast(`Contagem ${rodada} concluída!${proxima ? ` ${divs} item${divs !== 1 ? 's' : ''} para recontagem.` : ''}`, 'success')
     }
     return
   }
@@ -984,7 +993,31 @@ function handleWsEvent(ev) {
 }
 
 // ── Concluir
-function openConcluir() {
+async function openConcluir() {
+  // Verifica se o inventário está pronto para conclusão antes de abrir o modal.
+  // Regra: todos os itens devem estar CERTO (batem com a base) ou PARA_AJUSTE
+  // (mesmo erro confirmado). Itens PENDENTE ou DIVERGENTE bloqueiam a conclusão.
+  try {
+    const progresso = await progressoSessao(sessaoId)
+    if (!progresso.completa) {
+      const p = progresso.faltando_r1 || 0
+      const d = progresso.faltando_r2 || 0
+      const partes = []
+      if (!progresso.tem_itens) partes.push('nenhum item importado')
+      else {
+        if (p > 0) partes.push(`${p} item${p !== 1 ? 's' : ''} ainda não contado${p !== 1 ? 's' : ''}`)
+        if (d > 0) partes.push(`${d} item${d !== 1 ? 's' : ''} divergente${d !== 1 ? 's' : ''} aguardam recontagem`)
+      }
+      toast(`Não é possível concluir: ${partes.join(' e ') || 'inventário incompleto'}.`, 'error')
+      return
+    }
+  } catch(e) {
+    // Falha de rede ao verificar progresso — avisa e bloqueia (o backend também validaria, mas
+    // é melhor não abrir o modal de confirmação sem saber o estado real do inventário)
+    toast('Erro ao verificar estado do inventário. Tente novamente.', 'error')
+    return
+  }
+
   // Reseta modal para estado pré-conclusão
   document.getElementById('concluir-pre').style.display = ''
   document.getElementById('concluir-pos').style.display = 'none'
@@ -994,7 +1027,9 @@ function openConcluir() {
 
   const preview = document.getElementById('concluir-stats-preview')
   if (stats) {
-    preview.innerHTML = `<span style="color:#d7e3fc">${stats.total} itens</span><span style="color:#10eb8a">${stats.conferidos} conferidos</span><span style="color:#ffcc44">${stats.pendentes} pendentes</span><span style="color:#ffb4ab">${stats.divergencias} diverg.</span>`
+    const certos = Math.max(0, (stats.conferidos || 0) - (stats.divergencias || 0))
+    const ajuste = stats.divergencias || 0
+    preview.innerHTML = `<span style="color:#d7e3fc">${stats.total} itens</span><span style="color:#10eb8a">${certos} certos</span><span style="color:#a78bfa">${ajuste} para ajuste</span>`
   }
   openModal('modal-concluir')
 }
@@ -1083,44 +1118,68 @@ document.getElementById('btn-ai-analise').addEventListener('click', async () => 
     const badgesEl=document.getElementById('analise-badges')
     const risco=result.risco||result.nivel_risco, fonte=result.fonte||result.model
     badgesEl.innerHTML=''
-    if(fonte) badgesEl.innerHTML+=`<span class="badge badge-ia" style="background:rgba(210,187,255,0.15);color:#d2bbff;border-color:rgba(210,187,255,0.3)">${fonte}</span>`
+    if(fonte){
+      const s=document.createElement('span')
+      s.className='badge badge-ia'
+      s.style.cssText='background:rgba(210,187,255,0.15);color:#d2bbff;border-color:rgba(210,187,255,0.3)'
+      s.textContent=fonte; badgesEl.appendChild(s)
+    }
     if(risco){
-      const riscoMap={alto:{cls:'',style:'background:rgba(255,180,171,0.15);color:#ffb4ab;border-color:rgba(255,180,171,0.3)'},medio:{cls:'',style:'background:rgba(255,204,68,0.15);color:#ffcc44;border-color:rgba(255,204,68,0.3)'},baixo:{cls:'',style:'background:rgba(16,235,138,0.1);color:#10eb8a;border-color:rgba(16,235,138,0.25)'}}
-      const r=riscoMap[risco]||{cls:'',style:''}
-      badgesEl.innerHTML+=`<span class="badge" style="${r.style}">Risco ${risco.charAt(0).toUpperCase()+risco.slice(1)}</span>`
+      const riscoMap={alto:'background:rgba(255,180,171,0.15);color:#ffb4ab;border-color:rgba(255,180,171,0.3)',medio:'background:rgba(255,204,68,0.15);color:#ffcc44;border-color:rgba(255,204,68,0.3)',baixo:'background:rgba(16,235,138,0.1);color:#10eb8a;border-color:rgba(16,235,138,0.25)'}
+      const s=document.createElement('span'); s.className='badge'
+      s.style.cssText=riscoMap[risco]||''
+      s.textContent='Risco '+risco.charAt(0).toUpperCase()+risco.slice(1)
+      badgesEl.appendChild(s)
     }
     document.getElementById('analise-resumo').textContent=result.resumo||result.summary||result.relatorio_executivo||''
     const padroes=result.padroes||result.patterns||[]
     const padroesBlock=document.getElementById('analise-padroes-block')
     const gridEl=document.getElementById('analise-grid-2col')
+    const padroesEl=document.getElementById('analise-padroes')
     if(padroes.length>0){
-      padroesBlock.style.display=''
-      document.getElementById('analise-padroes').innerHTML=padroes.map(p=>`
-        <div style="display:flex;gap:.5rem;align-items:flex-start;font-size:.875rem;color:#bcc8d1;line-height:1.5">
-          <span style="color:#8fd6ff;flex-shrink:0;margin-top:2px">▸</span>
-          <span>${typeof p==='string'?p:(p.descricao||p.text||JSON.stringify(p))}</span>
-        </div>`).join('')
+      padroesBlock.style.display=''; padroesEl.innerHTML=''
+      padroes.forEach(p=>{
+        const txt=typeof p==='string'?p:(p.descricao||p.text||JSON.stringify(p))
+        const d=document.createElement('div')
+        d.style.cssText='display:flex;gap:.5rem;align-items:flex-start;font-size:.875rem;color:#bcc8d1;line-height:1.5'
+        const arrow=document.createElement('span'); arrow.style.cssText='color:#8fd6ff;flex-shrink:0;margin-top:2px'; arrow.textContent='▸'
+        const span=document.createElement('span'); span.textContent=txt
+        d.appendChild(arrow); d.appendChild(span); padroesEl.appendChild(d)
+      })
     } else { padroesBlock.style.display='none' }
     const criticos=result.itens_criticos||result.critical_items||[]
     const criticosBlock=document.getElementById('analise-criticos-block')
+    const criticosEl=document.getElementById('analise-criticos')
     if(criticos.length>0){
-      criticosBlock.style.display=''
-      document.getElementById('analise-criticos').innerHTML=criticos.map(it=>`
-        <div style="background:rgba(255,180,171,0.06);border:1px solid rgba(255,180,171,0.15);border-radius:8px;padding:.625rem .75rem">
-          <div style="font-family:'JetBrains Mono',monospace;font-size:.8125rem;font-weight:700;color:#ffb4ab;margin-bottom:.25rem">${it.codigo||it.code||'—'}</div>
-          <div style="font-size:.8125rem;color:#bcc8d1;line-height:1.4">${it.motivo||it.reason||it.descricao||''}</div>
-        </div>`).join('')
+      criticosBlock.style.display=''; criticosEl.innerHTML=''
+      criticos.forEach(it=>{
+        const d=document.createElement('div')
+        d.style.cssText='background:rgba(255,180,171,0.06);border:1px solid rgba(255,180,171,0.15);border-radius:8px;padding:.625rem .75rem'
+        const cod=document.createElement('div')
+        cod.style.cssText="font-family:'JetBrains Mono',monospace;font-size:.8125rem;font-weight:700;color:#ffb4ab;margin-bottom:.25rem"
+        cod.textContent=it.codigo||it.code||'—'
+        const mot=document.createElement('div')
+        mot.style.cssText='font-size:.8125rem;color:#bcc8d1;line-height:1.4'
+        mot.textContent=it.motivo||it.reason||it.descricao||''
+        d.appendChild(cod); d.appendChild(mot); criticosEl.appendChild(d)
+      })
     } else { criticosBlock.style.display='none' }
     if(!padroes.length && !criticos.length) gridEl.style.display='none'; else gridEl.style.display=''
     const recs=result.recomendacoes||result.recommendations||[]
     const recsBlock=document.getElementById('analise-recs-block')
+    const recsEl=document.getElementById('analise-recs')
     if(recs.length>0){
-      recsBlock.style.display=''
-      document.getElementById('analise-recs').innerHTML=recs.map((r,i)=>`
-        <div style="display:flex;gap:.75rem;align-items:flex-start;font-size:.875rem;color:#d7e3fc;line-height:1.6">
-          <span style="flex-shrink:0;width:20px;height:20px;border-radius:50%;background:rgba(16,235,138,0.15);border:1px solid rgba(16,235,138,0.3);display:flex;align-items:center;justify-content:center;font-size:.6875rem;font-weight:700;color:#10eb8a;margin-top:2px">${i+1}</span>
-          <span>${typeof r==='string'?r:(r.texto||r.text||JSON.stringify(r))}</span>
-        </div>`).join('')
+      recsBlock.style.display=''; recsEl.innerHTML=''
+      recs.forEach((r,i)=>{
+        const txt=typeof r==='string'?r:(r.texto||r.text||JSON.stringify(r))
+        const d=document.createElement('div')
+        d.style.cssText='display:flex;gap:.75rem;align-items:flex-start;font-size:.875rem;color:#d7e3fc;line-height:1.6'
+        const num=document.createElement('span')
+        num.style.cssText='flex-shrink:0;width:20px;height:20px;border-radius:50%;background:rgba(16,235,138,0.15);border:1px solid rgba(16,235,138,0.3);display:flex;align-items:center;justify-content:center;font-size:.6875rem;font-weight:700;color:#10eb8a;margin-top:2px'
+        num.textContent=i+1
+        const span=document.createElement('span'); span.textContent=txt
+        d.appendChild(num); d.appendChild(span); recsEl.appendChild(d)
+      })
     } else { recsBlock.style.display='none' }
   } catch(e) {
     document.getElementById('analise-loading').style.display='none'
@@ -1324,9 +1383,9 @@ async function carregarQR(rodada) {
     const baseUrl = encodeURIComponent(window.location.origin)
     imgEl.src = `/api/sessoes/${sessaoId}/qrcode-acesso?base_url=${baseUrl}&_=${Date.now()}`
 
-    // Mostra botão "Gerar para 2ª Contagem" se houver divergências após R1
+    // Mostra botão "Gerar para Nª Contagem" se a sessão está ativa (sem limite de rodadas)
     const btnRodada = document.getElementById('btn-gerar-nova-rodada')
-    if (sessao && sessao.status === 'ativa' && rod < 3) {
+    if (sessao && sessao.status === 'ativa') {
       btnRodada.style.display = ''
       btnRodada.textContent = `Gerar QR para ${rod + 1}ª Contagem`
       btnRodada.onclick = () => carregarQR(rod + 1)

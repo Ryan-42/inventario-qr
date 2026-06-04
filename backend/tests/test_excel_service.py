@@ -26,8 +26,14 @@ def test_importar_planilha_basica():
     xlsx = _make_xlsx([["A001", "Produto Alpha", 10], ["A002", "Produto Beta", 5]])
     itens = importar_planilha(xlsx)
     assert len(itens) == 2
-    assert itens[0] == {"codigo": "A001", "produto": "Produto Alpha", "quantidade_base": 10}
-    assert itens[1] == {"codigo": "A002", "produto": "Produto Beta", "quantidade_base": 5}
+    assert itens[0] == {
+        "codigo": "A001", "produto": "Produto Alpha", "quantidade_base": 10,
+        "local_fisico": None, "valor_estoque": None,
+    }
+    assert itens[1] == {
+        "codigo": "A002", "produto": "Produto Beta", "quantidade_base": 5,
+        "local_fisico": None, "valor_estoque": None,
+    }
 
 
 def test_importar_planilha_colunas_maiusculas():

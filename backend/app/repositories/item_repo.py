@@ -7,6 +7,10 @@ from typing import Optional
 from app.models.item_base import ItemBase
 from app.models.contagem import Contagem, HistoricoContagem
 
+# Garantia de terminação: após este número de rodadas com quantidades sempre diferentes,
+# o item é forçado para PARA_AJUSTE para evitar deadlock permanente no inventário.
+MAX_RODADAS_DIVERGENCIA = 5
+
 
 # ── Items ────────────────────────────────────────────────────────────────────
 
@@ -56,6 +60,21 @@ def listar_itens(db: Session, sessao_id: str) -> list[ItemBase]:
     return db.query(ItemBase).filter(ItemBase.sessao_id == sessao_id).all()
 
 
+def contar_itens(db: Session, sessao_id: str) -> int:
+    from sqlalchemy import func
+    return db.query(func.count(ItemBase.id)).filter(ItemBase.sessao_id == sessao_id).scalar() or 0
+
+
+def buscar_itens_por_codigos(db: Session, sessao_id: str, codigos: list[str]) -> list[ItemBase]:
+    """Busca itens por lista de códigos — evita carregar toda a base para poucas linhas."""
+    if not codigos:
+        return []
+    return db.query(ItemBase).filter(
+        ItemBase.sessao_id == sessao_id,
+        ItemBase.codigo.in_(codigos),
+    ).all()
+
+
 # ── Contagens ─────────────────────────────────────────────────────────────────
 
 def buscar_contagem(db: Session, sessao_id: str, codigo: str) -> Optional[Contagem]:
@@ -87,37 +106,47 @@ def registrar_contagem(
     if existente:
         mesma_qtd_anterior = (quantidade_encontrada == existente.quantidade_encontrada)
 
-        if existente.divergencia and not mesma_qtd_anterior:
-            # Item era divergente e nova quantidade é diferente → avança para próxima rodada
+        # Avança rodada apenas para itens DIVERGENTE ativos (não já-confirmados como PARA_AJUSTE)
+        # com nova quantidade diferente da anterior E diferente da base.
+        # Itens PARA_AJUSTE não avançam rodada — já estão resolvidos.
+        if (existente.divergencia and not existente.para_ajuste
+                and not mesma_qtd_anterior and divergencia):
             nova_rodada = existente.rodada + 1
         elif not existente.divergencia and divergencia:
-            # Item era OK mas nova contagem diverge → volta a requerer R2 (trata como R1 divergente)
-            # Mantém rodada atual para não falsamente "avançar" — o item entra na fila de R2
+            # Item era OK mas nova contagem diverge → entra na fila de recontagem
             nova_rodada = existente.rodada
         else:
-            # Mesma quantidade (confirma estado anterior), ou item continua OK → mantém rodada
+            # Mesma quantidade, item ficou OK, ou item já era PARA_AJUSTE → mantém rodada
             nova_rodada = existente.rodada
 
-        rodada_final = min(nova_rodada, 3)
+        rodada_final = nova_rodada
 
-        # "Para Ajuste" quando:
-        # 1. Confirmação da mesma quantidade divergente (dois registros confirmam o erro)
-        # 2. Chegou à rodada 3 e ainda diverge (sem mais rodadas disponíveis)
-        nova_para_ajuste = (
-            (divergencia and mesma_qtd_anterior and existente.divergencia)
-            or (rodada_final == 3 and divergencia)
-        )
+        # PARA_AJUSTE quando o mesmo erro divergente é confirmado pela segunda vez.
+        nova_para_ajuste = (divergencia and mesma_qtd_anterior and existente.divergencia)
 
-        # Se já estava "para_ajuste" E item ainda diverge → mantém flag
-        # Se já estava "para_ajuste" mas agora está OK → limpa (correção bem-sucedida)
-        if existente.para_ajuste and divergencia:
+        # Garantia de terminação: após MAX_RODADAS rodadas com quantidades sempre diferentes,
+        # força PARA_AJUSTE para impedir que o inventário fique bloqueado indefinidamente.
+        if (not nova_para_ajuste and not existente.para_ajuste
+                and divergencia and rodada_final >= MAX_RODADAS_DIVERGENCIA):
             nova_para_ajuste = True
-        elif existente.para_ajuste and not divergencia:
-            nova_para_ajuste = False  # item foi corrigido
+
+        # Regras de persistência do PARA_AJUSTE:
+        #   - qty bate com a base   → CERTO (correção bem-sucedida)
+        #   - qualquer qty divergente → mantém PARA_AJUSTE
+        #     SE a qty é diferente da confirmada: preserva o valor duplo-confirmado no registro
+        #     (a tentativa nova vai apenas para o HistoricoContagem, para trilha de auditoria).
+        qtd_contagem = quantidade_encontrada  # qty que será salva no registro atual
+        if existente.para_ajuste and not divergencia:
+            nova_para_ajuste = False  # corrigido para a base
+        elif existente.para_ajuste and divergencia:
+            nova_para_ajuste = True   # mantém confirmação
+            if not mesma_qtd_anterior:
+                # Nova qty nunca foi duplo-confirmada: preserva a qty confirmada no Contagem.
+                qtd_contagem = existente.quantidade_encontrada
 
         existente.rodada = rodada_final
-        existente.quantidade_encontrada = quantidade_encontrada
-        existente.divergencia = divergencia
+        existente.quantidade_encontrada = qtd_contagem
+        existente.divergencia = (qtd_contagem != quantidade_base)
         existente.para_ajuste = nova_para_ajuste
         existente.operador = operador
         existente.observacao = observacao
@@ -137,15 +166,21 @@ def registrar_contagem(
         )
         db.add(contagem)
 
-    # Captura para_ajuste do estado atual (existente ou recém criado)
-    _para_ajuste = nova_para_ajuste if existente else False
+    # Histórico sempre registra a tentativa ORIGINAL do operador (para auditoria completa).
+    # Quando qtd_contagem difere de quantidade_encontrada (preservação PARA_AJUSTE),
+    # o histórico mostra a tentativa nova com para_ajuste=False (não foi uma confirmação).
+    if existente and qtd_contagem != quantidade_encontrada:
+        # PARA_AJUSTE com nova qty diferente: histórico registra a tentativa, não a confirmação
+        _para_ajuste_hist = False
+    else:
+        _para_ajuste_hist = nova_para_ajuste if existente else False
     historico = HistoricoContagem(
         sessao_id=sessao_id,
         codigo=codigo,
         quantidade_encontrada=quantidade_encontrada,
         quantidade_base=quantidade_base,
         divergencia=divergencia,
-        para_ajuste=_para_ajuste,
+        para_ajuste=_para_ajuste_hist,
         operador=operador,
         observacao=observacao,
         rodada=rodada_final,
@@ -165,11 +200,17 @@ def contar_contagens(db: Session, sessao_id: str) -> int:
     return db.query(func.count(Contagem.id)).filter(Contagem.sessao_id == sessao_id).scalar() or 0
 
 
-def listar_historico(db: Session, sessao_id: str, codigo: str | None = None) -> list[HistoricoContagem]:
+def listar_historico(
+    db: Session,
+    sessao_id: str,
+    codigo: str | None = None,
+    limit: int = 500,
+    offset: int = 0,
+) -> list[HistoricoContagem]:
     q = db.query(HistoricoContagem).filter(HistoricoContagem.sessao_id == sessao_id)
     if codigo:
         q = q.filter(HistoricoContagem.codigo == codigo)
-    return q.order_by(HistoricoContagem.timestamp.asc()).all()
+    return q.order_by(HistoricoContagem.timestamp.asc()).offset(offset).limit(limit).all()
 
 
 def listar_contagens(db: Session, sessao_id: str,
@@ -219,16 +260,21 @@ def calcular_progresso_rodada(db: Session, sessao_id: str) -> dict:
     contagens = db.query(Contagem).filter(Contagem.sessao_id == sessao_id).all()
     n = len(contagens)
 
-    # Pendentes por rodada:
-    # faltando_rN = itens cujo rodada ainda é N-1 com divergência (ainda não recontados na rodada N)
-    faltando_r1 = total_itens - n                                              # itens sem nenhuma contagem
-    faltando_r2 = sum(1 for c in contagens if c.rodada == 1 and c.divergencia) # aguardando recontagem em R2
-    faltando_r3 = sum(1 for c in contagens if c.rodada == 2 and c.divergencia) # aguardando recontagem em R3
+    # faltando_r1 = itens sem nenhuma contagem
+    faltando_r1 = total_itens - n
 
-    # divergencias_rN = itens que foram contados na rodada N e ainda divergem
-    divergencias_r1 = faltando_r2  # idêntico por definição: R1 divergentes = pendentes de R2
-    divergencias_r2 = sum(1 for c in contagens if c.rodada == 2 and c.divergencia)
-    divergencias_r3 = sum(1 for c in contagens if c.rodada == 3 and c.divergencia)
+    # Itens pendentes de recontagem = divergente E ainda não confirmado como para_ajuste.
+    # Incluem itens em qualquer rodada que ainda não foram resolvidos (CERTO ou PARA_AJUSTE).
+    # Um item só sai daqui quando bate com a base (CERTO) ou confirma o mesmo erro (PARA_AJUSTE).
+    pendentes_recontagem = sum(1 for c in contagens if c.divergencia and not c.para_ajuste)
+    faltando_r2 = pendentes_recontagem
+    faltando_r3 = 0  # sem terceira rodada fixa — subsumir em faltando_r2
+
+    # divergencias_r1 = quantos divergiram na primeira contagem (para estatística do R1)
+    divergencias_r1 = sum(1 for c in contagens if c.rodada == 1 and c.divergencia)
+    # divergencias_r2 = itens que já foram recontados mas ainda não foram resolvidos
+    divergencias_r2 = sum(1 for c in contagens if c.rodada >= 2 and c.divergencia and not c.para_ajuste)
+    divergencias_r3 = 0
 
     if faltando_r1 > 0:
         rodada_atual = 1
@@ -237,31 +283,31 @@ def calcular_progresso_rodada(db: Session, sessao_id: str) -> dict:
         faltando = faltando_r1
         divergencias = divergencias_r1
     elif faltando_r2 > 0:
-        rodada_atual = 2
-        # escopo R2 = itens já recontados (rodada==2) + itens ainda pendentes (rodada==1, div=True)
-        total_rodada = sum(1 for c in contagens if c.rodada == 2 or (c.rodada == 1 and c.divergencia))
-        contados_rodada = sum(1 for c in contagens if c.rodada == 2)
+        # Fase de recontagem: itens divergentes pendentes de resolução (CERTO ou PARA_AJUSTE).
+        # rodada_atual é no mínimo 2 — se todos os divergentes ainda estão em rodada=1 (nenhuma
+        # recontagem feita ainda), max() retornaria 1, o que é enganoso. Garantimos mínimo de 2.
+        rodada_atual = max(2, max((c.rodada for c in contagens), default=2))
+        # Escopo = já recontados ao menos 1x (rodada>=2) + ainda aguardando 1ª recontagem (rodada==1 div)
+        divergentes_r1_pendentes = sum(1 for c in contagens if c.rodada == 1 and c.divergencia)
+        ja_recontados = sum(1 for c in contagens if c.rodada >= 2)
+        total_rodada = divergentes_r1_pendentes + ja_recontados
+        # Resolvidos na recontagem = recontados e já OK (CERTO ou PARA_AJUSTE)
+        contados_rodada = sum(
+            1 for c in contagens if c.rodada >= 2 and (not c.divergencia or c.para_ajuste)
+        )
         faltando = faltando_r2
-        divergencias = divergencias_r2
-    elif faltando_r3 > 0:
-        rodada_atual = 3
-        total_rodada = sum(1 for c in contagens if c.rodada == 3 or (c.rodada == 2 and c.divergencia))
-        contados_rodada = sum(1 for c in contagens if c.rodada == 3)
-        faltando = faltando_r3
-        divergencias = divergencias_r3
+        divergencias = faltando_r2
     else:
-        # Inventário completo: todas as rodadas zeraram
+        # Inventário completo: todos os itens são CERTO ou PARA_AJUSTE
         rodada_atual = max((c.rodada for c in contagens), default=1)
-        total_rodada = n          # escopo = todos os itens contados
-        contados_rodada = n       # todos foram contados (progresso = 100%)
+        total_rodada = n
+        contados_rodada = n
         faltando = 0
-        divergencias = sum(1 for c in contagens if c.divergencia)
+        divergencias = 0
 
-    completa = (faltando_r1 == 0 and faltando_r2 == 0 and faltando_r3 == 0)
-    proxima_rodada_necessaria = (
-        (faltando_r1 == 0 and faltando_r2 > 0) or
-        (faltando_r1 == 0 and faltando_r2 == 0 and faltando_r3 > 0)
-    )
+    # completa = todos contados na R1 E nenhum pendente de recontagem
+    completa = (faltando_r1 == 0 and faltando_r2 == 0)
+    proxima_rodada_necessaria = (faltando_r1 == 0 and faltando_r2 > 0)
 
     return {
         "rodada_atual": rodada_atual,

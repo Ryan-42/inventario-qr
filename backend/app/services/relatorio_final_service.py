@@ -355,7 +355,7 @@ def gerar_relatorio_final_pdf(
     # ── Footer ────────────────────────────────────────────────────────────────
     story.append(Spacer(1, 5*mm))
     story.append(HRFlowable(width="100%", thickness=0.5, color=_SLATE_200, spaceAfter=2*mm))
-    now = datetime.now().strftime("%d/%m/%Y às %H:%M")
+    now = datetime.now(timezone.utc).strftime("%d/%m/%Y às %H:%M UTC")
     story.append(Paragraph(f"Relatório Final gerado em {now} · Inventário QR · {sessao.codigo}", s_footer))
 
     doc.build(story)

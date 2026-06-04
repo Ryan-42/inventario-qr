@@ -30,10 +30,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY . .
 
 # Usuário não-root para segurança
-RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app
+RUN adduser --disabled-password --gecos "" appuser && chown -R appuser /app \
+    && chmod +x /app/entrypoint.sh
 USER appuser
 
 EXPOSE 8000
 
-# Dev: uvicorn com reload | Prod: sobrescrito pelo docker-compose.prod.yml (gunicorn)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Prod: entrypoint roda alembic upgrade head antes do gunicorn
+# Dev: sobrescrever com CMD ["uvicorn", ...] no docker-compose.yml
+CMD ["/app/entrypoint.sh"]
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
