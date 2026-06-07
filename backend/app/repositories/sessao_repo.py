@@ -153,6 +153,15 @@ def cancelar_sessao(db: Session, sessao_id: str) -> Optional[Sessao]:
     return buscar_sessao(db, sessao_id)
 
 
+def deletar_sessao(db: Session, sessao_id: str) -> bool:
+    sessao = buscar_sessao(db, sessao_id)
+    if not sessao:
+        return False
+    db.delete(sessao)
+    db.commit()
+    return True
+
+
 def calcular_valor_estoque(db: Session, sessao_id: str) -> dict:
     """
     Calcula o impacto financeiro do inventário.

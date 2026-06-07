@@ -37,6 +37,8 @@ export const concluirSessao = (id, adminToken) =>
   apiFetch(`/sessoes/${id}/concluir?token_admin=${encodeURIComponent(adminToken || getAdminToken(id))}`, { method: 'PATCH' })
 export const cancelarSessao = (id, adminToken) =>
   apiFetch(`/sessoes/${id}/cancelar?token_admin=${encodeURIComponent(adminToken || getAdminToken(id))}`, { method: 'PATCH' })
+export const deletarSessao = (id, adminToken) =>
+  apiFetch(`/sessoes/${id}?token_admin=${encodeURIComponent(adminToken || getAdminToken(id))}`, { method: 'DELETE' })
 export const rodadasSessao = (id) => apiFetch(`/sessoes/${id}/rodadas`)
 
 // ── Items ────────────────────────────────────────────────────────────

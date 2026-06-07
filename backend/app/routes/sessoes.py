@@ -131,6 +131,16 @@ async def cancelar_sessao(sessao_id: str, token_admin: str,
     return sessao_repo.buscar_sessao_com_stats(db, sessao_id) or cancelado
 
 
+@router.delete("/{sessao_id}", status_code=204)
+async def deletar_sessao(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+    """Remove permanentemente a sessão e todos os dados associados (itens, contagens, grupos)."""
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    _verificar_token_admin(sessao, token_admin)
+    sessao_repo.deletar_sessao(db, sessao_id)
+
+
 @router.get("/{sessao_id}/valor-estoque", response_model=ValorEstoqueStats)
 def valor_estoque_sessao(sessao_id: str, db: Session = Depends(get_db)):
     """Retorna análise financeira: valor inicial vs final do inventário."""

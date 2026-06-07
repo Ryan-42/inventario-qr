@@ -349,6 +349,40 @@ tailwind.config = {
 <!-- Toast -->
 <div id="toast-container"></div>
 
+<!-- Modal Deletar Sessão -->
+<div class="modal-backdrop" id="modal-deletar-sessao" role="dialog" aria-modal="true">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-title" style="display:flex;align-items:center;gap:.5rem">
+        <span class="material-symbols-outlined text-[18px]" style="color:#ffb4ab">delete_forever</span>
+        Deletar Sessão
+      </span>
+      <button class="modal-close" id="modal-deletar-close">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:.75rem">
+      <p style="font-size:.875rem;color:#bcc8d1;line-height:1.5">
+        Tem certeza que deseja deletar a sessão <strong id="deletar-sessao-nome" style="color:#d7e3fc"></strong>?
+      </p>
+      <div style="background:rgba(255,180,171,0.08);border:1px solid rgba(255,180,171,0.3);border-radius:8px;padding:.75rem;display:flex;gap:.5rem;align-items:flex-start">
+        <span class="material-symbols-outlined text-[16px]" style="color:#ffb4ab;flex-shrink:0;margin-top:1px">warning</span>
+        <p style="font-size:.8125rem;color:#ffb4ab;line-height:1.4;margin:0">
+          Esta ação é <strong>irreversível</strong>. Todos os itens, contagens e grupos desta sessão serão apagados permanentemente.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="modal-deletar-cancel">Cancelar</button>
+      <button class="btn" id="modal-deletar-confirm"
+              style="background:rgba(255,180,171,0.15);color:#ffb4ab;border-color:rgba(255,180,171,0.4)">
+        <span id="deletar-confirm-label">Sim, deletar</span>
+        <span id="deletar-confirm-spinner" class="spinner-sm hidden"></span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Nova Sessão -->
 <div class="modal-backdrop" id="modal-nova-sessao" role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal">
@@ -409,7 +443,7 @@ tailwind.config = {
 </div>
 
 <script type="module">
-import { listarSessoes, criarSessao } from '/static/js/api.js'
+import { listarSessoes, criarSessao, deletarSessao } from '/static/js/api.js'
 
 // ── State
 let allSessions = []
@@ -540,9 +574,14 @@ function renderCard(s) {
           </div>
           ${codigo}
         </div>
-        <button class="card-arrow text-outline-variant transition-colors shrink-0 ml-sm">
-          <span class="material-symbols-outlined">arrow_forward</span>
-        </button>
+        <div class="flex items-center gap-xs shrink-0 ml-sm">
+          ${isMinha ? `<button class="btn-delete-sessao text-outline-variant hover:text-error transition-colors p-1 rounded hover:bg-error/10" data-delete-id="${escapeHtml(String(s.id))}" data-delete-nome="${escapeHtml(s.nome || 'Sessão sem nome')}" title="Deletar sessão" aria-label="Deletar sessão">
+            <span class="material-symbols-outlined text-[18px]">delete</span>
+          </button>` : ''}
+          <button class="card-arrow text-outline-variant transition-colors">
+            <span class="material-symbols-outlined">arrow_forward</span>
+          </button>
+        </div>
       </div>
       <div class="p-md flex flex-col gap-sm bg-[#071325]/30">
         ${progressBar}
@@ -607,6 +646,19 @@ function renderGrid() {
     }
     card.addEventListener('click', navigate)
     card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate() } })
+  })
+  sessionsGrid.querySelectorAll('.btn-delete-sessao').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation()
+      openModalDeletar(btn.dataset.deleteId, btn.dataset.deleteNome)
+    })
+  })
+  // Delete buttons — stop propagation so clicking delete não navega para a sessão
+  sessionsGrid.querySelectorAll('.btn-delete-sessao').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation()
+      openModalDeletar(btn.dataset.deleteId, btn.dataset.deleteNome)
+    })
   })
 }
 
@@ -732,6 +784,52 @@ document.getElementById('filter-row').querySelectorAll('.filter-pill').forEach(b
 })
 
 searchInput.addEventListener('input', e => { searchQuery = e.target.value; renderGrid() })
+
+// ── Modal Deletar
+let _deletarId = null
+const modalDeletar     = document.getElementById('modal-deletar-sessao')
+const deletarNomeEl    = document.getElementById('deletar-sessao-nome')
+const deletarConfirmBtn = document.getElementById('modal-deletar-confirm')
+const deletarLbl       = document.getElementById('deletar-confirm-label')
+const deletarSpinner   = document.getElementById('deletar-confirm-spinner')
+
+function openModalDeletar(id, nome) {
+  _deletarId = id
+  deletarNomeEl.textContent = nome
+  deletarLbl.textContent = 'Sim, deletar'
+  deletarSpinner.classList.add('hidden')
+  deletarConfirmBtn.disabled = false
+  modalDeletar.classList.add('open')
+}
+function closeModalDeletar() {
+  modalDeletar.classList.remove('open')
+  _deletarId = null
+}
+
+document.getElementById('modal-deletar-close').addEventListener('click', closeModalDeletar)
+document.getElementById('modal-deletar-cancel').addEventListener('click', closeModalDeletar)
+modalDeletar.addEventListener('click', e => { if (e.target === modalDeletar) closeModalDeletar() })
+
+deletarConfirmBtn.addEventListener('click', async () => {
+  if (!_deletarId) return
+  deletarConfirmBtn.disabled = true
+  deletarLbl.textContent = 'Deletando…'
+  deletarSpinner.classList.remove('hidden')
+  try {
+    await deletarSessao(_deletarId)
+    closeModalDeletar()
+    // Remove do array local e re-renderiza sem recarregar do servidor
+    allSessions = allSessions.filter(s => s.id !== _deletarId)
+    updateStats(allSessions)
+    renderGrid()
+    toast('Sessão deletada com sucesso.', 'success')
+  } catch (err) {
+    toast('Erro ao deletar: ' + (err.message || 'Tente novamente.'), 'error')
+    deletarConfirmBtn.disabled = false
+    deletarLbl.textContent = 'Sim, deletar'
+    deletarSpinner.classList.add('hidden')
+  }
+})
 
 loadSessions()
 </script>
