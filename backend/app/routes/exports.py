@@ -1,6 +1,7 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,10 @@ from app.services.relatorio_final_service import gerar_relatorio_final_pdf, gera
 router = APIRouter(prefix="/sessoes", tags=["Exportações"])
 
 XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+class AdminBody(BaseModel):
+    token_admin: str
 
 
 def _tentar_analise_ia(db, sessao) -> dict | None:
@@ -47,12 +52,12 @@ def _tentar_analise_ia(db, sessao) -> dict | None:
         return None
 
 
-@router.get("/{sessao_id}/exportar/completo")
-def exportar_completo(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+@router.post("/{sessao_id}/exportar/completo")
+def exportar_completo(sessao_id: str, body: AdminBody, db: Session = Depends(get_db)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
+    verificar_token_admin(sessao, body.token_admin)
 
     itens = montar_inventario_completo(db, sessao_id)
     arquivo = exportar_inventario_completo(itens)
@@ -65,12 +70,12 @@ def exportar_completo(sessao_id: str, token_admin: str, db: Session = Depends(ge
     )
 
 
-@router.get("/{sessao_id}/exportar/divergencias")
-def exportar_somente_divergencias(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+@router.post("/{sessao_id}/exportar/divergencias")
+def exportar_somente_divergencias(sessao_id: str, body: AdminBody, db: Session = Depends(get_db)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
+    verificar_token_admin(sessao, body.token_admin)
 
     divergencias = montar_divergencias(db, sessao_id)
     arquivo = exportar_divergencias(divergencias)
@@ -83,12 +88,12 @@ def exportar_somente_divergencias(sessao_id: str, token_admin: str, db: Session 
     )
 
 
-@router.get("/{sessao_id}/exportar/pdf")
-def exportar_pdf(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+@router.post("/{sessao_id}/exportar/pdf")
+def exportar_pdf(sessao_id: str, body: AdminBody, db: Session = Depends(get_db)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
+    verificar_token_admin(sessao, body.token_admin)
 
     itens = montar_inventario_completo(db, sessao_id)
     stats = sessao_repo.stats_sessao(db, sessao_id)
@@ -102,13 +107,13 @@ def exportar_pdf(sessao_id: str, token_admin: str, db: Session = Depends(get_db)
     )
 
 
-@router.get("/{sessao_id}/exportar/relatorio-final-pdf")
-def exportar_relatorio_final_pdf(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+@router.post("/{sessao_id}/exportar/relatorio-final-pdf")
+def exportar_relatorio_final_pdf(sessao_id: str, body: AdminBody, db: Session = Depends(get_db)):
     """Gera PDF executivo final com análise completa, erros, acertos e impacto financeiro."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
+    verificar_token_admin(sessao, body.token_admin)
 
     itens = montar_inventario_completo(db, sessao_id)
     stats = sessao_repo.stats_sessao(db, sessao_id)
@@ -126,13 +131,13 @@ def exportar_relatorio_final_pdf(sessao_id: str, token_admin: str, db: Session =
                     headers={"Content-Disposition": f'attachment; filename="{nome}"'})
 
 
-@router.get("/{sessao_id}/exportar/relatorio-final-excel")
-def exportar_relatorio_final_excel_endpoint(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+@router.post("/{sessao_id}/exportar/relatorio-final-excel")
+def exportar_relatorio_final_excel_endpoint(sessao_id: str, body: AdminBody, db: Session = Depends(get_db)):
     """Gera Excel final com múltiplas abas: resumo, itens, divergências, recomendações e impacto financeiro."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
+    verificar_token_admin(sessao, body.token_admin)
 
     itens = montar_inventario_completo(db, sessao_id)
     stats = sessao_repo.stats_sessao(db, sessao_id)
@@ -150,14 +155,14 @@ def exportar_relatorio_final_excel_endpoint(sessao_id: str, token_admin: str, db
                     headers={"Content-Disposition": f'attachment; filename="{nome}"'})
 
 
-@router.get("/{sessao_id}/exportar/etiquetas")
-def exportar_etiquetas(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+@router.post("/{sessao_id}/exportar/etiquetas")
+def exportar_etiquetas(sessao_id: str, body: AdminBody, db: Session = Depends(get_db)):
     """Gera PDF com folha de etiquetas QR Code — 14 etiquetas por página (2×7)."""
     from app.repositories import item_repo
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
+    verificar_token_admin(sessao, body.token_admin)
 
     itens_raw = item_repo.listar_itens(db, sessao_id)
     if not itens_raw:

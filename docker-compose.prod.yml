@@ -24,7 +24,8 @@ services:
     ports: []  # Não expor banco externamente em produção
 
   redis:
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    # REDIS_PASSWORD obrigatório — falha explícita se não definido
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}"
     restart: unless-stopped
     ports: []  # Não expor Redis externamente em produção
 
@@ -36,15 +37,11 @@ services:
       SECRET_KEY: ${SECRET_KEY}
       APP_ENV: production
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-    command: >
-      gunicorn app.main:app
-        --workers ${GUNICORN_WORKERS:-2}
-        --worker-class uvicorn.workers.UvicornWorker
-        --bind 0.0.0.0:8000
-        --timeout 120
-        --keep-alive 5
-        --access-logfile -
-        --error-logfile -
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    # Sem command: — mantém o CMD do Dockerfile (/app/entrypoint.sh)
+    # O entrypoint.sh aplica alembic upgrade head antes de subir o gunicorn.
+    # Configurar workers/port via variáveis de ambiente acima.
     volumes: []  # Sem volume de código — imagem imutável em produção
     restart: unless-stopped
 

@@ -10,11 +10,29 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./inventario.db")
 
-# SQLite precisa de check_same_thread=False para funcionar com FastAPI
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-# pool_pre_ping=True: testa a conexão antes de cada uso para recuperar de idle timeouts
-# e restarts do PostgreSQL sem lançar erros OperationalError inesperados.
-engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
+# SQLite precisa de check_same_thread=False para funcionar com FastAPI.
+# PostgreSQL em produção requer SSL; se a DATABASE_URL já inclui sslmode não duplicamos.
+_is_postgres = not DATABASE_URL.startswith("sqlite")
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+elif "sslmode" not in DATABASE_URL:
+    connect_args = {"sslmode": "require"}
+else:
+    connect_args = {}
+engine = create_engine(
+    DATABASE_URL,
+    connect_args=connect_args,
+    pool_pre_ping=True,
+    # Em produção com PostgreSQL: pool dimensionado para suportar múltiplos workers Gunicorn.
+    # pool_size: conexões permanentes mantidas abertas.
+    # max_overflow: conexões extras permitidas sob carga pico.
+    # pool_recycle: fecha conexões ociosas após 1h para evitar idle timeout do PG.
+    **({
+        "pool_size": 10,
+        "max_overflow": 20,
+        "pool_recycle": 3600,
+    } if _is_postgres else {}),
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

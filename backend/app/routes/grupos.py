@@ -69,11 +69,13 @@ def listar_grupos(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{sessao_id}/grupos", status_code=201)
-def criar_grupo(sessao_id: str, payload: GrupoCreate, db: Session = Depends(get_db)):
+def criar_grupo(sessao_id: str, payload: GrupoCreate, token_admin: str,
+                db: Session = Depends(get_db)):
     """Cria um novo grupo de operadores com token de acesso próprio."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    verificar_token_admin(sessao, token_admin)
     if sessao.status != StatusSessao.ativa:
         raise HTTPException(status_code=409, detail="Sessão não está ativa")
 
@@ -91,11 +93,12 @@ def criar_grupo(sessao_id: str, payload: GrupoCreate, db: Session = Depends(get_
 
 
 @router.put("/{sessao_id}/grupos/{grupo_id}")
-def atualizar_grupo(sessao_id: str, grupo_id: str, payload: GrupoUpdate,
+def atualizar_grupo(sessao_id: str, grupo_id: str, payload: GrupoUpdate, token_admin: str,
                     db: Session = Depends(get_db)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    verificar_token_admin(sessao, token_admin)
     grupo = grupo_repo.buscar_grupo(db, sessao_id, grupo_id)
     if not grupo:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
@@ -104,11 +107,13 @@ def atualizar_grupo(sessao_id: str, grupo_id: str, payload: GrupoUpdate,
 
 
 @router.post("/{sessao_id}/grupos/{grupo_id}/regenerar-token")
-def regenerar_token_grupo(sessao_id: str, grupo_id: str, db: Session = Depends(get_db)):
+def regenerar_token_grupo(sessao_id: str, grupo_id: str, token_admin: str,
+                          db: Session = Depends(get_db)):
     """Gera novo token para o grupo (invalida o anterior)."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    verificar_token_admin(sessao, token_admin)
     grupo = grupo_repo.buscar_grupo(db, sessao_id, grupo_id)
     if not grupo:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
@@ -144,10 +149,12 @@ def qrcode_grupo(sessao_id: str, grupo_id: str, base_url: str = "",
 
 
 @router.delete("/{sessao_id}/grupos/{grupo_id}", status_code=204)
-def deletar_grupo(sessao_id: str, grupo_id: str, db: Session = Depends(get_db)):
+def deletar_grupo(sessao_id: str, grupo_id: str, token_admin: str,
+                  db: Session = Depends(get_db)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    verificar_token_admin(sessao, token_admin)
     grupo = grupo_repo.buscar_grupo(db, sessao_id, grupo_id)
     if not grupo:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
@@ -232,36 +239,27 @@ def lista_operador(sessao_id: str, token: str = "", rodada: int = 1,
     if not token_valido and not grupo:
         raise HTTPException(status_code=403, detail="Token inválido")
 
-    todos_itens = item_repo.listar_itens(db, sessao_id)
-    contagens_map = {c.codigo: c for c in item_repo.listar_contagens(db, sessao_id)}
+    codigos_filtro = None
+    if grupo:
+        # Pré-computa os códigos válidos do grupo via SQL-free (filtro em memória pequena)
+        # para não fazer um EXISTS nested por item
+        todos_codigos = {i.codigo for i in item_repo.listar_itens(db, sessao_id)}
+        codigos_filtro = {c for c in todos_codigos if grupo.valida_codigo(c)}
 
-    resultado = []
-    for item in todos_itens:
-        # Filtro de grupo
-        if grupo and not grupo.valida_codigo(item.codigo):
-            continue
-
-        contagem = contagens_map.get(item.codigo)
-
-        # Rodada 1: todos os itens não contados do grupo
-        # Rodada 2+: itens DIVERGENTES ativos (qualquer rodada < atual, sem para_ajuste)
-        if rodada == 1:
-            if contagem is not None:
-                continue  # já contado, não aparece na lista
-        else:
-            # Pendentes de recontagem = divergente E não para_ajuste (independente da rodada exata)
-            if not (contagem and contagem.divergencia
-                    and not getattr(contagem, 'para_ajuste', False)):
-                continue
-
-        resultado.append({
-            "codigo": item.codigo,
-            "produto": item.produto,
-            "local_fisico": item.local_fisico,
-            # quantidade_base INTENCIONALMENTE OMITIDA
-            "ja_contado": contagem is not None,
-            "rodada": rodada,
-        })
+    if rodada == 1:
+        itens = item_repo.listar_itens_pendentes_r1(db, sessao_id, codigos_filtro)
+        resultado = [
+            {"codigo": i.codigo, "produto": i.produto, "local_fisico": i.local_fisico,
+             "ja_contado": False, "rodada": 1}
+            for i in itens
+        ]
+    else:
+        rows = item_repo.listar_itens_divergentes_ativos(db, sessao_id, codigos_filtro)
+        resultado = [
+            {"codigo": i.codigo, "produto": i.produto, "local_fisico": i.local_fisico,
+             "ja_contado": True, "rodada": rodada}
+            for i, _c in rows
+        ]
 
     return sorted(resultado, key=lambda x: (x.get("local_fisico") or "zzz", x["codigo"]))
 
@@ -350,28 +348,19 @@ def itens_supervisor(sessao_id: str, token: str, db: Session = Depends(get_db)):
             "itens": [],
         }
 
-    itens = item_repo.listar_itens(db, sessao_id)
-    contagens_map = {c.codigo: c for c in item_repo.listar_contagens(db, sessao_id)}
-
-    resultado = []
-    for item in itens:
-        contagem = contagens_map.get(item.codigo)
-        # Supervisor vê apenas DIVERGENTES ativos — PARA_AJUSTE já está resolvido
-        if not contagem or not contagem.divergencia:
-            continue
-        if getattr(contagem, 'para_ajuste', False):
-            continue  # já aceito para ajuste — não precisa de ação do supervisor
-
-        resultado.append({
+    rows = item_repo.listar_itens_divergentes_ativos(db, sessao_id)
+    resultado = [
+        {
             "codigo": item.codigo,
             "produto": item.produto,
-            "local_fisico": item.local_fisico,  # localização para o supervisor encontrar
-            # sem quantidade_base
+            "local_fisico": item.local_fisico,
             "rodada": contagem.rodada,
-            "para_ajuste": getattr(contagem, 'para_ajuste', False),
+            "para_ajuste": False,
             "operador": contagem.operador,
-            "status": "Para Ajuste" if getattr(contagem, 'para_ajuste', False) else "Divergente",
-        })
+            "status": "Divergente",
+        }
+        for item, contagem in rows
+    ]
 
     return {
         "ativo": True,

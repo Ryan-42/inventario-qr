@@ -12,7 +12,7 @@ load_dotenv()
 
 from app.database import Base
 # Importa todos os models para que o Base.metadata os conheça
-from app.models import sessao, item_base, contagem  # noqa: F401
+from app.models import sessao, item_base, contagem, grupo_operador  # noqa: F401
 
 config = context.config
 

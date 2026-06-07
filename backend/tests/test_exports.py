@@ -10,7 +10,10 @@ def _registrar(client, sessao_id, codigo, qtd):
 
 
 def _export(client, sid, tok, path):
-    return client.get(f"/api/sessoes/{sid}/exportar/{path}?token_admin={tok}")
+    return client.post(
+        f"/api/sessoes/{sid}/exportar/{path}",
+        json={"token_admin": tok},
+    )
 
 
 def test_export_excel_completo(client, sessao_com_itens):
@@ -48,18 +51,18 @@ def test_export_pdf(client, sessao_com_itens):
 
 def test_export_token_invalido_retorna_403(client, sessao_com_itens):
     sid = sessao_com_itens["id"]
-    r = client.get(f"/api/sessoes/{sid}/exportar/completo?token_admin=ERRADO")
+    r = client.post(f"/api/sessoes/{sid}/exportar/completo", json={"token_admin": "ERRADO"})
     assert r.status_code == 403
 
 
 def test_export_sem_token_retorna_422(client, sessao_com_itens):
     sid = sessao_com_itens["id"]
-    r = client.get(f"/api/sessoes/{sid}/exportar/completo")
+    r = client.post(f"/api/sessoes/{sid}/exportar/completo", json={})
     assert r.status_code == 422
 
 
 def test_export_sessao_inexistente(client):
-    r = client.get("/api/sessoes/nao-existe/exportar/completo?token_admin=X")
+    r = client.post("/api/sessoes/nao-existe/exportar/completo", json={"token_admin": "X"})
     assert r.status_code == 404
 
 
@@ -76,11 +79,11 @@ def test_export_etiquetas(client, sessao_com_itens):
 def test_export_etiquetas_sem_itens(client, sessao):
     sid = sessao["id"]
     tok = sessao["token_admin"]
-    r = client.get(f"/api/sessoes/{sid}/exportar/etiquetas?token_admin={tok}")
+    r = client.post(f"/api/sessoes/{sid}/exportar/etiquetas", json={"token_admin": tok})
     assert r.status_code == 422
     assert "Nenhum item" in r.json()["detail"]
 
 
 def test_export_etiquetas_sessao_inexistente(client):
-    r = client.get("/api/sessoes/nao-existe/exportar/etiquetas?token_admin=X")
+    r = client.post("/api/sessoes/nao-existe/exportar/etiquetas", json={"token_admin": "X"})
     assert r.status_code == 404

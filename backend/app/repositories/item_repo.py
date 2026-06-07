@@ -188,6 +188,15 @@ def registrar_contagem(
     try:
         db.add(historico)
         db.commit()
+    except IntegrityError:
+        db.rollback()
+        # Race condition: outro worker inseriu o mesmo (sessao_id, codigo) simultaneamente.
+        # Retorna 409 em vez de 500 para que o cliente possa retentar.
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=409,
+            detail=f"Item '{codigo}' está sendo registrado por outro operador. Aguarde um instante e tente novamente.",
+        )
     except Exception:
         db.rollback()
         raise
@@ -226,6 +235,45 @@ def listar_contagens(db: Session, sessao_id: str,
     if limit is not None:
         q = q.limit(limit)
     return q.all()
+
+
+def listar_itens_pendentes_r1(
+    db: Session, sessao_id: str, codigos_filtro: set[str] | None = None
+) -> list[ItemBase]:
+    """R1: itens sem nenhuma contagem. Usa NOT EXISTS — não carrega contagens em memória."""
+    from sqlalchemy import exists
+    q = db.query(ItemBase).filter(
+        ItemBase.sessao_id == sessao_id,
+        ~exists().where(
+            Contagem.sessao_id == sessao_id,
+            Contagem.codigo == ItemBase.codigo,
+        ),
+    ).order_by(ItemBase.local_fisico.asc().nulls_last(), ItemBase.codigo.asc())
+    itens = q.all()
+    if codigos_filtro is not None:
+        itens = [i for i in itens if i.codigo in codigos_filtro]
+    return itens
+
+
+def listar_itens_divergentes_ativos(
+    db: Session, sessao_id: str, codigos_filtro: set[str] | None = None
+) -> list[tuple]:
+    """R2+: itens com divergência ativa (não para_ajuste). Retorna (ItemBase, Contagem)."""
+    rows = (
+        db.query(ItemBase, Contagem)
+        .join(Contagem, (Contagem.sessao_id == ItemBase.sessao_id)
+              & (Contagem.codigo == ItemBase.codigo))
+        .filter(
+            ItemBase.sessao_id == sessao_id,
+            Contagem.divergencia == True,   # noqa: E712
+            Contagem.para_ajuste == False,  # noqa: E712
+        )
+        .order_by(ItemBase.local_fisico.asc().nulls_last(), ItemBase.codigo.asc())
+        .all()
+    )
+    if codigos_filtro is not None:
+        rows = [(i, c) for i, c in rows if i.codigo in codigos_filtro]
+    return rows
 
 
 def listar_divergencias(db: Session, sessao_id: str) -> list[Contagem]:

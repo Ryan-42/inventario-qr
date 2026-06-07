@@ -98,13 +98,13 @@ def test_fluxo_exportacao_apos_conclusao(client, sessao_com_itens):
     _reg(client, sid, "ABC-002", 3)   # divergente
 
     # Excel completo
-    r = client.get(f"/api/sessoes/{sid}/exportar/completo?token_admin={tok}")
+    r = client.post(f"/api/sessoes/{sid}/exportar/completo", json={"token_admin": tok})
     assert r.status_code == 200
     assert "spreadsheetml" in r.headers["content-type"]
     assert len(r.content) > 0
 
     # PDF
-    r_pdf = client.get(f"/api/sessoes/{sid}/exportar/pdf?token_admin={tok}")
+    r_pdf = client.post(f"/api/sessoes/{sid}/exportar/pdf", json={"token_admin": tok})
     assert r_pdf.status_code == 200
     assert "pdf" in r_pdf.headers["content-type"]
 

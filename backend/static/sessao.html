@@ -871,14 +871,33 @@ function renderItens(filter, search) {
     </div>`
 }
 
-// ── Export links
+// ── Export links — usa fetch+blob para não expor token_admin na URL/logs
+function _bindExport(id, fn, loadingText) {
+  const el = document.getElementById(id)
+  if (!el) return
+  el.removeAttribute('href')
+  el.addEventListener('click', async (e) => {
+    e.preventDefault()
+    const orig = el.innerHTML
+    el.innerHTML = `<span class="material-symbols-outlined text-[16px]">hourglass_empty</span>${loadingText}`
+    el.style.pointerEvents = 'none'
+    try {
+      await fn(sessaoId)
+    } catch (err) {
+      toast(err.message || 'Erro ao exportar. Verifique o token admin.', 'error')
+    } finally {
+      el.innerHTML = orig
+      el.style.pointerEvents = ''
+    }
+  })
+}
 function setupExportLinks() {
-  document.getElementById('btn-export-completo').href = exportarCompleto(sessaoId)
-  document.getElementById('btn-export-divs').href = exportarDivergencias(sessaoId)
-  document.getElementById('btn-export-pdf').href = exportarPDF(sessaoId)
-  document.getElementById('btn-export-etiquetas').href = exportarEtiquetas(sessaoId)
-  document.getElementById('btn-export-relatorio-final-pdf').href = exportarRelatorioFinalPDF(sessaoId)
-  document.getElementById('btn-export-relatorio-final-excel').href = exportarRelatorioFinalExcel(sessaoId)
+  _bindExport('btn-export-completo',            exportarCompleto,           'Gerando…')
+  _bindExport('btn-export-divs',                exportarDivergencias,       'Gerando…')
+  _bindExport('btn-export-pdf',                 exportarPDF,                'Gerando…')
+  _bindExport('btn-export-etiquetas',           exportarEtiquetas,          'Gerando…')
+  _bindExport('btn-export-relatorio-final-pdf', exportarRelatorioFinalPDF,  'Gerando…')
+  _bindExport('btn-export-relatorio-final-excel', exportarRelatorioFinalExcel, 'Gerando…')
 }
 
 // ── Mobile link (com token)
@@ -1050,8 +1069,8 @@ document.getElementById('btn-concluir-confirm').addEventListener('click', async 
     // Mostra painel pós-conclusão com links de download
     document.getElementById('concluir-pre').style.display = 'none'
     document.getElementById('concluir-pos').style.display = ''
-    document.getElementById('btn-download-relatorio-pdf').href = exportarRelatorioFinalPDF(sessaoId)
-    document.getElementById('btn-download-relatorio-excel').href = exportarRelatorioFinalExcel(sessaoId)
+    _bindExport('btn-download-relatorio-pdf',   exportarRelatorioFinalPDF,   'Gerando PDF…')
+    _bindExport('btn-download-relatorio-excel', exportarRelatorioFinalExcel, 'Gerando Excel…')
     toast('Sessão concluída! Relatórios prontos para download.', 'success')
   } catch(e) {
     toast(e.message||'Erro ao concluir.','error')

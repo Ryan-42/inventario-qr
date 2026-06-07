@@ -9,7 +9,7 @@ from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
 from app.schemas import SessaoCreate, SessaoResponse, SessaoCreateResponse, SessaoStats, RodadasInfo, ProgressoRodada, ValorEstoqueStats
-from app.models.sessao import StatusSessao
+from app.models.sessao import Sessao, StatusSessao
 
 router = APIRouter(prefix="/sessoes", tags=["Sessões"])
 
@@ -152,18 +152,25 @@ def progresso_rodada(sessao_id: str, db: Session = Depends(get_db)):
 @router.get("/{sessao_id}/token-acesso")
 def get_token_acesso(sessao_id: str, db: Session = Depends(get_db)):
     """Retorna o token e QR code de acesso mobile da sessão."""
+    from sqlalchemy import update as sa_update
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    token = sessao.token_acesso
-    if not token:
-        token = secrets.token_hex(4).upper()
-        sessao.token_acesso = token
+    if not sessao.token_acesso:
+        # UPDATE atômico WHERE token_acesso IS NULL evita race condition entre dois requests
+        # simultâneos gerando tokens diferentes — apenas um INSERT vence, o outro é no-op.
+        novo_token = secrets.token_hex(4).upper()
+        db.execute(
+            sa_update(Sessao)
+            .where(Sessao.id == sessao_id,
+                   Sessao.token_acesso.is_(None))
+            .values(token_acesso=novo_token)
+        )
         db.commit()
-        db.refresh(sessao)  # evita DetachedInstanceError ao acessar rodada_token após commit
+        db.refresh(sessao)
     rodada = sessao.rodada_token or 1
-    mobile_url = f"/mobile/{sessao_id}?token={token}"
-    return {"token": token, "rodada": rodada, "mobile_url": mobile_url}
+    mobile_url = f"/mobile/{sessao_id}?token={sessao.token_acesso}"
+    return {"token": sessao.token_acesso, "rodada": rodada, "mobile_url": mobile_url}
 
 
 @router.post("/{sessao_id}/gerar-token")
@@ -210,17 +217,23 @@ def qrcode_acesso(sessao_id: str, base_url: str = "", db: Session = Depends(get_
     """
     import qrcode as qrcode_lib
     from io import BytesIO
+    from sqlalchemy import update as sa_update
     _validar_base_url(base_url)
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    token = sessao.token_acesso
-    if not token:
-        token = secrets.token_hex(4).upper()
-        sessao.token_acesso = token
+    if not sessao.token_acesso:
+        novo_token = secrets.token_hex(4).upper()
+        db.execute(
+            sa_update(Sessao)
+            .where(Sessao.id == sessao_id,
+                   Sessao.token_acesso.is_(None))
+            .values(token_acesso=novo_token)
+        )
         db.commit()
+        db.refresh(sessao)
     # Usa a base_url passada pelo frontend para garantir URL absoluta no QR
-    mobile_path = f"/mobile/{sessao_id}?token={token}"
+    mobile_path = f"/mobile/{sessao_id}?token={sessao.token_acesso}"
     full_url = f"{base_url.rstrip('/')}{mobile_path}" if base_url else mobile_path
     qr = qrcode_lib.QRCode(version=None, error_correction=qrcode_lib.constants.ERROR_CORRECT_M, box_size=10, border=2)
     qr.add_data(full_url)

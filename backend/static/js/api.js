@@ -84,13 +84,32 @@ export const alertaSessao = (sessaoId, payload) =>
 export const valorEstoqueSessao = (sessaoId) => apiFetch(`/sessoes/${sessaoId}/valor-estoque`)
 export const progressoSessao   = (sessaoId) => apiFetch(`/sessoes/${sessaoId}/progresso`)
 
-function _exportUrl(sessaoId, path) {
-  const tok = encodeURIComponent(getAdminToken(sessaoId))
-  return `${BASE}/sessoes/${sessaoId}/exportar/${path}?token_admin=${tok}`
+// token_admin vai no corpo do POST — nunca na URL — para não aparecer em logs nem histórico
+async function _exportFetch(sessaoId, path, filename) {
+  const tok = getAdminToken(sessaoId)
+  const res = await fetch(`${BASE}/sessoes/${sessaoId}/exportar/${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token_admin: tok }),
+  })
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`
+    try { const j = await res.json(); detail = j.detail || detail } catch {}
+    throw Object.assign(new Error(detail), { status: res.status })
+  }
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
-export const exportarCompleto          = (sessaoId) => _exportUrl(sessaoId, 'completo')
-export const exportarDivergencias      = (sessaoId) => _exportUrl(sessaoId, 'divergencias')
-export const exportarPDF               = (sessaoId) => _exportUrl(sessaoId, 'pdf')
-export const exportarEtiquetas         = (sessaoId) => _exportUrl(sessaoId, 'etiquetas')
-export const exportarRelatorioFinalPDF = (sessaoId) => _exportUrl(sessaoId, 'relatorio-final-pdf')
-export const exportarRelatorioFinalExcel = (sessaoId) => _exportUrl(sessaoId, 'relatorio-final-excel')
+export const exportarCompleto          = (sessaoId, nome) => _exportFetch(sessaoId, 'completo', nome || 'inventario_completo.xlsx')
+export const exportarDivergencias      = (sessaoId, nome) => _exportFetch(sessaoId, 'divergencias', nome || 'divergencias.xlsx')
+export const exportarPDF               = (sessaoId, nome) => _exportFetch(sessaoId, 'pdf', nome || 'relatorio.pdf')
+export const exportarEtiquetas         = (sessaoId, nome) => _exportFetch(sessaoId, 'etiquetas', nome || 'etiquetas.pdf')
+export const exportarRelatorioFinalPDF = (sessaoId, nome) => _exportFetch(sessaoId, 'relatorio-final-pdf', nome || 'relatorio_final.pdf')
+export const exportarRelatorioFinalExcel = (sessaoId, nome) => _exportFetch(sessaoId, 'relatorio-final-excel', nome || 'relatorio_final.xlsx')

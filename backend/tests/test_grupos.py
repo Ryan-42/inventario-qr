@@ -11,7 +11,8 @@ def _reg(client, sid, codigo, qtd):
 
 def test_criar_grupo(client, sessao):
     sid = sessao["id"]
-    r = client.post(f"/api/sessoes/{sid}/grupos",
+    tok = sessao["token_admin"]
+    r = client.post(f"/api/sessoes/{sid}/grupos?token_admin={tok}",
                     json={"nome": "Grupo Alpha", "filtro": "ABC", "tipo_filtro": "prefixo"})
     assert r.status_code == 201
     data = r.json()
@@ -29,9 +30,10 @@ def test_listar_grupos_vazio(client, sessao):
 
 def test_listar_grupos(client, sessao):
     sid = sessao["id"]
-    client.post(f"/api/sessoes/{sid}/grupos",
+    tok = sessao["token_admin"]
+    client.post(f"/api/sessoes/{sid}/grupos?token_admin={tok}",
                 json={"nome": "G1", "filtro": "*", "tipo_filtro": "todos"})
-    client.post(f"/api/sessoes/{sid}/grupos",
+    client.post(f"/api/sessoes/{sid}/grupos?token_admin={tok}",
                 json={"nome": "G2", "filtro": "X", "tipo_filtro": "prefixo"})
     r = client.get(f"/api/sessoes/{sid}/grupos")
     assert len(r.json()) == 2
@@ -39,10 +41,11 @@ def test_listar_grupos(client, sessao):
 
 def test_deletar_grupo(client, sessao):
     sid = sessao["id"]
-    r_create = client.post(f"/api/sessoes/{sid}/grupos",
+    tok = sessao["token_admin"]
+    r_create = client.post(f"/api/sessoes/{sid}/grupos?token_admin={tok}",
                            json={"nome": "Tmp", "filtro": "*", "tipo_filtro": "todos"})
     gid = r_create.json()["id"]
-    r_del = client.delete(f"/api/sessoes/{sid}/grupos/{gid}")
+    r_del = client.delete(f"/api/sessoes/{sid}/grupos/{gid}?token_admin={tok}")
     assert r_del.status_code == 204
     r_list = client.get(f"/api/sessoes/{sid}/grupos")
     assert all(g["id"] != gid for g in r_list.json())
@@ -50,11 +53,12 @@ def test_deletar_grupo(client, sessao):
 
 def test_regenerar_token_grupo(client, sessao):
     sid = sessao["id"]
-    r = client.post(f"/api/sessoes/{sid}/grupos",
+    tok = sessao["token_admin"]
+    r = client.post(f"/api/sessoes/{sid}/grupos?token_admin={tok}",
                     json={"nome": "G", "filtro": "*", "tipo_filtro": "todos"})
     gid = r.json()["id"]
     tok_antigo = r.json()["token"]
-    r2 = client.post(f"/api/sessoes/{sid}/grupos/{gid}/regenerar-token")
+    r2 = client.post(f"/api/sessoes/{sid}/grupos/{gid}/regenerar-token?token_admin={tok}")
     assert r2.status_code == 200
     assert r2.json()["token"] != tok_antigo
 
@@ -63,7 +67,7 @@ def test_criar_grupo_sessao_inativa_bloqueado(client, sessao):
     sid = sessao["id"]
     tok = sessao["token_admin"]
     client.patch(f"/api/sessoes/{sid}/cancelar?token_admin={tok}")
-    r = client.post(f"/api/sessoes/{sid}/grupos",
+    r = client.post(f"/api/sessoes/{sid}/grupos?token_admin={tok}",
                     json={"nome": "G", "filtro": "*", "tipo_filtro": "todos"})
     assert r.status_code == 409
 

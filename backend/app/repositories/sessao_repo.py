@@ -122,32 +122,35 @@ def buscar_sessao_com_stats(db: Session, sessao_id: str) -> Optional[dict]:
 
 
 def concluir_sessao(db: Session, sessao_id: str) -> Optional[Sessao]:
-    sessao = buscar_sessao(db, sessao_id)
-    # Só transiciona de 'ativa' → 'concluida'. Impede reverter cancelamentos ou duplicar conclusões.
-    if sessao and sessao.status == StatusSessao.ativa:
-        sessao.status = StatusSessao.concluida
-        sessao.data_fim = datetime.now(timezone.utc)
-        db.commit()
-        db.refresh(sessao)
-        return sessao
-    # Retorna None se não houve transição (status diferente de ativa ou não encontrada)
-    return None
+    from sqlalchemy import update as sa_update
+    # UPDATE atômico: só transiciona se ainda estava 'ativa' no momento do lock.
+    # Evita race condition entre dois workers tentando concluir ao mesmo tempo.
+    rowcount = db.execute(
+        sa_update(Sessao)
+        .where(Sessao.id == sessao_id, Sessao.status == StatusSessao.ativa)
+        .values(status=StatusSessao.concluida, data_fim=datetime.now(timezone.utc))
+    ).rowcount
+    db.commit()
+    if rowcount == 0:
+        return None
+    return buscar_sessao(db, sessao_id)
 
 
 def cancelar_sessao(db: Session, sessao_id: str) -> Optional[Sessao]:
-    sessao = buscar_sessao(db, sessao_id)
-    # Não cancela sessões já concluídas (evita reverter inventário fechado)
-    # Idempotente para sessões já canceladas: retorna None para que a rota retorne 409
-    if sessao and sessao.status == StatusSessao.cancelada:
-        return None  # já cancelada — sinaliza para a rota que não houve transição
-    if sessao and sessao.status not in (StatusSessao.ativa, StatusSessao.pausada):
-        return None  # concluida ou outro estado terminal — não cancelar
-    if sessao:
-        sessao.status = StatusSessao.cancelada
-        sessao.data_fim = datetime.now(timezone.utc)
-        db.commit()
-        db.refresh(sessao)
-    return sessao
+    from sqlalchemy import update as sa_update
+    # UPDATE atômico: só cancela sessões ativas ou pausadas.
+    rowcount = db.execute(
+        sa_update(Sessao)
+        .where(
+            Sessao.id == sessao_id,
+            Sessao.status.in_([StatusSessao.ativa, StatusSessao.pausada]),
+        )
+        .values(status=StatusSessao.cancelada, data_fim=datetime.now(timezone.utc))
+    ).rowcount
+    db.commit()
+    if rowcount == 0:
+        return None
+    return buscar_sessao(db, sessao_id)
 
 
 def calcular_valor_estoque(db: Session, sessao_id: str) -> dict:
