@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 from app.auth import verificar_token_admin
 from app.database import get_db
-from app.repositories import sessao_repo
+from app.repositories import sessao_repo, item_repo
 from app.services.sessao_service import montar_inventario_completo, montar_divergencias
 from app.services.excel_service import exportar_inventario_completo, exportar_divergencias
 from app.services.pdf_service import gerar_relatorio_pdf, gerar_etiquetas_pdf
@@ -124,8 +124,9 @@ def exportar_relatorio_final_pdf(sessao_id: str, body: AdminBody, db: Session = 
         ve_dict = None
 
     analise_dict = _tentar_analise_ia(db, sessao)
+    historico = item_repo.listar_historico(db, sessao_id, limit=None)
 
-    arquivo = gerar_relatorio_final_pdf(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict)
+    arquivo = gerar_relatorio_final_pdf(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict, historico=historico)
     nome = f"relatorio_final_{sessao.codigo}.pdf"
     return Response(content=arquivo, media_type="application/pdf",
                     headers={"Content-Disposition": f'attachment; filename="{nome}"'})
@@ -148,8 +149,9 @@ def exportar_relatorio_final_excel_endpoint(sessao_id: str, body: AdminBody, db:
         ve_dict = None
 
     analise_dict = _tentar_analise_ia(db, sessao)
+    historico = item_repo.listar_historico(db, sessao_id, limit=None)
 
-    arquivo = gerar_relatorio_final_excel(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict)
+    arquivo = gerar_relatorio_final_excel(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict, historico=historico)
     nome = f"relatorio_final_{sessao.codigo}.xlsx"
     return Response(content=arquivo, media_type=XLSX_MEDIA_TYPE,
                     headers={"Content-Disposition": f'attachment; filename="{nome}"'})

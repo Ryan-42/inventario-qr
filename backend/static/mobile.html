@@ -161,9 +161,6 @@ tailwind.config = {
       <button id="btn-modo-manual" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-primary transition-colors active:scale-95" title="Digitar código manualmente">
         <span class="material-symbols-outlined text-[20px]">keyboard</span>
       </button>
-      <button id="btn-lista" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-primary transition-colors active:scale-95" title="Minha lista de itens">
-        <span class="material-symbols-outlined text-[20px]">checklist</span>
-      </button>
       <button id="btn-operador" class="flex items-center gap-1 px-2 h-10 rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-primary transition-colors active:scale-95">
         <span class="material-symbols-outlined text-[18px]">person</span>
         <span id="operador-nome-label" class="text-code-sm font-code-sm max-w-[64px] truncate hidden sm:block">Operador</span>
@@ -451,46 +448,6 @@ tailwind.config = {
   </div>
 </div>
 
-<!-- ═══ STATE: LISTA DE ITENS ═══ -->
-<div id="state-lista" class="hidden absolute inset-0 z-40 bg-background flex flex-col">
-  <!-- Header -->
-  <div class="flex items-center gap-3 px-margin-mobile pt-10 pb-4 border-b border-white/5 bg-surface-container/80 backdrop-blur-md">
-    <button id="btn-back-lista" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant active:scale-95">
-      <span class="material-symbols-outlined text-[20px]">arrow_back</span>
-    </button>
-    <div class="flex-1 min-w-0">
-      <h2 class="font-semibold text-on-surface leading-tight" style="font-size:18px">Minha Lista</h2>
-      <p id="lista-grupo-label" class="text-code-sm font-code-sm text-on-surface-variant uppercase tracking-wider">Todos os itens</p>
-    </div>
-    <span id="lista-count" class="text-code-sm font-code-sm text-primary bg-surface-container-high px-2 py-1 rounded-lg border border-white/10"></span>
-  </div>
-
-  <!-- Search -->
-  <div class="px-margin-mobile py-sm border-b border-white/5 bg-surface-container/60">
-    <div class="relative">
-      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-      <input id="lista-search" type="text" inputmode="text" placeholder="Buscar por código ou nome..."
-        class="w-full rounded-xl py-2.5 pl-9 pr-4 text-body-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
-        style="background:#fff;color:#111;border:1px solid rgba(0,0,0,0.15);font-size:14px"/>
-    </div>
-  </div>
-
-  <!-- Info banner -->
-  <div class="px-margin-mobile py-sm">
-    <div class="bg-primary/5 border border-primary/15 rounded-xl px-md py-sm flex items-center gap-sm">
-      <span class="material-symbols-outlined text-primary text-[18px] shrink-0">info</span>
-      <p class="text-code-sm font-code-sm text-on-surface-variant leading-relaxed">Apenas código e nome — sem quantidade. Toque em um item para escanear.</p>
-    </div>
-  </div>
-
-  <!-- List -->
-  <div id="lista-items" class="flex-1 overflow-y-auto px-margin-mobile pb-8 flex flex-col gap-2 overscroll-contain">
-    <div id="lista-loading" class="flex flex-col items-center justify-center py-16 gap-3">
-      <div class="w-10 h-10 border-4 border-surface-container-high border-t-primary rounded-full animate-spin"></div>
-      <span class="text-code-sm font-code-sm text-on-surface-variant uppercase tracking-widest">Carregando itens...</span>
-    </div>
-  </div>
-</div>
 
 <!-- ═══ MODAL: Operator Name ═══ -->
 <div id="modal-operador">
@@ -545,7 +502,7 @@ const canvasEl = () => document.getElementById('scanner-canvas')
 function vibrate(ms) { try { if (navigator.vibrate) navigator.vibrate(ms) } catch {} }
 
 // ── showState
-const STATES = ['loading','token','scanner','manual','rodada-completa','item','confirmar','sucesso','erro','inativa','lista']
+const STATES = ['loading','token','scanner','manual','rodada-completa','item','confirmar','sucesso','erro','inativa']
 
 // ── Progresso state — campos que chegam no WS progresso_atualizado
 let progressoAtual = { rodada_atual: 1, faltando: 0, total_rodada: 0, contados_rodada: 0, completa: false }
@@ -780,10 +737,11 @@ function showState(name) {
     }
   })
   if (name === 'scanner') {
-    if (!stream) startCamera()
-    else if (!scanActive) { scanActive = true; requestAnimationFrame(scanFrame) }
+    startCamera()
+  } else if (name === 'inativa') {
+    stopCamera()  // destrói stream ao sair da sessão
   } else {
-    stopCamera()
+    pauseCamera()  // só pausa o loop; stream permanece ativo para retomada rápida
   }
   if (name === 'manual') {
     renderRecentes()
@@ -807,23 +765,33 @@ function showState(name) {
 // ── Camera
 async function startCamera() {
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal:'environment' }, width:{ ideal:1280 }, height:{ ideal:720 } } })
-    const video = videoEl()
-    video.srcObject = stream
-    await video.play()
+    if (!stream) {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+      })
+      const video = videoEl()
+      video.srcObject = stream
+      await video.play()
+    }
     scanActive = true
     requestAnimationFrame(scanFrame)
   } catch(e) {
     console.warn('Camera error:', e)
+    stream = null
     const hintEl = document.getElementById('scan-hint-text')
-    if (hintEl) hintEl.textContent = 'Câmera indisponível — use o campo abaixo'
+    if (hintEl) hintEl.innerHTML = 'Câmera indisponível — use o campo abaixo'
     scanActive = false
   }
 }
 
+// Pausa apenas o loop de scan sem destruir o stream (evita reinício lento ao voltar ao scanner)
+function pauseCamera() { scanActive = false }
+
+// Destrói o stream completamente — chamado só ao sair da sessão
 function stopCamera() {
   scanActive = false
-  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; const video = videoEl(); if (video) video.srcObject = null }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null }
+  const video = videoEl(); if (video) video.srcObject = null
 }
 
 function scanFrame() {
@@ -1061,88 +1029,8 @@ function startCountdown() {
 
 function returnToScanner() { currentItem=null; currentCodigo=null; currentQty=0; const obsInput=document.getElementById('observacao-input'); if(obsInput) obsInput.value=''; showState('scanner') }
 
-// ── Lista de itens (sem quantidade)
-let listaCache = []
-let listaCarregada = false
-
-async function carregarLista() {
-  listaCarregada = false
-  listaCache = []
-  const container = document.getElementById('lista-items')
-  const loading = document.getElementById('lista-loading')
-  if (loading) loading.style.display = ''
-  try {
-    const rodada = progressoAtual?.rodada_atual || 1
-    const tokenParam = tokenAtivo ? `&token=${encodeURIComponent(tokenAtivo)}` : ''
-    const res = await fetch(`/api/sessoes/${sessaoId}/lista-operador?rodada=${rodada}${tokenParam}`)
-    if (!res.ok) throw new Error('Falha ao carregar lista')
-    listaCache = await res.json()
-    listaCarregada = true
-  } catch(e) {
-    listaCache = []
-  } finally {
-    if (loading) loading.style.display = 'none'
-    renderLista(listaCache)
-  }
-}
-
-function renderLista(itens) {
-  const container = document.getElementById('lista-items')
-  const countEl = document.getElementById('lista-count')
-  if (!container) return
-  const loading = document.getElementById('lista-loading')
-  if (loading) loading.style.display = 'none'
-  if (countEl) countEl.textContent = `${itens.length} item${itens.length !== 1 ? 's' : ''}`
-  if (itens.length === 0) {
-    container.innerHTML = `<div class="flex flex-col items-center justify-center py-16 gap-3 text-center">
-      <span class="material-symbols-outlined text-[48px] text-on-surface-variant/40">checklist</span>
-      <p class="text-body-sm font-body-sm text-on-surface-variant">Nenhum item pendente nesta rodada</p>
-    </div>`
-    return
-  }
-  // Agrupa por local_fisico
-  const grupos = {}
-  for (const item of itens) {
-    const loc = item.local_fisico || 'Sem local'
-    if (!grupos[loc]) grupos[loc] = []
-    grupos[loc].push(item)
-  }
-  const html = Object.entries(grupos).map(([loc, items]) => `
-    <div class="flex flex-col gap-1">
-      <div class="flex items-center gap-2 mt-2 mb-1">
-        <span class="material-symbols-outlined text-[14px] text-on-surface-variant">place</span>
-        <span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-widest">${escapeHtmlLista(loc)}</span>
-      </div>
-      ${items.map(item => `
-        <button class="lista-item-btn w-full text-left px-md py-sm bg-surface-container border border-white/8 rounded-xl hover:border-primary/40 hover:bg-primary/5 transition-colors active:scale-[0.99]"
-          data-codigo="${escapeHtmlAttr(item.codigo)}">
-          <div class="flex items-center justify-between gap-sm">
-            <span class="text-code-sm font-code-sm text-primary" style="font-family:'JetBrains Mono',monospace">${escapeHtmlLista(item.codigo)}</span>
-            ${item.ja_contado ? '<span class="text-[10px] text-tertiary bg-tertiary/10 border border-tertiary/30 px-2 py-0.5 rounded-full uppercase font-semibold tracking-wider">✓</span>' : ''}
-          </div>
-          <p class="text-body-sm font-body-sm text-on-surface-variant truncate mt-0.5">${escapeHtmlLista(item.produto)}</p>
-        </button>`).join('')}
-    </div>`).join('')
-  container.innerHTML = html
-  container.querySelectorAll('.lista-item-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const codigo = btn.dataset.codigo
-      if (codigo) { showState('scanner'); setTimeout(() => processCode(codigo), 100) }
-    })
-  })
-}
-
 function escapeHtmlLista(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 function escapeHtmlAttr(s) { return String(s||'').replace(/"/g,'&quot;') }
-
-function filtrarLista(query) {
-  if (!query) { renderLista(listaCache); return }
-  const q = query.toLowerCase()
-  const filtrado = listaCache.filter(i =>
-    i.codigo.toLowerCase().includes(q) || (i.produto||'').toLowerCase().includes(q)
-  )
-  renderLista(filtrado)
-}
 
 // ── Event listeners
 // ── Rodada completa buttons
@@ -1150,13 +1038,6 @@ document.getElementById('btn-proxima-rodada').addEventListener('click', () => sh
 document.getElementById('btn-aguardar-admin').addEventListener('click', () => showState('scanner'))
 document.getElementById('btn-continuar-scanner').addEventListener('click', () => showState('scanner'))
 
-// ── Lista button
-document.getElementById('btn-lista').addEventListener('click', () => {
-  showState('lista')
-  carregarLista()
-})
-document.getElementById('btn-back-lista').addEventListener('click', () => showState('scanner'))
-document.getElementById('lista-search').addEventListener('input', e => filtrarLista(e.target.value.trim()))
 
 // ── Sync offline button
 document.getElementById('btn-sync-offline').addEventListener('click', async () => {

@@ -91,6 +91,7 @@ def gerar_relatorio_final_pdf(
     itens: list[dict],
     valor_estoque: dict | None = None,
     analise_ia: dict | None = None,
+    historico: list | None = None,
 ) -> bytes:
     """Gera PDF executivo completo da sessão com análise de erros, acertos e impacto financeiro."""
     buf = BytesIO()
@@ -352,6 +353,83 @@ def gerar_relatorio_final_pdf(
     items_table.setStyle(TableStyle(cmds_it))
     story.append(items_table)
 
+    # ── Histórico de Rodadas ─────────────────────────────────────────────────
+    if historico:
+        story.append(Spacer(1, 6*mm))
+        story.append(Paragraph("Histórico de Rodadas por Item", s_h2))
+        story.append(Spacer(1, 2*mm))
+        story.append(Paragraph(
+            "Itens que precisaram de mais de 1 rodada ou finalizaram como Para Ajuste.",
+            s_body,
+        ))
+        story.append(Spacer(1, 3*mm))
+
+        # Agrupa por código
+        from collections import defaultdict
+        hist_por_item: dict[str, list] = defaultdict(list)
+        for h in historico:
+            cod = getattr(h, "codigo", None) or (h.get("codigo") if isinstance(h, dict) else None)
+            if cod:
+                hist_por_item[cod].append(h)
+
+        # Filtra apenas itens com mais de 1 contagem ou para_ajuste
+        itens_multi = {
+            cod: regs for cod, regs in hist_por_item.items()
+            if len(regs) > 1 or any(
+                (getattr(r, "para_ajuste", False) or (isinstance(r, dict) and r.get("para_ajuste")))
+                for r in regs
+            )
+        }
+
+        if itens_multi:
+            rod_cols = ["Código", "Produto", "Qtd. Contagens", "Rodadas", "Resultado", "Operador(es)"]
+            rod_widths = [30*mm, 60*mm, 25*mm, 22*mm, 28*mm, 35*mm]
+            rod_rows = [rod_cols]
+            for cod, regs in sorted(itens_multi.items()):
+                regs_sorted = sorted(regs, key=lambda r: getattr(r, "timestamp", None) or (r.get("timestamp") if isinstance(r, dict) else ""))
+                rodadas = sorted({getattr(r, "rodada", 1) or (r.get("rodada") if isinstance(r, dict) else 1) for r in regs_sorted})
+                operadores = list({str(getattr(r, "operador", "") or (r.get("operador") if isinstance(r, dict) else "") or "—") for r in regs_sorted})
+                ultimo = regs_sorted[-1]
+                pa = getattr(ultimo, "para_ajuste", False) or (isinstance(ultimo, dict) and ultimo.get("para_ajuste"))
+                div = getattr(ultimo, "divergencia", False) or (isinstance(ultimo, dict) and ultimo.get("divergencia"))
+                produto = next((it.get("produto") for it in itens if it.get("codigo") == cod), "—")
+                resultado = "Para Ajuste" if pa else ("Divergente" if div else "OK")
+                rod_rows.append([
+                    Paragraph(cod, s_cell),
+                    Paragraph(str(produto), s_cell),
+                    Paragraph(str(len(regs)), s_cell_c),
+                    Paragraph(", ".join(str(r) for r in rodadas), s_cell_c),
+                    Paragraph(resultado, s_cell_c),
+                    Paragraph(", ".join(operadores[:3]), s_cell),
+                ])
+
+            rod_table = Table(rod_rows, colWidths=rod_widths, repeatRows=1)
+            rod_cmds = [
+                ("BACKGROUND",  (0, 0), (-1, 0), _BLUE),
+                ("TEXTCOLOR",   (0, 0), (-1, 0), _WHITE),
+                ("FONTSIZE",    (0, 0), (-1, 0), 8),
+                ("FONTNAME",    (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE",    (0, 1), (-1, -1), 8),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [_WHITE, _SLATE_50]),
+                ("BOX",         (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+                ("INNERGRID",   (0, 0), (-1, -1), 0.25, _SLATE_200),
+                ("VALIGN",      (0, 0), (-1, -1), "MIDDLE"),
+                ("TOPPADDING",  (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]
+            for i, (cod, regs) in enumerate(sorted(itens_multi.items()), 1):
+                ultimo = sorted(regs, key=lambda r: getattr(r, "timestamp", None) or "")[-1]
+                pa = getattr(ultimo, "para_ajuste", False) or (isinstance(ultimo, dict) and ultimo.get("para_ajuste"))
+                div = getattr(ultimo, "divergencia", False) or (isinstance(ultimo, dict) and ultimo.get("divergencia"))
+                if pa:
+                    rod_cmds.append(("BACKGROUND", (0, i), (-1, i), _PURPLE_LIGHT))
+                elif div:
+                    rod_cmds.append(("BACKGROUND", (0, i), (-1, i), _RED_LIGHT))
+            rod_table.setStyle(TableStyle(rod_cmds))
+            story.append(rod_table)
+        else:
+            story.append(Paragraph("Todos os itens foram conferidos na 1ª rodada sem divergências.", s_body))
+
     # ── Footer ────────────────────────────────────────────────────────────────
     story.append(Spacer(1, 5*mm))
     story.append(HRFlowable(width="100%", thickness=0.5, color=_SLATE_200, spaceAfter=2*mm))
@@ -368,6 +446,7 @@ def gerar_relatorio_final_excel(
     itens: list[dict],
     valor_estoque: dict | None = None,
     analise_ia: dict | None = None,
+    historico: list | None = None,
 ) -> bytes:
     """Gera Excel com múltiplas abas: Resumo, Itens OK, Divergências, Impacto Financeiro, Recomendações."""
     from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
@@ -446,6 +525,47 @@ def gerar_relatorio_final_excel(
         recs.append({"#": 1, "Recomendação": "Inventário concluído sem pendências significativas.", "Origem": "Sistema"})
     df_recs = pd.DataFrame(recs)
 
+    # ── Aba 5: Histórico de Rodadas ───────────────────────────────────────────
+    df_hist = None
+    if historico:
+        hist_rows = []
+        for h in historico:
+            if isinstance(h, dict):
+                hist_rows.append(h)
+            else:
+                hist_rows.append({
+                    "codigo": getattr(h, "codigo", ""),
+                    "rodada": getattr(h, "rodada", 1),
+                    "quantidade_encontrada": getattr(h, "quantidade_encontrada", None),
+                    "quantidade_base": getattr(h, "quantidade_base", None),
+                    "divergencia": getattr(h, "divergencia", False),
+                    "para_ajuste": getattr(h, "para_ajuste", False),
+                    "operador": getattr(h, "operador", ""),
+                    "observacao": getattr(h, "observacao", ""),
+                    "timestamp": getattr(h, "timestamp", None),
+                })
+        if hist_rows:
+            df_hist = pd.DataFrame(hist_rows).reindex(
+                columns=["codigo", "rodada", "quantidade_encontrada", "quantidade_base",
+                         "divergencia", "para_ajuste", "operador", "observacao", "timestamp"]
+            )
+            df_hist.columns = ["Código", "Rodada", "Qtd. Encontrada", "Qtd. Base",
+                                "Divergente", "Para Ajuste", "Operador", "Observação", "Data/Hora"]
+            # Linha de resumo por item: quantas contagens, resultado final
+            prod_map = {it.get("codigo"): it.get("produto", "") for it in itens}
+            resumo_hist = (
+                df_hist.groupby("Código")
+                .agg(
+                    Produto=("Código", lambda x: prod_map.get(x.iloc[0], "")),
+                    Contagens=("Rodada", "count"),
+                    Rodadas=("Rodada", lambda x: ", ".join(str(r) for r in sorted(x.unique()))),
+                    Resultado_Final=("Para Ajuste", lambda x: "Para Ajuste" if x.iloc[-1] else ("Divergente" if df_hist.loc[x.index[-1:], "Divergente"].iloc[0] else "OK")),
+                    Operadores=("Operador", lambda x: ", ".join(str(v) for v in x.dropna().unique() if v)[:50]),
+                )
+                .reset_index()
+            )
+            resumo_hist.columns = ["Código", "Produto", "Total Contagens", "Rodadas", "Resultado Final", "Operadores"]
+
     # ── Escreve para Excel com formatação ─────────────────────────────────────
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df_resumo.to_excel(writer, index=False, sheet_name="Resumo Executivo")
@@ -453,6 +573,9 @@ def gerar_relatorio_final_excel(
         if not df_divs.empty:
             df_divs.to_excel(writer, index=False, sheet_name="Divergências")
         df_recs.to_excel(writer, index=False, sheet_name="Recomendações")
+        if df_hist is not None:
+            resumo_hist.to_excel(writer, index=False, sheet_name="Resumo por Rodadas")
+            df_hist.to_excel(writer, index=False, sheet_name="Histórico Detalhado")
 
         wb = writer.book
 
@@ -515,5 +638,25 @@ def gerar_relatorio_final_excel(
         # Aba Recomendações
         ws_rec = wb["Recomendações"]
         _estilizar_aba(ws_rec, [6, 80, 14])
+
+        # Abas de Histórico de Rodadas
+        if df_hist is not None:
+            ws_res_hist = wb["Resumo por Rodadas"]
+            _estilizar_aba(ws_res_hist, [18, 40, 18, 20, 18, 35])
+            # Colorir por resultado
+            res_col = 5
+            pur_fill = PatternFill("solid", fgColor="F5F3FF")
+            for row in ws_res_hist.iter_rows(min_row=2):
+                res_val = str(row[res_col - 1].value or "").lower()
+                if "ajuste" in res_val:
+                    f = pur_fill
+                elif "divergente" in res_val:
+                    f = div_fill
+                else:
+                    f = ok_fill
+                for cell in row:
+                    cell.fill = f
+            ws_hist = wb["Histórico Detalhado"]
+            _estilizar_aba(ws_hist, [18, 10, 16, 12, 12, 12, 20, 30, 20])
 
     return output.getvalue()

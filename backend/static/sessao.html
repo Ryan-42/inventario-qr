@@ -271,16 +271,8 @@ tailwind.config = {
     <div id="rodadas-content" class="flex flex-col gap-sm"></div>
   </section>
 
-  <!-- MOBILE LINK & UPLOAD -->
-  <section class="grid grid-cols-1 md:grid-cols-2 gap-md">
-    <div class="glass-panel rounded-xl p-lg flex flex-col gap-sm border border-white/10">
-      <h3 class="text-label-md font-label-md text-on-surface-variant uppercase">Acesso Mobile</h3>
-      <p class="text-body-sm font-body-sm text-on-surface-variant">Compartilhe com os operadores:</p>
-      <div class="flex items-center gap-sm bg-surface-container-high border border-white/10 rounded-lg px-md py-sm">
-        <span id="mobile-link-text" class="font-mono text-code-sm font-code-sm text-on-surface-variant flex-1 overflow-hidden text-ellipsis whitespace-nowrap"></span>
-        <button id="btn-copy-link" class="btn btn-secondary btn-sm shrink-0">Copiar</button>
-      </div>
-    </div>
+  <!-- UPLOAD -->
+  <section class="grid grid-cols-1 gap-md">
     <div class="glass-panel rounded-xl p-lg flex flex-col gap-sm border border-white/10">
       <h3 class="text-label-md font-label-md text-on-surface-variant uppercase">Planilha Base</h3>
       <p class="text-body-sm font-body-sm text-on-surface-variant">Importe a planilha de estoque para validar contagens.</p>
@@ -363,7 +355,7 @@ tailwind.config = {
     <!-- Token display -->
     <div style="background:rgba(10,22,40,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:1rem;margin-bottom:1rem;text-align:center">
       <div style="font-size:.75rem;font-weight:600;color:#87929b;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.375rem">Token de Acesso</div>
-      <div id="qr-token-display" style="font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700;color:#8fd6ff;letter-spacing:.15em">----</div>
+      <div id="qr-token-display" style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:#8fd6ff;letter-spacing:.12em;word-break:break-all;line-height:1.3">----</div>
       <div id="qr-rodada-badge" style="font-size:.75rem;color:#bcc8d1;margin-top:.25rem"></div>
     </div>
 
@@ -572,7 +564,7 @@ import {
   analisarSessao, chatSessao, rodadasSessao,
   exportarCompleto, exportarDivergencias, exportarPDF, exportarEtiquetas,
   exportarRelatorioFinalPDF, exportarRelatorioFinalExcel,
-  valorEstoqueSessao, progressoSessao,
+  valorEstoqueSessao, progressoSessao, getAdminToken,
 } from '/static/js/api.js'
 import { SessionWS } from '/static/js/ws.js'
 
@@ -934,7 +926,7 @@ function handleWsEvent(ev) {
   }
   if (ev.tipo === '_disconnected') {
     document.getElementById('ws-dot').className = 'ws-dot ws-disconnected'
-    document.getElementById('ws-label').textContent = 'Reconectando...'; return
+    document.getElementById('ws-label').textContent = 'Offline'; return
   }
   if (ev.tipo === 'progresso_atualizado') {
     // Busca stats completos (inclui divergencias reais, que não vêm no evento de progresso)
@@ -1381,10 +1373,15 @@ async function abrirModalQR() {
 
 async function carregarQR(rodada) {
   try {
-    const url = rodada
-      ? `/api/sessoes/${sessaoId}/gerar-token?rodada=${rodada}`
-      : `/api/sessoes/${sessaoId}/token-acesso`
-    const method = rodada ? 'POST' : 'GET'
+    let url, method
+    if (rodada) {
+      const ta = encodeURIComponent(getAdminToken(sessaoId) || '')
+      url = `/api/sessoes/${sessaoId}/gerar-token?rodada=${rodada}&token_admin=${ta}`
+      method = 'POST'
+    } else {
+      url = `/api/sessoes/${sessaoId}/token-acesso`
+      method = 'GET'
+    }
     const res = await fetch(url, { method })
     const data = await res.json()
     const token = data.token || '----'
