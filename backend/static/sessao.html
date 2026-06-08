@@ -463,10 +463,33 @@ tailwind.config = {
       <div style="font-size:.75rem;color:#3d4850">ou clique para selecionar (.xlsx, .csv)</div>
     </div>
     <div id="upload-validation-report" class="validation-report" style="display:none"></div>
-    <div style="margin-top:1.25rem;display:none;gap:.75rem;align-items:center" id="upload-action-row">
+
+    <!-- Preview das primeiras linhas (aparece após validação) -->
+    <div id="upload-preview" style="display:none;margin-top:1rem">
+      <div style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3d4850;margin-bottom:.5rem" id="upload-preview-title">Prévia — primeiras 5 linhas</div>
+      <div style="overflow-x:auto;border-radius:8px;border:1px solid rgba(255,255,255,0.08)">
+        <table style="width:100%;border-collapse:collapse;font-size:.8125rem">
+          <thead>
+            <tr style="background:rgba(255,255,255,0.04)">
+              <th style="padding:.5rem .75rem;text-align:left;color:#87929b;font-weight:600;white-space:nowrap">Código</th>
+              <th style="padding:.5rem .75rem;text-align:left;color:#87929b;font-weight:600">Produto</th>
+              <th style="padding:.5rem .75rem;text-align:right;color:#87929b;font-weight:600;white-space:nowrap">Qtd</th>
+              <th style="padding:.5rem .75rem;text-align:left;color:#87929b;font-weight:600">Local</th>
+            </tr>
+          </thead>
+          <tbody id="upload-preview-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="margin-top:1.25rem;display:none;gap:.75rem;align-items:center;flex-wrap:wrap" id="upload-action-row">
       <button id="btn-analisar-importar" class="btn btn-primary" disabled>
         <span id="upload-btn-spinner" class="spinner-sm" style="display:none"></span>
-        Analisar e importar
+        <span id="upload-btn-label">Analisar</span>
+      </button>
+      <button id="btn-confirmar-importar" class="btn btn-primary hidden">
+        <span id="upload-confirm-spinner" class="spinner-sm hidden"></span>
+        Confirmar importação
       </button>
       <span id="upload-status-text" style="font-size:.8125rem;color:#3d4850"></span>
     </div>
@@ -1086,34 +1109,81 @@ function setSelectedFile(f) {
   selectedFile=f; uploadValidated=false; dropzone.classList.add('has-file')
   document.getElementById('dropzone-label').textContent=f.name
   document.getElementById('upload-validation-report').style.display='none'
+  document.getElementById('upload-preview').style.display='none'
   document.getElementById('upload-action-row').style.display='flex'
   document.getElementById('btn-analisar-importar').disabled=false
+  document.getElementById('btn-analisar-importar').classList.remove('hidden')
+  document.getElementById('btn-confirmar-importar').classList.add('hidden')
+  document.getElementById('upload-btn-label').textContent='Analisar'
   document.getElementById('upload-status-text').textContent=''
+}
+
+function _renderPreview(rows, total) {
+  const tbody = document.getElementById('upload-preview-body')
+  const title = document.getElementById('upload-preview-title')
+  if (title) title.textContent = `Prévia — ${rows.length} de ${total} linhas`
+  if (!tbody || !rows.length) return
+  tbody.innerHTML = rows.map(r => `
+    <tr style="border-top:1px solid rgba(255,255,255,0.05)">
+      <td style="padding:.45rem .75rem;font-family:'JetBrains Mono',monospace;font-size:.8rem;color:#8fd6ff">${escapeHtml(r.codigo)}</td>
+      <td style="padding:.45rem .75rem;color:#d7e3fc;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.produto)}</td>
+      <td style="padding:.45rem .75rem;text-align:right;color:#d7e3fc">${escapeHtml(String(r.quantidade??'—'))}</td>
+      <td style="padding:.45rem .75rem;color:#87929b;font-size:.75rem">${escapeHtml(r.local_fisico||'—')}</td>
+    </tr>`).join('')
+  document.getElementById('upload-preview').style.display='block'
 }
 
 document.getElementById('btn-analisar-importar').addEventListener('click', async () => {
   if(!selectedFile) return
-  const btn=document.getElementById('btn-analisar-importar'),spinner=document.getElementById('upload-btn-spinner'),statusText=document.getElementById('upload-status-text'),reportEl=document.getElementById('upload-validation-report')
-  btn.disabled=true; spinner.style.display='inline-block'; statusText.textContent='Validando com IA...'
+  const btn=document.getElementById('btn-analisar-importar')
+  const spinner=document.getElementById('upload-btn-spinner')
+  const statusText=document.getElementById('upload-status-text')
+  const reportEl=document.getElementById('upload-validation-report')
+  btn.disabled=true; spinner.style.display='inline-block'
+  document.getElementById('upload-btn-label').textContent='Analisando...'
+  statusText.textContent=''
   try {
-    let canImport=true
-    try {
-      const validation=await validarPlanilha(sessaoId,selectedFile)
-      const validationIssues=validation.problemas||validation.issues||[]
-      const podeImportar=validation.valido||validation.pode_importar_com_avisos||validation.pode_importar
-      if(validationIssues.length>0){reportEl.style.display='block';reportEl.innerHTML=`<div style="font-size:.8125rem;font-weight:600;margin-bottom:.5rem;color:${podeImportar?'#ffcc44':'#ffb4ab'}">${podeImportar?'Avisos encontrados':'Planilha inválida'}</div><div>${validationIssues.map(issue=>`<div class="validation-issue"><span>${podeImportar?'!':'✕'}</span><span>${typeof issue==='string'?issue:(issue.mensagem||issue.message||JSON.stringify(issue))}</span></div>`).join('')}</div>`}
-      if(!podeImportar){canImport=false;btn.disabled=false;spinner.style.display='none';statusText.textContent='';return}
-    } catch(e){}
-    if(canImport){
-      statusText.textContent='Importando...'
-      const result=await uploadPlanilha(sessaoId,selectedFile)
-      toast(`Planilha importada: ${result.total||result.itens_importados||0} itens`,'success')
-      const [newStats,newItens]=await Promise.all([statsSessao(sessaoId),listarItens(sessaoId)])
-      stats=newStats; itens=newItens; renderStats(); renderItens(currentFilter,currentSearch); closeModal('modal-upload'); selectedFile=null; uploadValidated=false
-      loadValorEstoque()  // atualiza painel financeiro após importar planilha
+    const validation=await validarPlanilha(sessaoId,selectedFile)
+    const issues=validation.problemas||validation.issues||[]
+    const podeImportar=validation.valido||validation.pode_importar_com_avisos||validation.pode_importar
+    if(issues.length>0){
+      reportEl.style.display='block'
+      reportEl.innerHTML=`<div style="font-size:.8125rem;font-weight:600;margin-bottom:.5rem;color:${podeImportar?'#ffcc44':'#ffb4ab'}">${podeImportar?'Avisos encontrados':'Planilha inválida'}</div><div>${issues.map(i=>`<div class="validation-issue"><span>${podeImportar?'⚠':'✕'}</span><span>${escapeHtml(typeof i==='string'?i:(i.mensagem||i.message||JSON.stringify(i)))}</span></div>`).join('')}</div>`
     }
-  } catch(e) { toast(e.message||'Erro ao importar.','error') }
-  finally { btn.disabled=false; spinner.style.display='none'; statusText.textContent='' }
+    if(!podeImportar){ btn.disabled=false; spinner.style.display='none'; document.getElementById('upload-btn-label').textContent='Analisar'; return }
+    // Mostra preview e habilita botão de confirmação
+    if(validation.preview_rows?.length) _renderPreview(validation.preview_rows, validation.total_rows||validation.preview_rows.length)
+    btn.classList.add('hidden')
+    document.getElementById('btn-confirmar-importar').classList.remove('hidden')
+    statusText.textContent=`${validation.total_rows||'?'} itens prontos para importar`
+  } catch(e) {
+    toast(e.message||'Erro ao validar.','error')
+    btn.disabled=false; spinner.style.display='none'
+    document.getElementById('upload-btn-label').textContent='Analisar'
+  } finally {
+    spinner.style.display='none'
+  }
+})
+
+document.getElementById('btn-confirmar-importar').addEventListener('click', async () => {
+  if(!selectedFile) return
+  const btn=document.getElementById('btn-confirmar-importar')
+  const spinner=document.getElementById('upload-confirm-spinner')
+  const statusText=document.getElementById('upload-status-text')
+  btn.disabled=true; spinner.classList.remove('hidden'); statusText.textContent='Importando...'
+  try {
+    const result=await uploadPlanilha(sessaoId,selectedFile)
+    toast(`Planilha importada: ${result.total||result.itens_importados||0} itens`,'success')
+    const [newStats,newItens]=await Promise.all([statsSessao(sessaoId),listarItens(sessaoId)])
+    stats=newStats; itens=newItens; renderStats(); renderItens(currentFilter,currentSearch)
+    closeModal('modal-upload'); selectedFile=null
+    loadValorEstoque()
+  } catch(e) {
+    toast(e.message||'Erro ao importar.','error')
+    btn.disabled=false
+  } finally {
+    spinner.classList.add('hidden'); statusText.textContent=''
+  }
 })
 
 // ── AI Analysis

@@ -397,6 +397,13 @@ tailwind.config = {
         <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3d4850;display:block;margin-bottom:0.5rem" for="input-nome-sessao">Nome da Sessão</label>
         <input id="input-nome-sessao" type="text" class="input" placeholder="Ex: Inventário Geral — Janeiro 2025" maxlength="120" autocomplete="off"/>
       </div>
+      <div>
+        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3d4850;display:block;margin-bottom:0.5rem" for="input-webhook-url">
+          Webhook URL <span style="color:#3d4850;font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span>
+        </label>
+        <input id="input-webhook-url" type="url" class="input" placeholder="https://seu-sistema.com/webhook" maxlength="500" autocomplete="off"/>
+        <p style="font-size:.6875rem;color:#3d4850;margin-top:.375rem">Receba um POST automático quando o inventário for concluído.</p>
+      </div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" id="modal-cancel-btn">Cancelar</button>
@@ -702,7 +709,8 @@ async function createSession(nome) {
   modalCreateLbl.textContent = 'Criando…'
   modalCreateSpinner.classList.remove('hidden')
   try {
-    const sessao = await criarSessao(nome.trim())
+    const webhookUrl = (document.getElementById('input-webhook-url')?.value || '').trim() || null
+    const sessao = await criarSessao(nome.trim(), webhookUrl)
     // Armazena token_admin para esta sessão
     if (sessao.token_admin) {
       setAdminToken(sessao.id, sessao.token_admin)
@@ -727,6 +735,7 @@ async function createSession(nome) {
 function openModal() {
   modalBackdrop.classList.add('open')
   inputNome.value = ''
+  const wh = document.getElementById('input-webhook-url'); if (wh) wh.value = ''
   modalCreateBtn.disabled = true
   modalCreateLbl.textContent = 'Criar Sessão'
   modalCreateSpinner.classList.add('hidden')

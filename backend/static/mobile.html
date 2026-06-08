@@ -794,17 +794,53 @@ function stopCamera() {
   const video = videoEl(); if (video) video.srcObject = null
 }
 
-function scanFrame() {
+// BarcodeDetector API — nativa no Chrome/Edge/Android, suporta QR + EAN-13/128/UPC/Code39
+// Fallback para jsQR (QR code apenas) em browsers sem suporte
+const _barcodeDetector = (() => {
+  try {
+    if ('BarcodeDetector' in window) {
+      return new BarcodeDetector({
+        formats: ['qr_code','ean_13','ean_8','code_128','code_39','upc_a','upc_e','itf','codabar','data_matrix','pdf417','aztec'],
+      })
+    }
+  } catch {}
+  return null
+})()
+
+// Atualiza hint para indicar suporte a código de barras
+document.addEventListener('DOMContentLoaded', () => {
+  const hint = document.getElementById('scan-hint-text')
+  if (hint && _barcodeDetector) {
+    hint.innerHTML = '<span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>QR Code ou código de barras'
+  }
+})
+
+async function scanFrame() {
   if (!scanActive) return
-  const video = videoEl(), canvas = canvasEl()
-  if (!video || !canvas) return
+  const video = videoEl()
+  if (!video) return
+
   if (video.readyState >= video.HAVE_ENOUGH_DATA) {
-    canvas.width = video.videoWidth; canvas.height = video.videoHeight
-    const ctx = canvas.getContext('2d')
-    ctx.drawImage(video, 0, 0)
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-    const code = jsQR(imageData.data, canvas.width, canvas.height, { inversionAttempts:'dontInvert' })
-    if (code && code.data && code.data.trim()) { onCodeDetected(code.data.trim()); return }
+    if (_barcodeDetector) {
+      // Nativo: suporta QR + todos os formatos lineares
+      try {
+        const results = await _barcodeDetector.detect(video)
+        if (results.length > 0) {
+          const raw = results[0].rawValue?.trim()
+          if (raw) { onCodeDetected(raw); return }
+        }
+      } catch {}
+    } else {
+      // Fallback jsQR: apenas QR Code
+      const canvas = canvasEl()
+      if (!canvas) { requestAnimationFrame(scanFrame); return }
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(video, 0, 0)
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const code = jsQR(imageData.data, canvas.width, canvas.height, { inversionAttempts: 'dontInvert' })
+      if (code && code.data && code.data.trim()) { onCodeDetected(code.data.trim()); return }
+    }
   }
   requestAnimationFrame(scanFrame)
 }

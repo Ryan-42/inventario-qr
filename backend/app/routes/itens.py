@@ -49,7 +49,20 @@ async def validar_planilha(
 
     from app.agents.validation import ValidationAgent
     agente = ValidationAgent()
-    return agente.validate(itens)
+    resultado = agente.validate(itens)
+    # Inclui preview das primeiras 5 linhas para o frontend mostrar antes de confirmar o import
+    resultado["preview_rows"] = [
+        {
+            "codigo": it.get("codigo", ""),
+            "produto": it.get("produto", ""),
+            "quantidade": it.get("quantidade_base", it.get("quantidade", 0)),
+            "local_fisico": it.get("local_fisico", ""),
+            "valor_estoque": it.get("valor_estoque"),
+        }
+        for it in itens[:5]
+    ]
+    resultado["total_rows"] = len(itens)
+    return resultado
 
 
 @router.post("/{sessao_id}/upload", status_code=201)

@@ -8,6 +8,7 @@ from app.models.sessao import StatusSessao
 
 class SessaoCreate(BaseModel):
     nome: str = Field(..., max_length=120)
+    webhook_url: Optional[str] = Field(default=None, max_length=500)
 
     @field_validator("nome")
     @classmethod
@@ -16,6 +17,16 @@ class SessaoCreate(BaseModel):
         if not v:
             raise ValueError("Nome da sessão não pode ser vazio")
         return v
+
+    @field_validator("webhook_url")
+    @classmethod
+    def webhook_url_valida(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        v = v.strip()
+        if v and not (v.startswith("http://") or v.startswith("https://")):
+            raise ValueError("webhook_url deve começar com http:// ou https://")
+        return v or None
 
 
 class SessaoResponse(BaseModel):
@@ -28,6 +39,7 @@ class SessaoResponse(BaseModel):
     total_itens: int = 0
     itens_contados: int = 0
     total_divergencias: int = 0
+    webhook_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

@@ -13,6 +13,24 @@ from app.models.sessao import Sessao, StatusSessao
 
 router = APIRouter(prefix="/sessoes", tags=["Sessões"])
 
+import logging as _logging
+_logger = _logging.getLogger(__name__)
+
+
+def _disparar_webhook(webhook_url: str, payload: dict) -> None:
+    """Dispara HTTP POST para webhook_url com o payload JSON. Falhas são apenas logadas."""
+    import urllib.request, json as _json
+    try:
+        data = _json.dumps(payload).encode()
+        req = urllib.request.Request(
+            webhook_url, data=data,
+            headers={"Content-Type": "application/json", "User-Agent": "INVIQ-Webhook/1.0"},
+            method="POST",
+        )
+        urllib.request.urlopen(req, timeout=10)
+    except Exception as exc:
+        _logger.warning("webhook_failed url=%s erro=%s", webhook_url, exc)
+
 
 @router.get("/", response_model=list[SessaoResponse])
 def listar_sessoes(db: Session = Depends(get_db)):
@@ -22,7 +40,7 @@ def listar_sessoes(db: Session = Depends(get_db)):
 @router.post("/", response_model=SessaoCreateResponse, status_code=201)
 @limiter.limit("20/hour")
 async def criar_sessao(request: Request, payload: SessaoCreate, db: Session = Depends(get_db)):
-    sessao = sessao_repo.criar_sessao(db, nome=payload.nome)
+    sessao = sessao_repo.criar_sessao(db, nome=payload.nome, webhook_url=payload.webhook_url)
     return {
         "id": sessao.id,
         "codigo": sessao.codigo,
@@ -34,6 +52,7 @@ async def criar_sessao(request: Request, payload: SessaoCreate, db: Session = De
         "itens_contados": 0,
         "total_divergencias": 0,
         "token_admin": sessao.token_admin,
+        "webhook_url": sessao.webhook_url,
     }
 
 
@@ -97,6 +116,7 @@ async def concluir_sessao(sessao_id: str, token_admin: str,
                    "Todos os itens devem estar Certo ou Para Ajuste.",
         )
 
+    webhook_url = sessao.webhook_url  # captura antes de concluir (sessao pode ser GCed)
     concluido = sessao_repo.concluir_sessao(db, sessao_id)
     if not concluido:
         raise HTTPException(status_code=409, detail="Sessão não pôde ser concluída (conflito). Tente novamente.")
@@ -105,6 +125,17 @@ async def concluir_sessao(sessao_id: str, token_admin: str,
         "tipo": "sessao_status_alterado", "status": "concluida",
         "mensagem": "O inventário foi concluído pelo administrador.",
     })
+    if webhook_url:
+        stats_wh = sessao_repo.stats_sessao(db, sessao_id)
+        background_tasks.add_task(_disparar_webhook, webhook_url, {
+            "evento": "sessao_concluida",
+            "sessao_id": sessao_id,
+            "codigo": sessao.codigo,
+            "nome": sessao.nome,
+            "total": stats_wh.get("total", 0),
+            "conferidos": stats_wh.get("conferidos", 0),
+            "divergencias": stats_wh.get("divergencias", 0),
+        })
     # Retorna dict com stats reais em vez do ORM sem os campos calculados
     return sessao_repo.buscar_sessao_com_stats(db, sessao_id) or concluido
 

@@ -35,6 +35,7 @@ class Sessao(Base):
     token_supervisor = Column(String, nullable=True)  # token do supervisor (acesso somente-leitura)
     pausada_em = Column(DateTime(timezone=True), nullable=True)
     previsao_retomada = Column(String, nullable=True)  # ex: "14:00"
+    webhook_url = Column(String, nullable=True)  # URL para POST ao concluir/cancelar
 
     itens = relationship("ItemBase", back_populates="sessao", cascade="all, delete-orphan")
     contagens = relationship("Contagem", back_populates="sessao", cascade="all, delete-orphan")

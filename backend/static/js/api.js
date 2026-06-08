@@ -30,7 +30,7 @@ export function setAdminToken(sessaoId, token) {
 
 // ── Sessions ────────────────────────────────────────────────────────
 export const listarSessoes = () => apiFetch('/sessoes')
-export const criarSessao = (nome) => apiFetch('/sessoes', { method: 'POST', body: JSON.stringify({ nome }) })
+export const criarSessao = (nome, webhookUrl) => apiFetch('/sessoes', { method: 'POST', body: JSON.stringify({ nome, webhook_url: webhookUrl || null }) })
 export const buscarSessao = (id) => apiFetch(`/sessoes/${id}`)
 export const statsSessao = (id) => apiFetch(`/sessoes/${id}/stats`)
 export const concluirSessao = (id, adminToken) =>
