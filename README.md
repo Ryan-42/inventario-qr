@@ -313,48 +313,35 @@ Admin conclui sessão
 
 ---
 
-## Deploy (Koyeb)
+## Deploy (Render) — Em produção
 
-Deploy via Docker a partir do GitHub. Sem sleep, PostgreSQL gratuito via Neon.
+O projeto está no ar em **https://inventario-qr-api.onrender.com** via Render Blueprint.
 
-**1. Banco de dados — Neon PostgreSQL (gratuito)**
+O `render.yaml` na raiz do projeto configura tudo automaticamente: PostgreSQL + web service Docker.
 
-1. Acesse [neon.tech](https://neon.tech) → **Start for free**
-2. Crie um projeto (ex: `inventario-qr`) → região mais próxima
-3. Copie a **Connection string** no formato:  
-   `postgresql://usuario:senha@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require`
+**Para fazer o seu próprio deploy:**
 
-**2. Deploy no Koyeb**
+1. Acesse [render.com](https://render.com) → **Blueprints** → **New Blueprint Instance**
+2. Conecte o repo `inventario-qr` → branch `main`
+3. Render lê o `render.yaml` e cria o banco e o serviço automaticamente
+4. Preencha as variáveis solicitadas:
 
-1. Acesse [app.koyeb.com](https://app.koyeb.com) → **Create Service**
-2. Escolha **GitHub** → autorize e selecione o repo `inventario-qr`
-3. Em **Builder** selecione **Dockerfile**
-4. Preencha:
-   - **Branch:** `main`
-   - **Dockerfile location:** `backend/Dockerfile`
-   - **Docker build context:** `backend`
-5. Em **Exposed ports** confirme a porta **`8000`**
-6. Em **Health checks** → path: **`/health`**
-7. Em **Environment variables** adicione:
+| Variável | Valor |
+|----------|-------|
+| `ALLOWED_ORIGINS` | `https://SEU-APP.onrender.com` |
+| `ANTHROPIC_API_KEY` | `sk-ant-...` *(opcional)* |
+
+5. Clique **Deploy Blueprint** — o `entrypoint.sh` aguarda o banco, roda `alembic upgrade head` e sobe o gunicorn
+
+**Após o deploy, adicione via Environment:**
 
 | Variável | Valor |
 |----------|-------|
 | `APP_ENV` | `production` |
-| `DATABASE_URL` | *(connection string do Neon — passo 1)* |
-| `SECRET_KEY` | *(gere: `python -c "import secrets; print(secrets.token_hex(32))"`)* |
-| `ALLOWED_ORIGINS` | `https://SEU-APP.koyeb.app` *(atualize após saber a URL)* |
-| `ANTHROPIC_API_KEY` | `sk-ant-...` *(opcional)* |
+| `ALLOWED_ORIGINS` | URL real gerada pelo Render |
 
-8. Clique **Deploy** — o `entrypoint.sh` aguarda o banco, roda `alembic upgrade head` e sobe o gunicorn.
-
-**3. Após o deploy**
-
-- Copie a URL gerada (ex: `inventario-qr-xxx.koyeb.app`)
-- Volte em **Environment** → atualize `ALLOWED_ORIGINS` com essa URL → **Redeploy**
-- Acesse `https://SEU-APP.koyeb.app/health` → deve retornar `{"status":"ok"}`
-
-> WebSocket (`wss://`) funciona nativamente no Koyeb sem configuração extra.  
-> O `render.yaml` na raiz do projeto é uma alternativa para Render.com, caso precise.
+> **Limitação free tier:** o serviço dorme após 15min de inatividade e acorda em ~30–50s na primeira requisição. Para uso contínuo, upgrade para o plano pago ($7/mês).  
+> WebSocket (`wss://`) funciona nativamente no Render sem configuração extra.
 
 ---
 
