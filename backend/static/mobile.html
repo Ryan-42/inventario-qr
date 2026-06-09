@@ -79,6 +79,7 @@ tailwind.config = {
   .ws-disconnected { background:#3d4850; }
   /* App.css modal overrides for operator modal */
   #modal-operador .modal { background:#0b1629;border:1px solid rgba(255,255,255,0.08);padding:1.5rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body class="bg-background text-on-background h-screen w-screen relative select-none touch-none">
@@ -343,7 +344,7 @@ tailwind.config = {
       <p id="item-produto-nome" class="font-headline-md font-bold text-on-background leading-tight"></p>
       <div class="mt-sm flex justify-center gap-2 flex-wrap">
         <div id="item-rodada-badge"></div>
-        <div id="item-segunda-label" class="hidden px-3 py-1 bg-surface-variant/30 border border-outline-variant text-on-surface-variant rounded-lg text-code-sm font-code-sm">
+        <div id="item-segunda-label" class="hidden px-3 py-1 bg-surface-variant/30 border border-white/10 text-on-surface-variant rounded-lg text-code-sm font-code-sm">
           ↻ Já contado anteriormente
         </div>
       </div>
@@ -427,8 +428,8 @@ tailwind.config = {
     <p id="sucesso-detalhe" class="text-code-sm font-code-sm text-on-surface-variant mt-1"></p>
     <div id="sucesso-alertas" class="mt-2"></div>
     <div class="mt-4 flex items-center gap-2 text-on-surface-variant text-code-sm font-code-sm">
-      <div id="countdown-ring" class="w-8 h-8 rounded-full border-2 border-white/20 flex items-center justify-center text-sm font-bold text-on-surface-variant">3</div>
-      <span class="text-[10px] uppercase tracking-widest">Voltando ao scanner...</span>
+      <div id="countdown-ring" class="w-8 h-8 rounded-full border-2 border-tertiary/40 flex items-center justify-center text-sm font-bold text-tertiary" style="animation:spin .75s linear infinite;border-top-color:transparent">3</div>
+      <span class="text-[10px] uppercase tracking-widest text-on-surface-variant">Voltando ao scanner...</span>
     </div>
   </div>
 </div>

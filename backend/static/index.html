@@ -170,6 +170,7 @@ tailwind.config = {
   @keyframes toast-in { from { opacity: 0; transform: translateX(1rem); } to { opacity: 1; transform: translateX(0); } }
   .animate-enter { animation: enter 0.3s ease; }
   @keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  #search-input::placeholder { color: #87929b; }
   @media (max-width: 640px) {
     .modal { margin: 0; border-radius: 14px 14px 0 0; max-height: 88vh; position: fixed; bottom: 0; left: 0; right: 0; max-width: 100%; }
     .modal-backdrop { align-items: flex-end; padding: 0; }
@@ -190,7 +191,7 @@ tailwind.config = {
   <div class="flex-1 px-sm flex flex-col gap-base">
     <a class="flex items-center gap-md px-md py-sm rounded-lg bg-primary/10 text-primary border-r-4 border-primary" href="/">
       <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">inventory_2</span>
-      <span class="text-label-md font-label-md">Inventory</span>
+      <span class="text-label-md font-label-md">Inventário</span>
     </a>
     <a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
       <span class="material-symbols-outlined">qr_code_scanner</span>
@@ -198,22 +199,22 @@ tailwind.config = {
     </a>
     <a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
       <span class="material-symbols-outlined">query_stats</span>
-      <span class="text-label-md font-label-md">Reports</span>
+      <span class="text-label-md font-label-md">Relatórios</span>
     </a>
     <a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
       <span class="material-symbols-outlined">psychology</span>
-      <span class="text-label-md font-label-md">AI Insights</span>
+      <span class="text-label-md font-label-md">IA & Insights</span>
     </a>
     <a class="flex items-center gap-md px-md py-sm rounded-lg text-on-surface-variant opacity-70 hover:bg-white/5 hover:text-primary transition-colors" href="#">
       <span class="material-symbols-outlined">history_edu</span>
-      <span class="text-label-md font-label-md">Audit Log</span>
+      <span class="text-label-md font-label-md">Auditoria</span>
     </a>
   </div>
   <div class="px-gutter mt-auto flex flex-col gap-md">
     <div class="h-px bg-white/5 w-full"></div>
     <a class="flex items-center gap-md text-on-surface-variant opacity-70 hover:text-primary transition-colors" href="#">
       <span class="material-symbols-outlined">help_outline</span>
-      <span class="text-label-md font-label-md">Help</span>
+      <span class="text-label-md font-label-md">Ajuda</span>
     </a>
   </div>
 </nav>
@@ -240,9 +241,10 @@ tailwind.config = {
         <button class="hover:text-primary transition-colors p-xs rounded-full hover:bg-white/5"><span class="material-symbols-outlined">notifications</span></button>
         <button class="hover:text-primary transition-colors p-xs rounded-full hover:bg-white/5"><span class="material-symbols-outlined">settings</span></button>
       </div>
-      <button id="btn-nova-sessao" class="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md uppercase px-lg py-sm rounded-lg flex items-center gap-xs shadow-[0_0_15px_rgba(143,214,255,0.3)] transition-all hover:scale-[0.98] text-[#003549]">
-        <span class="material-symbols-outlined text-[18px]">add</span>
-        Nova Sessão
+      <button id="btn-nova-sessao" class="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md uppercase px-lg py-sm rounded-lg flex items-center gap-xs shadow-[0_0_20px_rgba(143,214,255,0.35)] hover:shadow-[0_0_28px_rgba(143,214,255,0.5)] transition-all hover:scale-[0.98] active:scale-95 text-[#003549]">
+        <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1">add_circle</span>
+        <span class="hidden sm:inline">Nova Sessão</span>
+        <span class="sm:hidden">Nova</span>
       </button>
     </div>
   </header>
@@ -252,24 +254,29 @@ tailwind.config = {
 
     <!-- Hero -->
     <section class="flex flex-col gap-sm">
+      <div class="flex items-center gap-xs w-fit px-sm py-xs rounded-full mb-xs" style="background:rgba(143,214,255,0.08);border:1px solid rgba(143,214,255,0.18)">
+        <span class="material-symbols-outlined text-primary text-[13px]" style="font-variation-settings:'FILL' 1">qr_code_scanner</span>
+        <span class="text-[10px] font-semibold text-primary uppercase tracking-widest">Inventário Operacional</span>
+      </div>
       <h1 class="text-headline-xl-mobile md:text-headline-xl font-headline-xl text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary w-fit">
         Sessões de Inventário
       </h1>
-      <p class="text-body-lg font-body-lg text-on-surface-variant max-w-2xl">
-        Gerenciamento inteligente com análise em tempo real. Monitore o progresso, divergências e eficiência das equipes em campo.
+      <p class="text-body-md font-body-md text-on-surface-variant max-w-xl">
+        Gerencie inventários por QR Code com rastreamento em tempo real, análise de IA e relatórios financeiros automáticos.
       </p>
     </section>
 
     <!-- Stats -->
     <section class="grid grid-cols-1 md:grid-cols-3 gap-md">
-      <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm hover:border-primary/30 transition-colors">
-        <div class="flex justify-between items-start">
+      <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm hover:border-primary/20 transition-all border-t-2 border-t-primary relative overflow-hidden">
+        <div class="absolute -top-10 -right-10 w-20 h-20 bg-primary/8 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex justify-between items-start relative z-10">
           <span class="text-label-md font-label-md uppercase text-on-surface-variant">Total de Sessões</span>
-          <span class="material-symbols-outlined text-outline-variant">analytics</span>
+          <span class="material-symbols-outlined text-on-surface-variant">analytics</span>
         </div>
-        <div id="stat-total" class="text-headline-xl font-headline-xl text-primary" style="text-shadow: 0 0 20px rgba(143,214,255,0.4)">—</div>
+        <div id="stat-total" class="text-headline-xl font-headline-xl text-primary relative z-10" style="text-shadow: 0 0 20px rgba(143,214,255,0.4)">—</div>
       </div>
-      <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm border-t-2 border-t-tertiary relative overflow-hidden">
+      <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm border-t-2 border-t-tertiary relative overflow-hidden hover:border-tertiary/30 transition-all">
         <div class="absolute -top-10 -right-10 w-24 h-24 bg-tertiary/10 rounded-full blur-xl pointer-events-none"></div>
         <div class="flex justify-between items-start relative z-10">
           <span class="text-label-md font-label-md uppercase text-on-surface-variant flex items-center gap-2">
@@ -278,14 +285,15 @@ tailwind.config = {
           </span>
           <span class="material-symbols-outlined text-tertiary">radar</span>
         </div>
-        <div id="stat-ativas" class="text-headline-xl font-headline-xl text-on-surface relative z-10">—</div>
+        <div id="stat-ativas" class="text-headline-xl font-headline-xl text-tertiary relative z-10" style="text-shadow: 0 0 20px rgba(16,235,138,0.3)">—</div>
       </div>
-      <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm hover:border-primary/30 transition-colors">
-        <div class="flex justify-between items-start">
+      <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm hover:border-secondary/20 transition-all border-t-2 border-t-secondary relative overflow-hidden">
+        <div class="absolute -top-10 -right-10 w-20 h-20 bg-secondary/8 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex justify-between items-start relative z-10">
           <span class="text-label-md font-label-md uppercase text-on-surface-variant">Concluídas</span>
           <span class="material-symbols-outlined text-secondary">task_alt</span>
         </div>
-        <div id="stat-concluidas" class="text-headline-xl font-headline-xl text-secondary">—</div>
+        <div id="stat-concluidas" class="text-headline-xl font-headline-xl text-secondary relative z-10">—</div>
       </div>
     </section>
 
@@ -298,8 +306,8 @@ tailwind.config = {
         <button class="filter-pill px-md py-xs rounded-full bg-surface-variant/30 border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors text-label-md font-label-md uppercase" data-filter="cancelada">Canceladas</button>
       </div>
       <div class="relative w-full md:w-64">
-        <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-outline-variant text-[20px]">search</span>
-        <input id="search-input" class="w-full bg-white border border-black/20 rounded-lg pl-xl pr-sm py-xs text-body-sm font-body-sm focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder:text-gray-400" style="color:#111" placeholder="Buscar sessão, código..." type="search"/>
+        <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+        <input id="search-input" class="w-full rounded-lg pl-xl pr-sm py-xs text-body-sm font-body-sm focus:outline-none transition-all" style="background:rgba(42,53,72,0.6);color:#d7e3fc;border:1px solid rgba(255,255,255,0.1);color-scheme:dark" placeholder="Buscar sessão, código..." type="search"/>
       </div>
     </section>
 
@@ -549,25 +557,25 @@ function renderCard(s) {
   const progressBar = (s.total_itens && s.total_itens > 0) ? `
     <div>
       <div class="flex justify-between items-center mb-xs">
-        <span class="text-code-md font-code-md text-on-surface"><span class="text-primary font-bold">${s.itens_contados || 0}</span><span class="text-on-surface-variant"> / ${s.total_itens}</span></span>
-        <div class="flex items-center gap-sm">
-          ${s.total_divergencias > 0 ? `<span class="text-code-sm font-code-sm text-error bg-error/10 px-xs rounded">${s.total_divergencias} div.</span>` : ''}
+        <span class="text-code-md font-code-md text-on-surface"><span class="${isAtiva ? 'text-tertiary' : 'text-primary'} font-bold">${s.itens_contados || 0}</span><span class="text-on-surface-variant"> / ${s.total_itens}</span></span>
+        <div class="flex items-center gap-xs">
+          ${s.total_divergencias > 0 ? `<span class="text-code-sm font-code-sm text-error bg-error/10 px-xs py-[1px] rounded-sm">${s.total_divergencias} div.</span>` : ''}
           <span class="text-code-sm font-code-sm ${isAtiva ? 'text-tertiary' : 'text-on-surface-variant'} font-bold">${progressPct}%</span>
         </div>
       </div>
       <div class="w-full h-1.5 bg-surface-variant/60 rounded-full overflow-hidden">
         <div class="h-full rounded-full transition-all ${isAtiva ? 'bg-tertiary shadow-[0_0_8px_rgba(16,235,138,0.5)]' : isConcluida ? 'bg-outline' : 'bg-error/50'}" style="width:${progressPct}%"></div>
       </div>
-    </div>` : ''
+    </div>` : `<div class="flex items-center gap-xs py-xs"><span class="material-symbols-outlined text-[13px] text-on-surface-variant/40">table_chart</span><span class="text-[11px] text-on-surface-variant/40">Sem planilha base</span></div>`
 
   const codigo = s.codigo
-    ? `<span class="text-code-sm font-code-sm text-outline-variant">ID: ${escapeHtml(s.codigo)}</span>`
+    ? `<span class="text-code-sm font-code-sm text-outline">ID: ${escapeHtml(s.codigo)}</span>`
     : ''
 
   // XSS: todos os dados do servidor são escaped via escapeHtml() antes de ir para innerHTML.
   // Nomes, códigos e textos dinâmicos nunca são inseridos diretamente como HTML.
   return `
-    <div class="glass-panel rounded-xl overflow-hidden group session-card-stitch border-l-4 ${borderColor} hover:bg-white/[0.02] transition-colors flex flex-col animate-enter ${opacity}"
+    <div class="glass-panel rounded-xl overflow-hidden group session-card-stitch border-l-4 ${borderColor} hover:bg-white/[0.03] hover:shadow-[0_4px_24px_rgba(0,0,0,0.4)] transition-all flex flex-col animate-enter ${opacity}"
          role="button" tabindex="0" data-id="${escapeHtml(String(s.id))}" data-status="${escapeHtml(s.status || '')}">
       <div class="p-md flex justify-between items-start border-b border-white/5">
         <div class="flex flex-col gap-xs min-w-0 flex-1">
@@ -579,22 +587,22 @@ function renderCard(s) {
           ${codigo}
         </div>
         <div class="flex items-center gap-xs shrink-0 ml-sm">
-          ${isMinha ? `<button class="btn-delete-sessao text-outline-variant hover:text-error transition-colors p-1 rounded hover:bg-error/10" data-delete-id="${escapeHtml(String(s.id))}" data-delete-nome="${escapeHtml(s.nome || 'Sessão sem nome')}" title="Deletar sessão" aria-label="Deletar sessão">
+          ${isMinha ? `<button class="btn-delete-sessao text-on-surface-variant/60 hover:text-error transition-colors p-1 rounded hover:bg-error/10" data-delete-id="${escapeHtml(String(s.id))}" data-delete-nome="${escapeHtml(s.nome || 'Sessão sem nome')}" title="Deletar sessão" aria-label="Deletar sessão">
             <span class="material-symbols-outlined text-[18px]">delete</span>
           </button>` : ''}
-          <button class="card-arrow text-outline-variant transition-colors">
+          <button class="card-arrow text-on-surface-variant/50 hover:text-primary transition-colors">
             <span class="material-symbols-outlined">arrow_forward</span>
           </button>
         </div>
       </div>
       <div class="p-md flex flex-col gap-sm" style="background:rgba(7,19,37,0.25)">
         ${progressBar}
-        <div class="flex items-center justify-between gap-xs">
-          <div class="flex items-center gap-xs text-on-surface-variant">
-            <span class="material-symbols-outlined text-[14px]">schedule</span>
-            <span class="text-body-sm font-body-sm text-[11px]">${escapeHtml(formatDate(s.data_inicio || s.criado_em))}</span>
+        <div class="flex items-center justify-between gap-xs pt-xs border-t border-white/[0.04]">
+          <div class="flex items-center gap-xs text-on-surface-variant/60">
+            <span class="material-symbols-outlined text-[12px]">calendar_today</span>
+            <span class="text-[10px] tracking-wide">${escapeHtml(formatDate(s.data_inicio || s.criado_em))}</span>
           </div>
-          ${s.total_itens != null ? `<span class="text-[11px] text-on-surface-variant bg-surface-variant/30 px-xs py-[2px] rounded">${escapeHtml(String(s.total_itens))} itens</span>` : ''}
+          ${s.total_itens != null ? `<span class="text-[10px] text-on-surface-variant/50 tabular-nums">${escapeHtml(String(s.total_itens))} itens</span>` : ''}
         </div>
       </div>
     </div>`

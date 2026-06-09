@@ -15,7 +15,7 @@
   /* ── Text ─── */
   --text-primary:   #d8eeff;
   --text-secondary: #6a8fb0;
-  --text-tertiary:  #344d65;
+  --text-tertiary:  #5c7b92;
 
   /* ── Borders ─── */
   --border-subtle:  rgba(0, 191, 255, 0.06);
@@ -506,7 +506,7 @@ th {
   letter-spacing: 0.1em; color: var(--text-tertiary); white-space: nowrap;
 }
 td { padding: 0.625rem 1rem; border-top: 1px solid var(--border-subtle); color: var(--text-secondary); }
-tr:hover td { background: rgba(0,191,255,0.02); }
+tr:hover td { background: rgba(0,191,255,0.04); }
 .status-ok   { color: var(--success-light); font-weight: 600; font-size: 0.75rem; }
 .status-div  { color: var(--danger-light);  font-weight: 600; font-size: 0.75rem; }
 .status-pend { color: var(--text-tertiary); font-size: 0.75rem; }
