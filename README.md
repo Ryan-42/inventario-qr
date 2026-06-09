@@ -1,11 +1,12 @@
 # INVIQ — Inventário Físico por QR Code
 
-[![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
-[![SQLite/PostgreSQL](https://img.shields.io/badge/SQLite%2FPostgreSQL-003B57?style=flat-square&logo=sqlite&logoColor=white)]()
-[![Claude AI](https://img.shields.io/badge/Claude%20AI-Anthropic-D97706?style=flat-square)](https://anthropic.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-produção-336791?style=flat-square&logo=postgresql&logoColor=white)]()
+[![Claude AI](https://img.shields.io/badge/Claude%20AI-Haiku-D97706?style=flat-square)](https://anthropic.com)
 [![WebSocket](https://img.shields.io/badge/WebSocket-Tempo%20Real-10eb8a?style=flat-square)]()
-[![Mobile](https://img.shields.io/badge/Mobile-Scanner%20QR-7AD0FF?style=flat-square)]()
+[![Tests](https://img.shields.io/badge/Testes-159%20passando-4CAF50?style=flat-square)]()
+[![Railway](https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=flat-square&logo=railway&logoColor=white)]()
 
 > Sistema de contagem de inventário físico com scanner mobile, tempo real via WebSocket, análise por IA e relatórios financeiros automáticos.
 
@@ -31,10 +32,11 @@ Divergências são detectadas e recontadas automaticamente em até 3 rodadas. Ao
 
 ### Scanner Mobile
 - **QR Code via câmera** — sem instalar app, funciona em qualquer browser mobile
+- **Barcode nativo** — EAN-13/8, Code 128/39, UPC-A/E, ITF, PDF417, Aztec via BarcodeDetector API
 - **Modo manual** com busca fuzzy por código, produto ou local físico
 - **Funciona offline** — contagens salvas localmente e sincronizadas ao reconectar
 - **Token de acesso por rodada** — QR Code gerado pelo admin controla qual rodada o operador pode contar
-- Vibração ao detectar QR · Proteção contra duplo-scan · Long-press para incremento rápido
+- Vibração ao detectar · Proteção contra duplo-scan · Câmera persistente ao mudar de estado
 
 ### Sistema de Rodadas
 - **Rodada 1** — todos os itens contados ao menos uma vez
@@ -48,11 +50,17 @@ Divergências são detectadas e recontadas automaticamente em até 3 rodadas. Ao
 - Live feed de cada leitura dos operadores
 - Banner automático ao concluir rodada com botão "Gerar QR Próxima Rodada"
 - Tabela com filtros: OK / Divergente / **Para Ajuste** / Pendente
+- Botão de excluir sessão com confirmação
 
-### Análise por IA (Claude)
+### Grupos de Operadores
+- Cada grupo tem token próprio + QR Code — operador é bloqueado fora do seu setor
+- **Supervisor Mobile** — acesso somente-leitura pós-R1 com itens divergentes + localização
+- **Lista do Operador** — itens pendentes filtrados por grupo no mobile
+
+### Análise por IA (Claude Haiku)
 - **Análise de sessão** — padrões, itens críticos, recomendações, relatório executivo
 - **Chat IA** — perguntas em linguagem natural sobre a sessão
-- **Validação de planilha** — detecta problemas antes de importar
+- **Validação de planilha** — detecta problemas antes de importar (prévia de 5 linhas)
 - **Alerta em tempo real** — anomalias por regras após cada leitura
 - Funciona sem API Key com análise local básica como fallback
 
@@ -67,11 +75,16 @@ Divergências são detectadas e recontadas automaticamente em até 3 rodadas. Ao
 | **PDF Final** | `.pdf` | KPIs + impacto financeiro + análise IA + tabela completa |
 | **Excel Final** | `.xlsx` | 4 abas: Resumo, Todos os Itens, Divergências com Impacto R$, Recomendações |
 
+Exports via `fetch + blob` com token no body — token nunca aparece em URL ou logs.
+
 ### Impacto Financeiro
-Quando a planilha tem a coluna `valor em estoque`, o sistema calcula automaticamente:
+Quando a planilha tem a coluna `valor_estoque`, o sistema calcula automaticamente:
 - Valor inicial vs valor apurado
 - Variação em R$ e porcentagem
 - Top 5 maiores perdas e ganhos por item
+
+### Webhook
+Ao concluir uma sessão, o sistema dispara automaticamente um `POST` para a URL configurada com payload JSON completo — para integração com ERPs, Slack, ou qualquer sistema externo.
 
 ---
 
@@ -79,23 +92,26 @@ Quando a planilha tem a coluna `valor em estoque`, o sistema calcula automaticam
 
 **Backend**
 ```
-Python 3.11+      FastAPI + Uvicorn (ASGI)
-SQLAlchemy 2.x    SQLite (dev) / PostgreSQL (produção)
-WebSocket nativo  Tempo real com heartbeat + backoff exponencial
-Anthropic SDK     Claude Haiku — análise, chat, validação
-ReportLab         Geração de PDF
-pandas + openpyxl Import/export de planilhas Excel
-qrcode[pil]       Geração de QR Code PNG
-slowapi           Rate limiting nos endpoints de IA
+Python 3.12        FastAPI + Uvicorn/Gunicorn (ASGI)
+SQLAlchemy 2.x     SQLite (dev) / PostgreSQL (produção)
+Alembic            Migrations versionadas (0001 → 0005)
+WebSocket nativo   Tempo real com heartbeat + backoff exponencial
+Anthropic SDK      Claude Haiku — análise, chat, validação, alerta
+ReportLab          Geração de PDF
+pandas + openpyxl  Import/export de planilhas Excel
+qrcode[pil]        Geração de QR Code PNG
+slowapi            Rate limiting por token (não por IP)
+gunicorn           Servidor WSGI/ASGI para produção
 ```
 
 **Frontend**
 ```
 HTML5 + Tailwind CDN   Sem build step — servido pelo FastAPI
-Material Symbols       Ícones Google
+Material Symbols       Ícones Google (Outlined, FILL 0/1)
 Inter + JetBrains Mono Tipografia
-jsQR                   Leitura de QR Code via câmera
-WebSocket nativo        Tempo real sem dependências externas
+jsQR                   Fallback de leitura QR Code via câmera
+BarcodeDetector API    Scanner nativo no browser (EAN, Code128, etc.)
+WebSocket nativo       Tempo real sem dependências externas
 localStorage           Fila offline + persistência do operador
 ```
 
@@ -107,24 +123,31 @@ localStorage           Fila offline + persistência do operador
 inventario-qr/
 ├── backend/
 │   ├── app/
-│   │   ├── models/           # Sessao, ItemBase, Contagem, Historico
+│   │   ├── models/           # Sessao, ItemBase, Contagem, HistoricoContagem
 │   │   ├── repositories/     # sessao_repo, item_repo
 │   │   ├── routes/           # sessoes, contagens, exports, agentes, ws
 │   │   ├── services/         # pdf_service, excel_service, relatorio_final_service
 │   │   ├── agents/           # AnaliseAgent, ChatAgent, ValidationAgent, AlertaAgent
 │   │   ├── websockets/       # ConnectionManager (broadcast por sessão)
-│   │   ├── database.py       # Engine + migração automática SQLite
-│   │   └── main.py           # FastAPI app
+│   │   ├── database.py       # Engine + SQLite → PostgreSQL automático
+│   │   └── main.py           # FastAPI app + CORS + health check
+│   ├── alembic/              # Migrations 0001 → 0005
 │   ├── static/
 │   │   ├── index.html        # Dashboard admin
 │   │   ├── sessao.html       # Detalhe da sessão
 │   │   ├── mobile.html       # Scanner mobile
-│   │   ├── css/app.css       # Utilitários compartilhados
+│   │   ├── css/app.css       # Design system compartilhado
 │   │   └── js/               # api.js + ws.js
+│   ├── tests/                # 159 testes (pytest + SQLite in-memory)
 │   ├── requirements.txt
 │   ├── .env.example
-│   └── Dockerfile
-└── REGRAS_NEGOCIO.md          # 39 RN + 60 RF + 20 RNF + roadmap
+│   ├── Dockerfile            # Multi-stage, usuário não-root
+│   ├── entrypoint.sh         # Aguarda DB + alembic upgrade head + gunicorn
+│   └── railway.toml          # Deploy Railway (Dockerfile builder)
+├── docker-compose.yml        # Dev local com hot-reload
+├── docker-compose.prod.yml   # Produção com PostgreSQL
+├── render.yaml               # Blueprint Render (alternativo ao Railway)
+└── REGRAS_NEGOCIO.md         # 39 RN + 60 RF + 20 RNF
 ```
 
 ---
@@ -157,7 +180,7 @@ pip install -r requirements.txt
 copy .env.example .env
 # Linux/Mac:
 cp .env.example .env
-# Edite o .env para usar PostgreSQL ou Claude AI
+# Edite .env para usar PostgreSQL ou Claude AI
 ```
 
 ### 3. Rodar
@@ -168,13 +191,28 @@ uvicorn app.main:app --reload --port 8000
 
 Acesse: **http://localhost:8000**
 
-Para liberar acesso na rede local (celulares na mesma rede):
+Para liberar acesso a celulares na mesma rede Wi-Fi:
 
 ```bash
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 4. Fluxo de teste
+### 4. Docker (dev)
+
+```bash
+# Na raiz do projeto:
+docker compose up --build
+```
+
+### 5. Testes
+
+```bash
+cd backend
+pytest tests/ -q
+# 159 passed
+```
+
+### 6. Fluxo de uso
 
 1. Acesse `http://localhost:8000`
 2. Crie uma nova sessão
@@ -187,11 +225,13 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ## Variáveis de Ambiente
 
-| Variável | Obrigatória | Descrição |
-|----------|-------------|-----------|
-| `DATABASE_URL` | Não | URL do banco (default: SQLite local) |
-| `ANTHROPIC_API_KEY` | Não | Chave Claude AI (sem ela, análise local) |
-| `ALLOWED_ORIGINS` | Não | Origens CORS permitidas |
+| Variável | Obrigatória | Padrão | Descrição |
+|----------|-------------|--------|-----------|
+| `DATABASE_URL` | Não | SQLite local | URL do banco (`postgresql://...` em produção) |
+| `ANTHROPIC_API_KEY` | Não | — | Chave Claude AI (sem ela, análise local) |
+| `ALLOWED_ORIGINS` | Não | localhost | Origens CORS permitidas (separadas por vírgula) |
+| `SECRET_KEY` | Não | gerado | Chave de assinatura de tokens |
+| `GUNICORN_WORKERS` | Não | 2 | Workers em produção (recomendado: 2×núcleos+1) |
 
 ---
 
@@ -212,18 +252,21 @@ Formato `.xlsx` ou `.csv`. O sistema aceita 20+ nomes de coluna por campo:
 ## Principais Endpoints
 
 ```
-GET  /api/sessoes                            Lista sessões
-POST /api/sessoes                            Cria sessão
-GET  /api/sessoes/{id}/stats                 KPIs (total, conferidos, %)
-GET  /api/sessoes/{id}/progresso             Rodada atual, itens faltando
-POST /api/sessoes/{id}/contagens             Registra contagem
-GET  /api/sessoes/{id}/token-acesso          Token mobile atual
-POST /api/sessoes/{id}/gerar-token?rodada=N  Novo token (invalida anterior)
-GET  /api/sessoes/{id}/qrcode-acesso         PNG do QR Code
-GET  /api/sessoes/{id}/valor-estoque         Impacto financeiro
+GET  /api/sessoes                             Lista sessões
+POST /api/sessoes                             Cria sessão
+DELETE /api/sessoes/{id}                      Remove sessão (token_admin)
+GET  /api/sessoes/{id}/stats                  KPIs (total, conferidos, %)
+GET  /api/sessoes/{id}/progresso              Rodada atual, itens faltando
+POST /api/sessoes/{id}/contagens              Registra contagem
+GET  /api/sessoes/{id}/token-acesso           Token mobile atual
+POST /api/sessoes/{id}/gerar-token?rodada=N   Novo token (invalida anterior)
+GET  /api/sessoes/{id}/qrcode-acesso          PNG do QR Code
+GET  /api/sessoes/{id}/valor-estoque          Impacto financeiro
+POST /api/sessoes/{id}/validar-planilha       Valida + preview (IA)
 GET  /api/sessoes/{id}/exportar/relatorio-final-pdf
 GET  /api/sessoes/{id}/exportar/relatorio-final-excel
-ws://host/api/ws/sessao/{id}                WebSocket tempo real
+ws://host/api/ws/sessao/{id}                 WebSocket tempo real
+GET  /health                                  Health check
 ```
 
 Documentação interativa: `http://localhost:8000/docs`
@@ -236,9 +279,12 @@ Documentação interativa: `http://localhost:8000/docs`
 { "tipo": "contagem_registrada", "codigo": "SKU-01", "divergencia": true, "para_ajuste": false, "rodada": 1 }
 { "tipo": "progresso_atualizado", "rodada_atual": 1, "faltando": 12, "total_rodada": 100 }
 { "tipo": "rodada_completa", "rodada_concluida": 1, "divergencias_pendentes": 4, "proxima_rodada_necessaria": true }
+{ "tipo": "contagem_deletada", "codigo": "SKU-01" }
+{ "tipo": "sessao_pausada" }
 ```
 
-O cliente envia `{"tipo":"ping"}` a cada 25s para manter a conexão viva.
+O cliente envia `{"tipo":"ping"}` a cada 25s para manter a conexão viva.  
+Reconexão com backoff exponencial: 2s → 4s → 8s → 15s máx.
 
 ---
 
@@ -261,21 +307,35 @@ Divergências vão para recontagem (R2 → R3)
 
 Admin conclui sessão
   → PDF Final + Excel Final gerados automaticamente
+  → webhook disparado para sistemas externos
   → exporta divergências para ajuste no ERP
 ```
 
 ---
 
-## Deploy
+## Deploy (Railway)
 
-Pronto para **Railway** com `backend/railway.toml` já configurado:
+O projeto inclui `backend/railway.toml` configurado para deploy via Dockerfile.
 
-```bash
-# Variáveis necessárias no Railway:
-DATABASE_URL       # provisionar PostgreSQL plugin (auto-injetado)
-ANTHROPIC_API_KEY  # opcional
-ALLOWED_ORIGINS    # https://seu-app.railway.app
-```
+**Passos:**
+
+1. Faça push do código para o GitHub
+2. Acesse [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
+3. Selecione o repositório `inventario-qr`
+4. **Root Directory:** `backend`
+5. Railway detecta o `railway.toml` e usa o Dockerfile automaticamente
+6. Adicione um serviço PostgreSQL: **+ New** → **Database** → **PostgreSQL**  
+   Railway injeta `DATABASE_URL` automaticamente
+7. Configure as variáveis de ambiente no Railway:
+
+| Variável | Valor |
+|----------|-------|
+| `APP_ENV` | `production` |
+| `ANTHROPIC_API_KEY` | `sk-ant-...` |
+| `ALLOWED_ORIGINS` | `https://seu-app.railway.app` |
+| `SECRET_KEY` | *(gere com `python -c "import secrets; print(secrets.token_hex(32))"`)* |
+
+8. Faça o deploy — o `entrypoint.sh` aguarda o banco, roda `alembic upgrade head` automaticamente e sobe o gunicorn.
 
 ---
 
@@ -284,11 +344,13 @@ ALLOWED_ORIGINS    # https://seu-app.railway.app
 | Sprint | Status | Descrição |
 |--------|--------|-----------|
 | Sprint 1 | ✅ | Backend + Scanner + WebSocket base |
-| Sprint 2 | ✅ | Design Stitch + Modo Manual + Rodadas |
+| Sprint 2 | ✅ | Design System + Modo Manual + Rodadas |
 | Sprint 3 | ✅ | Token de Rodada + Para Ajuste + Relatórios Finais |
-| Sprint 4 | 🔭 | Autenticação JWT + Dashboard multi-sessão |
-| Sprint 5 | 🔭 | Integração ERP + Notificações Push |
-| Sprint 6 | 🔭 | Contagem por foto (Computer Vision) |
+| Sprint 4 | ✅ | Grupos de Operadores + Supervisor + Token Admin + QA (70+ bugs) |
+| Sprint 5 | ✅ | Deploy + Barcode Scanner + Webhook + Rate Limit + UI Polimento |
+| Sprint 6 | 🔭 | Autenticação JWT + Operadores ao Vivo + Service Worker |
+| Sprint 7 | 🔭 | Integração ERP + IA Avançada (predição, classificação) |
+| Sprint 8 | 🔭 | Multi-tenant + PWA instalável + OCR etiquetas |
 
 ---
 
