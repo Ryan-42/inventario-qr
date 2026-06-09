@@ -313,29 +313,48 @@ Admin conclui sessão
 
 ---
 
-## Deploy (Railway)
+## Deploy (Koyeb)
 
-O projeto inclui `backend/railway.toml` configurado para deploy via Dockerfile.
+Deploy via Docker a partir do GitHub. Sem sleep, PostgreSQL gratuito via Neon.
 
-**Passos:**
+**1. Banco de dados — Neon PostgreSQL (gratuito)**
 
-1. Faça push do código para o GitHub
-2. Acesse [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
-3. Selecione o repositório `inventario-qr`
-4. **Root Directory:** `backend`
-5. Railway detecta o `railway.toml` e usa o Dockerfile automaticamente
-6. Adicione um serviço PostgreSQL: **+ New** → **Database** → **PostgreSQL**  
-   Railway injeta `DATABASE_URL` automaticamente
-7. Configure as variáveis de ambiente no Railway:
+1. Acesse [neon.tech](https://neon.tech) → **Start for free**
+2. Crie um projeto (ex: `inventario-qr`) → região mais próxima
+3. Copie a **Connection string** no formato:  
+   `postgresql://usuario:senha@ep-xxx.us-east-2.aws.neon.tech/neondb?sslmode=require`
+
+**2. Deploy no Koyeb**
+
+1. Acesse [app.koyeb.com](https://app.koyeb.com) → **Create Service**
+2. Escolha **GitHub** → autorize e selecione o repo `inventario-qr`
+3. Em **Builder** selecione **Dockerfile**
+4. Preencha:
+   - **Branch:** `main`
+   - **Dockerfile location:** `backend/Dockerfile`
+   - **Docker build context:** `backend`
+5. Em **Exposed ports** confirme a porta **`8000`**
+6. Em **Health checks** → path: **`/health`**
+7. Em **Environment variables** adicione:
 
 | Variável | Valor |
 |----------|-------|
 | `APP_ENV` | `production` |
-| `ANTHROPIC_API_KEY` | `sk-ant-...` |
-| `ALLOWED_ORIGINS` | `https://seu-app.railway.app` |
-| `SECRET_KEY` | *(gere com `python -c "import secrets; print(secrets.token_hex(32))"`)* |
+| `DATABASE_URL` | *(connection string do Neon — passo 1)* |
+| `SECRET_KEY` | *(gere: `python -c "import secrets; print(secrets.token_hex(32))"`)* |
+| `ALLOWED_ORIGINS` | `https://SEU-APP.koyeb.app` *(atualize após saber a URL)* |
+| `ANTHROPIC_API_KEY` | `sk-ant-...` *(opcional)* |
 
-8. Faça o deploy — o `entrypoint.sh` aguarda o banco, roda `alembic upgrade head` automaticamente e sobe o gunicorn.
+8. Clique **Deploy** — o `entrypoint.sh` aguarda o banco, roda `alembic upgrade head` e sobe o gunicorn.
+
+**3. Após o deploy**
+
+- Copie a URL gerada (ex: `inventario-qr-xxx.koyeb.app`)
+- Volte em **Environment** → atualize `ALLOWED_ORIGINS` com essa URL → **Redeploy**
+- Acesse `https://SEU-APP.koyeb.app/health` → deve retornar `{"status":"ok"}`
+
+> WebSocket (`wss://`) funciona nativamente no Koyeb sem configuração extra.  
+> O `render.yaml` na raiz do projeto é uma alternativa para Render.com, caso precise.
 
 ---
 
