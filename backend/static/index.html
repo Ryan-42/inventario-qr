@@ -290,7 +290,7 @@ tailwind.config = {
     </section>
 
     <!-- Filter row -->
-    <section id="filter-row" class="hidden flex-col md:flex-row justify-between items-start md:items-center gap-md">
+    <section id="filter-row" class="flex-col md:flex-row justify-between items-start md:items-center gap-md" style="display:none">
       <div class="flex flex-wrap gap-xs">
         <button class="filter-pill active px-md py-xs rounded-full bg-primary/10 border border-primary text-primary text-label-md font-label-md uppercase" data-filter="todas">Todas</button>
         <button class="filter-pill px-md py-xs rounded-full bg-surface-variant/30 border border-outline-variant text-on-surface-variant hover:text-on-surface transition-colors text-label-md font-label-md uppercase" data-filter="ativa">Ativas</button>
@@ -394,15 +394,15 @@ tailwind.config = {
     </div>
     <div class="flex flex-col gap-md">
       <div>
-        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3d4850;display:block;margin-bottom:0.5rem" for="input-nome-sessao">Nome da Sessão</label>
+        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#87929b;display:block;margin-bottom:0.5rem" for="input-nome-sessao">Nome da Sessão</label>
         <input id="input-nome-sessao" type="text" class="input" placeholder="Ex: Inventário Geral — Janeiro 2025" maxlength="120" autocomplete="off"/>
       </div>
       <div>
-        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3d4850;display:block;margin-bottom:0.5rem" for="input-webhook-url">
-          Webhook URL <span style="color:#3d4850;font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span>
+        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#87929b;display:block;margin-bottom:0.5rem" for="input-webhook-url">
+          Webhook URL <span style="color:#87929b;font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span>
         </label>
         <input id="input-webhook-url" type="url" class="input" placeholder="https://seu-sistema.com/webhook" maxlength="500" autocomplete="off"/>
-        <p style="font-size:.6875rem;color:#3d4850;margin-top:.375rem">Receba um POST automático quando o inventário for concluído.</p>
+        <p style="font-size:.6875rem;color:#87929b;margin-top:.375rem">Receba um POST automático quando o inventário for concluído.</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -429,7 +429,7 @@ tailwind.config = {
         Guarde este token — ele é a sua chave de acesso como administrador deste inventário. Você precisará dele para acessar o painel de controle.
       </p>
       <div style="background:#0b1629;border:1px solid rgba(143,214,255,0.3);border-radius:10px;padding:1rem;text-align:center">
-        <p style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#3d4850;margin-bottom:.5rem">Seu Token Admin</p>
+        <p style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#87929b;margin-bottom:.5rem">Seu Token Admin</p>
         <p id="token-admin-display" style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;letter-spacing:.2em;color:#8fd6ff"></p>
       </div>
       <button id="btn-copiar-token" class="btn btn-secondary" style="width:100%;justify-content:center;gap:.5rem">
@@ -548,18 +548,15 @@ function renderCard(s) {
   const progressPct = (s.total_itens && s.total_itens > 0) ? Math.round(((s.itens_contados || 0) / s.total_itens) * 100) : 0
   const progressBar = (s.total_itens && s.total_itens > 0) ? `
     <div>
-      <div class="flex justify-between items-end mb-xs">
-        <div class="flex flex-col gap-xs">
-          <span class="text-label-md font-label-md text-on-surface-variant uppercase">Progresso</span>
-          <span class="text-code-md font-code-md text-on-surface"><span class="text-primary font-bold">${s.itens_contados || 0}</span> / ${s.total_itens} SKUs</span>
+      <div class="flex justify-between items-center mb-xs">
+        <span class="text-code-md font-code-md text-on-surface"><span class="text-primary font-bold">${s.itens_contados || 0}</span><span class="text-on-surface-variant"> / ${s.total_itens}</span></span>
+        <div class="flex items-center gap-sm">
+          ${s.total_divergencias > 0 ? `<span class="text-code-sm font-code-sm text-error bg-error/10 px-xs rounded">${s.total_divergencias} div.</span>` : ''}
+          <span class="text-code-sm font-code-sm ${isAtiva ? 'text-tertiary' : 'text-on-surface-variant'} font-bold">${progressPct}%</span>
         </div>
-        ${s.total_divergencias > 0 ? `<div class="flex flex-col items-end gap-xs">
-          <span class="text-label-md font-label-md text-on-surface-variant uppercase">Divergências</span>
-          <span class="text-code-md font-code-md text-error bg-error/10 px-sm rounded">${s.total_divergencias} Encontradas</span>
-        </div>` : ''}
       </div>
-      <div class="w-full h-2 bg-surface-variant rounded-full overflow-hidden">
-        <div class="h-full ${isAtiva ? 'bg-tertiary shadow-[0_0_10px_rgba(16,235,138,0.5)]' : 'bg-outline'}" style="width:${progressPct}%"></div>
+      <div class="w-full h-1.5 bg-surface-variant/60 rounded-full overflow-hidden">
+        <div class="h-full rounded-full transition-all ${isAtiva ? 'bg-tertiary shadow-[0_0_8px_rgba(16,235,138,0.5)]' : isConcluida ? 'bg-outline' : 'bg-error/50'}" style="width:${progressPct}%"></div>
       </div>
     </div>` : ''
 
@@ -590,11 +587,14 @@ function renderCard(s) {
           </button>
         </div>
       </div>
-      <div class="p-md flex flex-col gap-sm bg-[#071325]/30">
+      <div class="p-md flex flex-col gap-sm" style="background:rgba(7,19,37,0.25)">
         ${progressBar}
-        <div class="flex items-center gap-xs text-on-surface-variant">
-          <span class="material-symbols-outlined text-[16px]">schedule</span>
-          <span class="text-body-sm font-body-sm text-[12px]">${escapeHtml(formatDate(s.data_inicio || s.criado_em))}${s.total_itens != null ? ` • ${escapeHtml(String(s.total_itens))} itens` : ''}</span>
+        <div class="flex items-center justify-between gap-xs">
+          <div class="flex items-center gap-xs text-on-surface-variant">
+            <span class="material-symbols-outlined text-[14px]">schedule</span>
+            <span class="text-body-sm font-body-sm text-[11px]">${escapeHtml(formatDate(s.data_inicio || s.criado_em))}</span>
+          </div>
+          ${s.total_itens != null ? `<span class="text-[11px] text-on-surface-variant bg-surface-variant/30 px-xs py-[2px] rounded">${escapeHtml(String(s.total_itens))} itens</span>` : ''}
         </div>
       </div>
     </div>`
@@ -609,7 +609,7 @@ function updateStats(sessions) {
   statAtivas.textContent = ativas
   statConcluidas.textContent = concluidas
   const label = sessionCountLbl.querySelector('span')
-  if (label) label.textContent = total > 0 ? `${total} sessão${total !== 1 ? 'ões' : ''}` : ''
+  if (label) label.textContent = total > 0 ? `${total !== 1 ? `${total} sessões` : '1 sessão'}` : ''
   sessionCountLbl.classList.toggle('hidden', total === 0)
 }
 
@@ -660,13 +660,6 @@ function renderGrid() {
       openModalDeletar(btn.dataset.deleteId, btn.dataset.deleteNome)
     })
   })
-  // Delete buttons — stop propagation so clicking delete não navega para a sessão
-  sessionsGrid.querySelectorAll('.btn-delete-sessao').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation()
-      openModalDeletar(btn.dataset.deleteId, btn.dataset.deleteNome)
-    })
-  })
 }
 
 function showLoading() {
@@ -674,7 +667,7 @@ function showLoading() {
   sessionsGrid.classList.add('hidden')
   sessionsEmpty.classList.add('hidden')
   sessionsError.classList.add('hidden')
-  filterRow.style.display = 'none'
+  filterRow.style.display = 'none'   // oculta row de filtros durante o loading
 }
 
 function hideLoading() { sessionsLoading.classList.add('hidden') }
@@ -692,7 +685,7 @@ async function loadSessions() {
     allSessions = Array.isArray(data) ? data : (data.sessoes || data.items || [])
     hideLoading()
     updateStats(allSessions)
-    if (allSessions.length > 0) filterRow.style.display = ''
+    if (allSessions.length > 0) filterRow.style.display = 'flex'
     renderGrid()
   } catch (err) {
     hideLoading()

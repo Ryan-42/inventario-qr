@@ -69,6 +69,18 @@ tailwind.config = {
   .btn-stitch-ia:disabled { opacity:0.45; cursor:not-allowed; }
   .btn-stitch-primary { background:#8fd6ff; color:#003549; border-color:#8fd6ff; padding:8px 24px; border-radius:8px; font-size:12px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:all 0.2s; display:inline-flex; align-items:center; gap:8px; }
   .btn-stitch-primary:hover { background:#c3e8ff; box-shadow:0 0 20px rgba(143,214,255,0.4); }
+  /* Banner animation */
+  #banner-rodada { transition: opacity 0.3s, transform 0.3s; }
+  #banner-rodada.hidden { opacity: 0; transform: translateY(-8px); }
+  /* Spinner sm override */
+  .spinner-sm { display:inline-block; }
+  /* Operator row */
+  .operator-row { display:flex; align-items:center; justify-content:space-between; gap:.5rem; padding:.5rem 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+  .operator-row:last-child { border-bottom:none; }
+  .operator-row-left { display:flex; align-items:center; gap:.625rem; min-width:0; }
+  .op-stat { font-size:.6875rem; color:#87929b; }
+  /* Table placeholder */
+  .table-placeholder { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem; }
 </style>
 </head>
 <body class="min-h-screen relative font-sans overflow-x-hidden">
@@ -81,36 +93,37 @@ tailwind.config = {
 <main class="relative z-10 w-full max-w-[1440px] mx-auto px-gutter md:px-margin-desktop py-lg pb-[100px] flex flex-col gap-xl">
 
   <!-- HEADER -->
-  <header class="flex flex-col md:flex-row md:items-center justify-between gap-md border-b border-white/5 pb-md">
-    <div class="flex items-center gap-md">
-      <a href="/" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-primary transition-colors">
-        <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+  <header class="flex items-center justify-between gap-sm flex-wrap border-b border-white/5 pb-md">
+    <div class="flex items-center gap-sm min-w-0 flex-1">
+      <a href="/" class="w-9 h-9 shrink-0 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-primary transition-colors">
+        <span class="material-symbols-outlined text-[18px]">arrow_back</span>
       </a>
-      <div class="flex items-center gap-sm flex-wrap">
-        <h1 id="sessao-nome" class="text-headline-lg font-bold text-on-surface">Carregando...</h1>
-        <span id="status-badge" class="badge badge-dot" style="flex-shrink:0"></span>
+      <div class="flex items-center gap-xs flex-wrap min-w-0">
+        <h1 id="sessao-nome" class="font-bold text-on-surface truncate" style="font-size:clamp(1rem,2.5vw,1.5rem)">Carregando...</h1>
+        <span id="status-badge" class="badge badge-dot shrink-0"></span>
       </div>
     </div>
-    <div class="flex items-center gap-sm flex-wrap">
-      <div class="ws-indicator flex items-center gap-1 px-sm py-1 rounded-full bg-surface-variant/30 border border-white/5" style="font-size:0.7rem;color:#bcc8d1">
+    <div class="flex items-center gap-xs shrink-0 flex-wrap justify-end">
+      <div class="flex items-center gap-1 px-2 py-1 rounded-full bg-surface-variant/30 border border-white/5" style="font-size:0.65rem;color:#bcc8d1">
         <span class="ws-dot ws-disconnected" id="ws-dot"></span>
-        <span id="ws-label" class="hide-mobile">Desconectado</span>
+        <span id="ws-label" class="hide-mobile" style="font-size:.65rem">Offline</span>
       </div>
       <button id="btn-mostrar-qr" class="btn-stitch-ia text-tertiary border-tertiary/30 hover:bg-tertiary/10" title="QR Code de acesso mobile">
         <span class="material-symbols-outlined text-[18px]">qr_code_2</span>
-        <span class="hide-mobile">QR Acesso</span>
+        <span class="hide-mobile">QR</span>
       </button>
-      <button id="btn-ai-analise" class="btn-stitch-ia text-secondary border-secondary/30 hover:bg-secondary/10 glow-purple">
+      <button id="btn-ai-analise" class="btn-stitch-ia text-secondary border-secondary/30 hover:bg-secondary/10" title="Análise de IA">
         <span class="material-symbols-outlined text-[18px]">psychology</span>
-        <span class="hide-mobile">IA Analisar</span>
+        <span class="hide-mobile">IA</span>
       </button>
-      <button id="btn-ai-chat" class="btn-stitch-ia text-primary border-primary/30 hover:bg-primary/10">
+      <button id="btn-ai-chat" class="btn-stitch-ia text-primary border-primary/30 hover:bg-primary/10" title="Chat com IA">
         <span class="material-symbols-outlined text-[18px]">chat</span>
-        <span class="hide-mobile">Chat IA</span>
+        <span class="hide-mobile">Chat</span>
       </button>
       <button id="btn-concluir" class="btn-stitch-primary glow-cyan" style="display:none">
-        <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
-        Concluir Sessão
+        <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
+        <span class="hide-mobile">Concluir Sessão</span>
+        <span class="md:hidden">Concluir</span>
       </button>
     </div>
   </header>
@@ -248,7 +261,7 @@ tailwind.config = {
         <h3 class="text-label-md font-label-md text-on-surface-variant uppercase border-b border-white/10 pb-2">Operadores Ativos</h3>
         <div id="operators-list">
           <div class="table-placeholder">
-            <div style="color:#3d4850;font-size:.8125rem">Nenhum operador ainda</div>
+            <div style="color:#87929b;font-size:.8125rem">Nenhum operador ainda</div>
           </div>
         </div>
       </div>
@@ -272,44 +285,57 @@ tailwind.config = {
   </section>
 
   <!-- UPLOAD -->
-  <section class="grid grid-cols-1 gap-md">
-    <div class="glass-panel rounded-xl p-lg flex flex-col gap-sm border border-white/10">
-      <h3 class="text-label-md font-label-md text-on-surface-variant uppercase">Planilha Base</h3>
-      <p class="text-body-sm font-body-sm text-on-surface-variant">Importe a planilha de estoque para validar contagens.</p>
-      <div id="planilha-item-count" class="text-code-sm font-code-sm text-primary"></div>
-      <button id="btn-upload-planilha" class="btn btn-secondary self-start">
-        <span class="material-symbols-outlined text-[16px]">upload</span>
-        Importar planilha
-      </button>
+  <section id="upload-section" class="grid grid-cols-1 gap-md">
+    <div class="glass-panel rounded-xl border border-white/10 overflow-hidden">
+      <div class="flex items-center justify-between px-lg py-md border-b border-white/5">
+        <div class="flex items-center gap-sm">
+          <span class="material-symbols-outlined text-on-surface-variant text-[20px]">table_chart</span>
+          <h3 class="text-label-md font-label-md text-on-surface-variant uppercase">Planilha Base</h3>
+        </div>
+        <div id="planilha-item-count" class="text-code-sm font-code-sm text-primary"></div>
+      </div>
+      <div class="px-lg py-md flex items-center justify-between gap-md">
+        <p class="text-body-sm font-body-sm text-on-surface-variant">Importe a planilha de estoque para validar contagens em tempo real.</p>
+        <button id="btn-upload-planilha" class="btn btn-secondary shrink-0" style="display:none">
+          <span class="material-symbols-outlined text-[16px]">upload_file</span>
+          <span class="hide-mobile">Importar planilha</span>
+          <span class="md:hidden">Importar</span>
+        </button>
+      </div>
     </div>
   </section>
 
   <!-- EXPORTAR -->
   <section class="glass-panel rounded-xl p-lg border border-white/10">
-    <h2 class="text-label-md font-label-md text-on-surface-variant uppercase mb-md">Exportar</h2>
+    <div class="flex items-center gap-sm mb-md">
+      <span class="material-symbols-outlined text-[18px] text-on-surface-variant">download</span>
+      <h2 class="text-label-md font-label-md text-on-surface-variant uppercase">Exportar Relatórios</h2>
+    </div>
     <div class="grid grid-cols-2 md:grid-cols-3 gap-sm mb-sm">
-      <a id="btn-export-completo" class="btn btn-secondary" style="text-decoration:none" target="_blank">
-        <span class="material-symbols-outlined text-[16px]">download</span>Excel completo
-      </a>
-      <a id="btn-export-divs" class="btn btn-secondary" style="text-decoration:none" target="_blank">
-        <span class="material-symbols-outlined text-[16px]">warning</span>Excel divergências
-      </a>
-      <a id="btn-export-etiquetas" class="btn btn-secondary" style="text-decoration:none" target="_blank" title="Etiquetas QR Code A4">
-        <span class="material-symbols-outlined text-[16px]">label</span>Etiquetas QR
-      </a>
+      <button id="btn-export-completo" class="btn btn-secondary" title="Download da planilha completa com todos os itens e status">
+        <span class="material-symbols-outlined text-[15px]">table_view</span>Excel Completo
+      </button>
+      <button id="btn-export-divs" class="btn btn-secondary" title="Apenas os itens com divergência">
+        <span class="material-symbols-outlined text-[15px]" style="color:#ffb4ab">difference</span>Divergências
+      </button>
+      <button id="btn-export-etiquetas" class="btn btn-secondary" title="Etiquetas QR Code prontas para impressão (A4)">
+        <span class="material-symbols-outlined text-[15px]">label</span>Etiquetas QR
+      </button>
     </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-sm border-t border-white/5 pt-sm">
-      <a id="btn-export-pdf" class="btn btn-secondary" style="text-decoration:none" target="_blank">
-        <span class="material-symbols-outlined text-[16px]" style="color:#94A3B8">picture_as_pdf</span>PDF relatório
-      </a>
-      <a id="btn-export-relatorio-final-pdf" class="btn btn-secondary" style="text-decoration:none;border-color:rgba(255,180,171,0.3);color:#ffb4ab" target="_blank">
-        <span class="material-symbols-outlined text-[16px]">summarize</span>PDF Relatório Final
-        <span style="font-size:.6rem;color:#3d4850;margin-left:auto">+ IA + Financeiro</span>
-      </a>
-      <a id="btn-export-relatorio-final-excel" class="btn btn-secondary" style="text-decoration:none;border-color:rgba(16,235,138,0.3);color:#10eb8a" target="_blank">
-        <span class="material-symbols-outlined text-[16px]">table_chart</span>Excel Relatório Final
-        <span style="font-size:.6rem;color:#3d4850;margin-left:auto">Múltiplas abas</span>
-      </a>
+      <button id="btn-export-pdf" class="btn btn-secondary" title="Relatório PDF com visão geral da sessão">
+        <span class="material-symbols-outlined text-[15px]" style="color:#94A3B8">picture_as_pdf</span>PDF Relatório
+      </button>
+      <button id="btn-export-relatorio-final-pdf" class="btn btn-secondary" style="border-color:rgba(255,180,171,0.3);color:#ffb4ab" title="PDF completo: KPIs + análise IA + impacto financeiro">
+        <span class="material-symbols-outlined text-[15px]">summarize</span>
+        <span>PDF Final</span>
+        <span style="font-size:.65rem;color:#87929b;margin-left:auto;white-space:nowrap">IA + Financeiro</span>
+      </button>
+      <button id="btn-export-relatorio-final-excel" class="btn btn-secondary" style="border-color:rgba(16,235,138,0.3);color:#10eb8a" title="Excel com 4 abas: Resumo, Itens, Divergências, Recomendações">
+        <span class="material-symbols-outlined text-[15px]">table_chart</span>
+        <span>Excel Final</span>
+        <span style="font-size:.65rem;color:#87929b;margin-left:auto;white-space:nowrap">4 abas</span>
+      </button>
     </div>
   </section>
 
@@ -326,14 +352,14 @@ tailwind.config = {
           <button class="filter-btn" data-filter="divergente">Divergente</button>
           <button class="filter-btn" data-filter="ajuste">Para Ajuste</button>
           <button class="filter-btn" data-filter="pendente">Pendente</button>
-          <input type="search" id="search-itens" class="input search-input" placeholder="Buscar código ou produto..."/>
+          <input type="search" id="search-itens" class="input search-input" placeholder="Buscar código ou produto..." style="background:#fff;color:#111;border:1px solid rgba(0,0,0,0.15);border-radius:8px"/>
         </div>
       </div>
       <div id="itens-sentinel" style="height:1px"></div>
       <div id="itens-container">
-        <div class="table-placeholder" id="itens-loading-placeholder">
-          <div class="spinner"></div>
-          <div style="color:#3d4850;font-size:.8125rem" id="itens-loading-text">Rolar para carregar itens</div>
+        <div class="table-placeholder" id="itens-loading-placeholder" style="padding:2.5rem 1rem;display:flex;flex-direction:column;align-items:center;gap:.75rem">
+          <span class="material-symbols-outlined text-on-surface-variant" style="font-size:32px;opacity:.4">inventory_2</span>
+          <div style="color:#87929b;font-size:.8125rem;text-align:center" id="itens-loading-text">Role a página para carregar os itens</div>
         </div>
       </div>
     </div>
@@ -429,12 +455,12 @@ tailwind.config = {
         <a id="btn-download-relatorio-pdf" class="btn btn-secondary" style="text-decoration:none;justify-content:center" target="_blank">
           <span class="material-symbols-outlined text-[18px]" style="color:#ffb4ab">picture_as_pdf</span>
           <span>Relatório Final PDF</span>
-          <span style="font-size:.6875rem;color:#3d4850;margin-left:auto">Executivo + IA + Financeiro</span>
+          <span style="font-size:.6875rem;color:#87929b;margin-left:auto">Executivo + IA + Financeiro</span>
         </a>
         <a id="btn-download-relatorio-excel" class="btn btn-secondary" style="text-decoration:none;justify-content:center" target="_blank">
           <span class="material-symbols-outlined text-[18px]" style="color:#10eb8a">table_chart</span>
           <span>Relatório Final Excel</span>
-          <span style="font-size:.6875rem;color:#3d4850;margin-left:auto">Múltiplas abas + Recomendações</span>
+          <span style="font-size:.6875rem;color:#87929b;margin-left:auto">Múltiplas abas + Recomendações</span>
         </a>
       </div>
       <div class="modal-footer">
@@ -460,13 +486,13 @@ tailwind.config = {
         <span class="material-symbols-outlined text-[32px]">upload_file</span>
       </div>
       <div style="font-weight:500;margin-bottom:.25rem" id="dropzone-label">Arraste o arquivo aqui</div>
-      <div style="font-size:.75rem;color:#3d4850">ou clique para selecionar (.xlsx, .csv)</div>
+      <div style="font-size:.75rem;color:#87929b">ou clique para selecionar (.xlsx, .csv)</div>
     </div>
     <div id="upload-validation-report" class="validation-report" style="display:none"></div>
 
     <!-- Preview das primeiras linhas (aparece após validação) -->
     <div id="upload-preview" style="display:none;margin-top:1rem">
-      <div style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#3d4850;margin-bottom:.5rem" id="upload-preview-title">Prévia — primeiras 5 linhas</div>
+      <div style="font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#87929b;margin-bottom:.5rem" id="upload-preview-title">Prévia — primeiras 5 linhas</div>
       <div style="overflow-x:auto;border-radius:8px;border:1px solid rgba(255,255,255,0.08)">
         <table style="width:100%;border-collapse:collapse;font-size:.8125rem">
           <thead>
@@ -491,7 +517,7 @@ tailwind.config = {
         <span id="upload-confirm-spinner" class="spinner-sm hidden"></span>
         Confirmar importação
       </button>
-      <span id="upload-status-text" style="font-size:.8125rem;color:#3d4850"></span>
+      <span id="upload-status-text" style="font-size:.8125rem;color:#87929b"></span>
     </div>
   </div>
 </div>
@@ -510,7 +536,7 @@ tailwind.config = {
     <div id="analise-loading" style="text-align:center;padding:3rem 1rem;flex-shrink:0">
       <div class="spinner" style="margin:0 auto 1rem;width:40px;height:40px"></div>
       <div style="color:#8fd6ff;font-size:.9375rem;font-weight:500;margin-bottom:.375rem">Analisando sessão com IA...</div>
-      <div style="color:#3d4850;font-size:.8125rem">Isso pode levar alguns segundos</div>
+      <div style="color:#87929b;font-size:.8125rem">Isso pode levar alguns segundos</div>
     </div>
 
     <div id="analise-content" style="display:none;flex:1;overflow-y:auto;padding:1.25rem;gap:1.25rem;flex-direction:column">
@@ -569,7 +595,7 @@ tailwind.config = {
       <button class="modal-close" id="btn-close-chat">✕</button>
     </div>
     <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0"></div>
-    <div id="chat-typing" style="display:none;padding:.5rem 0;font-size:.75rem;color:#3d4850">
+    <div id="chat-typing" style="display:none;padding:.5rem 0;font-size:.75rem;color:#87929b">
       <span class="spinner-sm" style="display:inline-block;vertical-align:middle;margin-right:.375rem"></span>
       IA respondendo...
     </div>
@@ -712,8 +738,8 @@ function renderRodadas(data) {
           <span class="badge ${r.concluida ? 'badge-ativa' : 'badge-cancelada'}">${r.concluida ? 'Concluída' : 'Em andamento'}</span>
         </div>
         <div style="display:flex;gap:1rem;font-size:.8125rem">
-          <div><span style="color:#3d4850">Itens: </span><strong style="color:#d7e3fc">${r.total}</strong></div>
-          <div><span style="color:#3d4850">Diverg: </span><strong style="color:#ffb4ab">${r.divergencias}</strong></div>
+          <div><span style="color:#87929b">Itens: </span><strong style="color:#d7e3fc">${r.total}</strong></div>
+          <div><span style="color:#87929b">Diverg: </span><strong style="color:#ffb4ab">${r.divergencias}</strong></div>
         </div>
         ${r.divergencias > 0 ? `<div class="progress-bar" style="margin-top:.625rem"><div class="progress-bar-fill" style="width:${divPct}%;background:#ffb4ab"></div></div>` : ''}
       </div>`
@@ -800,7 +826,7 @@ function renderOperators(conts) {
   }
   const sorted = Object.entries(opMap).sort((a,b)=>b[1].total-a[1].total).slice(0,5)
   if (sorted.length === 0) {
-    list.innerHTML = '<div class="table-placeholder"><div style="color:#3d4850;font-size:.8125rem">Nenhum operador ainda</div></div>'; return
+    list.innerHTML = '<div class="table-placeholder"><div style="color:#87929b;font-size:.8125rem">Nenhum operador ainda</div></div>'; return
   }
   list.innerHTML = sorted.map(([name, o]) => `
     <div class="operator-row">
@@ -808,7 +834,7 @@ function renderOperators(conts) {
         <div class="operator-avatar" style="background:${escapeHtml(operatorColor(name))}22;color:${escapeHtml(operatorColor(name))}">${escapeHtml(operatorInitials(name))}</div>
         <div><div style="font-weight:500;font-size:.8125rem;color:#d7e3fc">${escapeHtml(name)}</div><div class="op-stat">${escapeHtml(timeAgo(o.lastSeen))}</div></div>
       </div>
-      <div style="text-align:right"><div style="font-weight:600;font-size:.875rem;color:#d7e3fc">${escapeHtml(String(o.total))}</div><div class="op-stat" style="color:${o.divs>0?'#ffb4ab':'#3d4850'}">${escapeHtml(String(o.divs))} div.</div></div>
+      <div style="text-align:right"><div style="font-weight:600;font-size:.875rem;color:#d7e3fc">${escapeHtml(String(o.total))}</div><div class="op-stat" style="color:${o.divs>0?'#ffb4ab':'#87929b'}">${escapeHtml(String(o.divs))} div.</div></div>
     </div>`).join('')
 }
 
@@ -831,7 +857,7 @@ function renderLiveFeed() {
         </div>
         <div class="flex justify-between items-center text-body-sm font-body-sm text-on-surface-variant" style="font-size:12px">
           <span>Q: ${qtd} ${name !== 'Anônimo' ? `· ${name}` : ''}</span>
-          <span style="font-size:10px;color:#3d4850">${escapeHtml(timeAgo(ev.timestamp||ev.registrado_em))}</span>
+          <span style="font-size:10px;color:#87929b">${escapeHtml(timeAgo(ev.timestamp||ev.registrado_em))}</span>
         </div>
       </div>`
   }).join('')
@@ -856,7 +882,7 @@ function renderItens(filter, search) {
     filtered = filtered.filter(it => (it.codigo||'').toLowerCase().includes(q)||(it.produto||it.descricao||it.nome||'').toLowerCase().includes(q))
   }
   if (filtered.length === 0) {
-    container.innerHTML = '<div class="empty-state"><span class="material-symbols-outlined" style="font-size:32px;color:#3d4850;display:block;margin-bottom:.375rem">search_off</span><div class="empty-state-text">Nenhum item encontrado</div></div>'; return
+    container.innerHTML = '<div class="empty-state"><span class="material-symbols-outlined" style="font-size:32px;color:#87929b;display:block;margin-bottom:.375rem">search_off</span><div class="empty-state-text">Nenhum item encontrado</div></div>'; return
   }
   const statusLabel = { ok:'OK', conferido:'OK', divergente:'DIV', 'para ajuste':'AJUSTE', pendente:'Pendente', nao_conferido:'Pendente' }
   const statusClass = { ok:'status-ok', conferido:'status-ok', divergente:'status-div', 'para ajuste':'', pendente:'status-pend', nao_conferido:'status-pend' }
@@ -877,9 +903,9 @@ function renderItens(filter, search) {
             <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(nome)}</td>
             <td>${base}</td>
             <td style="font-weight:${cont!=='—'?'600':'400'}">${cont}</td>
-            <td style="color:${it.diferenca!=null?difColor:'#3d4850'}">${dif}</td>
+            <td style="color:${it.diferenca!=null?difColor:'#87929b'}">${dif}</td>
             <td><span class="${statusClass[st]||'status-pend'}" ${statusInline[st]?`style="${statusInline[st]}"`:''}>${statusLabel[st]||it.status||'—'}</span></td>
-            <td style="white-space:nowrap;color:#3d4850">${timeAgo(it.timestamp||it.atualizado_em||it.updated_at)}</td>
+            <td style="white-space:nowrap;color:#87929b">${timeAgo(it.timestamp||it.atualizado_em||it.updated_at)}</td>
           </tr>`
         }).join('')}</tbody>
       </table>
@@ -915,29 +941,6 @@ function setupExportLinks() {
   _bindExport('btn-export-relatorio-final-excel', exportarRelatorioFinalExcel, 'Gerando…')
 }
 
-// ── Mobile link (com token)
-async function setupMobileLink() {
-  try {
-    const data = await fetch(`/api/sessoes/${sessaoId}/token-acesso`).then(r => r.json())
-    const token = data.token || ''
-    const url = `${window.location.origin}/mobile/${sessaoId}?token=${token}`
-    const linkEl = document.getElementById('mobile-link-text')
-    if (linkEl) linkEl.textContent = url
-    document.getElementById('btn-copy-link').addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(url); toast('Link copiado!', 'success') }
-      catch { toast('Não foi possível copiar.', 'error') }
-    })
-  } catch {
-    // fallback sem token
-    const url = `${window.location.origin}/mobile/${sessaoId}`
-    const linkEl = document.getElementById('mobile-link-text')
-    if (linkEl) linkEl.textContent = url
-    document.getElementById('btn-copy-link').addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(url); toast('Link copiado!', 'success') }
-      catch { toast('Não foi possível copiar.', 'error') }
-    })
-  }
-}
 
 // ── WS handler
 function handleWsEvent(ev) {
@@ -1362,7 +1365,7 @@ function renderValorEstoque() {
     semDados.classList.remove('hidden')
     tabelas.classList.add('hidden')
     document.getElementById('fin-status-badge').textContent = 'Sem dados financeiros'
-    document.getElementById('fin-status-badge').style.cssText = 'color:#3d4850;border-color:#3d4850'
+    document.getElementById('fin-status-badge').style.cssText = 'color:#87929b;border-color:#3d4850'
     return
   }
 
@@ -1473,7 +1476,7 @@ async function carregarQR(rodada) {
     const btnRodada = document.getElementById('btn-gerar-nova-rodada')
     if (sessao && sessao.status === 'ativa') {
       btnRodada.style.display = ''
-      btnRodada.textContent = `Gerar QR para ${rod + 1}ª Contagem`
+      btnRodada.innerHTML = `<span class="material-symbols-outlined text-[16px]">refresh</span> Gerar QR para ${rod + 1}ª Contagem`
       btnRodada.onclick = () => carregarQR(rod + 1)
     } else {
       btnRodada.style.display = 'none'
@@ -1500,7 +1503,6 @@ async function init() {
   try {
     const [sessaoData,statsData]=await Promise.all([buscarSessao(sessaoId),statsSessao(sessaoId).catch(()=>null)])
     sessao=sessaoData; stats=statsData; renderHeader(); renderStats(); setupExportLinks(); setupLazyItens()
-    setupMobileLink().catch(()=>{})  // async — chamada não-bloqueante com erro tratado
     listarContagens(sessaoId).then(conts=>{contagens=conts||[];renderChart(contagens);renderOperators(contagens)}).catch(()=>{})
     loadRodadas()
     loadValorEstoque()

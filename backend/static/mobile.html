@@ -296,8 +296,8 @@ tailwind.config = {
           autocorrect="off"
           spellcheck="false"
           placeholder="Ex: DIESEL-1000L, ARLA-200L..."
-          class="flex-1 rounded-2xl py-4 px-4 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-semibold tracking-wide shadow-inner" style="background:#fff;color:#111;border:2px solid rgba(143,214,255,0.4);"
-          style="font-family:'JetBrains Mono',monospace;font-size:20px;letter-spacing:0.05em"/>
+          class="flex-1 rounded-2xl py-4 px-4 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-semibold tracking-wide shadow-inner"
+          style="background:#fff;color:#111;border:2px solid rgba(143,214,255,0.4);font-family:'JetBrains Mono',monospace;font-size:20px;letter-spacing:0.05em"/>
       </div>
       <p class="text-code-sm font-code-sm text-on-surface-variant">Digite o código ou parte do nome — sugestões aparecem abaixo.</p>
     </div>
@@ -751,10 +751,6 @@ function showState(name) {
     document.getElementById('btn-submit-manual').disabled = true
     setTimeout(() => inp?.focus(), 150)
   }
-  if (name === 'lista') {
-    const searchInp = document.getElementById('lista-search')
-    if (searchInp) searchInp.value = ''
-  }
   if (name === 'scanner') {
     atualizarBarraProgresso(progressoAtual)
     atualizarBotaoOffline()
@@ -910,7 +906,7 @@ function renderItem() {
   if (rodadaBadge) {
     const label = rodadaLabels[proximaRodada] || `${proximaRodada}ª contagem`
     const isRecontagem = proximaRodada >= 2
-    rodadaBadge.innerHTML = `<span class="badge ${isRecontagem?'badge-cancelada':''}" style="${!isRecontagem?'background:rgba(255,255,255,.06);color:#3d4850;border:1px solid rgba(255,255,255,0.05)':''}">${label}</span>`
+    rodadaBadge.innerHTML = `<span class="badge ${isRecontagem?'badge-cancelada':''}" style="${!isRecontagem?'background:rgba(255,255,255,.06);color:#87929b;border:1px solid rgba(255,255,255,0.05)':''}">${label}</span>`
   }
   const badge = document.getElementById('item-status-badge')
   if (badge) badge.innerHTML = ''
