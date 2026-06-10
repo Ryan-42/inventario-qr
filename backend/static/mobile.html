@@ -768,7 +768,7 @@ async function startCamera() {
       })
       const video = videoEl()
       video.srcObject = stream
-      await video.play()
+      video.play().catch(() => {}) // autoplay attribute already starts playback; ignore AbortError
     }
     scanActive = true
     requestAnimationFrame(scanFrame)
