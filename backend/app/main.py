@@ -73,7 +73,7 @@ class SecurityHeadersMiddleware:
             (b"x-content-type-options", b"nosniff"),
             (b"x-frame-options", b"DENY"),
             (b"referrer-policy", b"strict-origin-when-cross-origin"),
-            (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
+            (b"permissions-policy", b"camera=self, microphone=(), geolocation=()"),
         ]
         if is_prod:
             self._headers.append(
