@@ -356,7 +356,7 @@ def gerar_relatorio_final_pdf(
     # ── Histórico de Rodadas ─────────────────────────────────────────────────
     if historico:
         story.append(Spacer(1, 6*mm))
-        story.append(Paragraph("Histórico de Rodadas por Item", s_h2))
+        story.append(Paragraph("HISTÓRICO DE RODADAS POR ITEM", s_section))
         story.append(Spacer(1, 2*mm))
         story.append(Paragraph(
             "Itens que precisaram de mais de 1 rodada ou finalizaram como Para Ajuste.",

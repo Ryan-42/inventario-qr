@@ -161,15 +161,16 @@ def exportar_inventario_completo(itens_com_status: list[dict]) -> bytes:
     """
     df = pd.DataFrame(itens_com_status)
 
-    colunas = ["codigo", "produto", "quantidade_base", "quantidade_encontrada", "diferenca", "status", "operador", "rodada", "observacao", "timestamp"]
+    colunas = ["codigo", "produto", "local_fisico", "quantidade_base", "quantidade_encontrada",
+               "diferenca", "status", "operador", "rodada", "observacao", "timestamp"]
     df = df.reindex(columns=colunas)
-    df.columns = ["Código", "Produto", "Base", "Encontrado", "Diferença", "Status", "Operador", "Rodada", "Observação", "Data/Hora"]
+    df.columns = ["Código", "Produto", "Local", "Base", "Encontrado",
+                  "Diferença", "Status", "Operador", "Rodada", "Observação", "Data/Hora"]
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="Inventário Completo")
 
-        # Estilização básica
         ws = writer.sheets["Inventário Completo"]
         for col in ws.columns:
             max_len = max(len(str(cell.value or "")) for cell in col)
