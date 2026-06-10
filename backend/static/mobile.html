@@ -803,17 +803,25 @@ async function startCamera() {
     stream = null
     scanActive = false
     if (hintEl) {
-      const msgs = {
-        NotAllowedError: 'Permissão negada — libere a câmera nas configurações do browser',
-        NotFoundError: 'Câmera não encontrada neste dispositivo',
-        NotReadableError: 'Câmera em uso por outro app — feche e tente novamente',
-        OverconstrainedError: 'Câmera incompatível — tente novamente',
-        NotSupportedError: 'Browser não suporta acesso à câmera',
+      const retryBtn = `<button onclick="stream=null;startCamera()" style="display:block;margin-top:6px;background:rgba(143,214,255,0.15);border:1px solid rgba(143,214,255,0.3);border-radius:6px;padding:3px 10px;font-size:10px;color:#8fd6ff;text-transform:uppercase;letter-spacing:.05em;cursor:pointer">Tentar novamente</button>`
+      let msg
+      if (e.name === 'NotAllowedError') {
+        msg = `<span style="color:#ffb4ab;font-size:11px;line-height:1.5">
+          <b>Câmera bloqueada.</b> Para liberar:<br>
+          1. Clique no cadeado 🔒 na barra de endereço<br>
+          2. Mude <b>Câmera</b> de "Permitido" para <b>"Perguntar"</b><br>
+          3. Recarregue a página e clique em <b>Permitir</b>
+        </span>${retryBtn}`
+      } else {
+        const msgs = {
+          NotFoundError: 'Câmera não encontrada neste dispositivo',
+          NotReadableError: 'Câmera em uso por outro app — feche outros apps e tente',
+          OverconstrainedError: 'Câmera incompatível com este browser',
+          NotSupportedError: 'Browser não suporta acesso à câmera — use Chrome ou Edge',
+        }
+        msg = `<span style="color:#ffb4ab"><span class="material-symbols-outlined text-[14px]">videocam_off</span> ${msgs[e.name] || `Erro: ${e.name || e.message}`}</span>${retryBtn}`
       }
-      const msg = msgs[e.name] || `Câmera indisponível (${e.name || 'erro'}) — use o campo abaixo`
-      hintEl.innerHTML = `<span class="material-symbols-outlined text-[14px]" style="color:#ffb4ab">videocam_off</span>`
-        + `<span style="color:#ffb4ab">${msg}</span>`
-        + `<button onclick="stream=null;startCamera()" style="margin-left:6px;background:rgba(143,214,255,0.12);border:1px solid rgba(143,214,255,0.25);border-radius:5px;padding:1px 7px;font-size:10px;color:#8fd6ff;text-transform:uppercase;letter-spacing:.05em">Tentar novamente</button>`
+      hintEl.innerHTML = msg
     }
   }
 }
