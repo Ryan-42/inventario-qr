@@ -83,10 +83,10 @@ tailwind.config = {
   @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
-<body class="bg-background text-on-background h-screen w-screen relative select-none touch-none">
+<body class="bg-background text-on-background h-screen w-screen relative select-none">
 
 <!-- ═══ STATE: TOKEN ═══ -->
-<div id="state-token" class="hidden absolute inset-0 z-50 bg-background flex flex-col items-center justify-center px-6">
+<div id="state-token" class="hidden absolute inset-0 z-50 bg-background flex flex-col items-center justify-center px-6" style="padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)">
   <div class="w-full max-w-[360px] flex flex-col items-center gap-lg">
     <div class="w-20 h-20 bg-surface-container border border-white/10 rounded-2xl flex items-center justify-center shadow-lg">
       <span class="material-symbols-outlined text-[40px] text-primary" style="font-variation-settings:'FILL' 1">lock_open</span>
@@ -102,7 +102,7 @@ tailwind.config = {
         inputmode="text"
         autocapitalize="characters"
         autocomplete="off"
-        maxlength="8"
+        maxlength="16"
         placeholder="Ex: 3A7F2B1C"
         class="w-full rounded-2xl py-4 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-center font-bold tracking-widest uppercase"
         style="background:#fff;color:#111;border:2px solid rgba(143,214,255,0.4);font-family:'JetBrains Mono',monospace;font-size:1.5rem;letter-spacing:.2em"/>
@@ -157,7 +157,7 @@ tailwind.config = {
     </div>
     <div class="flex items-center gap-2">
       <div class="flex items-center gap-2 bg-surface-variant/40 px-3 py-1.5 rounded-full border border-white/5">
-        <div id="ws-dot" class="ws-dot ws-disconnected animate-pulse-ring"></div>
+        <div id="ws-dot" class="ws-dot ws-disconnected"></div>
         <span id="ws-label" class="text-code-sm font-code-sm text-tertiary tracking-wider uppercase" style="font-size:10px">Sync</span>
       </div>
       <button id="btn-modo-manual" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-primary transition-colors active:scale-95" title="Digitar código manualmente">
@@ -266,7 +266,7 @@ tailwind.config = {
 <!-- ═══ STATE: MANUAL ENTRY ═══ -->
 <div id="state-manual" class="hidden absolute inset-0 z-40 bg-background flex flex-col">
   <!-- Header -->
-  <div class="flex items-center gap-3 px-margin-mobile pt-10 pb-4 border-b border-white/5 bg-surface-container/80 backdrop-blur-md">
+  <div class="flex items-center gap-3 px-margin-mobile pb-4 border-b border-white/5 bg-surface-container/80 backdrop-blur-md" style="padding-top:max(2.5rem,env(safe-area-inset-top))">
     <button id="btn-back-manual" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant active:scale-95">
       <span class="material-symbols-outlined text-[20px]">arrow_back</span>
     </button>
@@ -277,7 +277,7 @@ tailwind.config = {
   </div>
 
   <!-- Content -->
-  <div class="flex-1 overflow-y-auto px-margin-mobile pt-xl flex flex-col gap-lg">
+  <div class="flex-1 overflow-y-auto overscroll-contain touch-pan-y px-margin-mobile pt-xl flex flex-col gap-lg">
     <!-- Context hint -->
     <div class="bg-primary/5 border border-primary/20 rounded-2xl p-md flex items-start gap-sm">
       <span class="material-symbols-outlined text-primary text-[22px] shrink-0 mt-0.5">info</span>
@@ -315,7 +315,7 @@ tailwind.config = {
   </div>
 
   <!-- Footer -->
-  <div class="px-margin-mobile pb-8 pt-4 border-t border-white/5">
+  <div class="px-margin-mobile pt-4 border-t border-white/5" style="padding-bottom:max(2rem,env(safe-area-inset-bottom))">
     <button id="btn-submit-manual"
       class="w-full py-4 bg-primary text-on-primary rounded-2xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(143,214,255,0.2)] hover:shadow-[0_0_30px_rgba(143,214,255,0.4)] active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none text-[#003549]"
       disabled>
@@ -328,7 +328,7 @@ tailwind.config = {
 <!-- ═══ STATE: ITEM DETAIL ═══ -->
 <div id="state-item" class="hidden absolute inset-0 z-40 bg-background/95 backdrop-blur-xl flex flex-col">
   <!-- Header -->
-  <div class="flex items-center gap-3 px-margin-mobile pt-10 pb-4 border-b border-white/5">
+  <div class="flex items-center gap-3 px-margin-mobile pb-4 border-b border-white/5" style="padding-top:max(2.5rem,env(safe-area-inset-top))">
     <button id="btn-back-item" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-container border border-white/10 text-on-surface-variant active:scale-95">
       <span class="material-symbols-outlined text-[20px]">arrow_back</span>
     </button>
@@ -339,7 +339,7 @@ tailwind.config = {
   </div>
 
   <!-- Scrollable content -->
-  <div class="flex-1 overflow-y-auto px-margin-mobile py-lg flex flex-col gap-md">
+  <div class="flex-1 overflow-y-auto overscroll-contain touch-pan-y px-margin-mobile py-lg flex flex-col gap-md">
     <!-- Item info -->
     <div class="bg-surface-container border border-white/10 rounded-2xl p-lg text-center">
       <p id="item-produto-nome" class="font-headline-md font-bold text-on-background leading-tight"></p>
@@ -365,7 +365,7 @@ tailwind.config = {
           <span class="material-symbols-outlined text-[32px]">add</span>
         </button>
       </div>
-      <button id="btn-edit-qty" class="text-code-sm font-code-sm text-on-surface-variant bg-none border-none cursor-pointer underline p-1">
+      <button id="btn-edit-qty" class="text-code-sm font-code-sm text-on-surface-variant bg-transparent border-none cursor-pointer underline p-1 active:opacity-60">
         editar direto
       </button>
     </div>
@@ -377,20 +377,20 @@ tailwind.config = {
     <div>
       <label class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider block mb-2">Operador</label>
       <input id="operador-input" type="text" inputmode="text" placeholder="Nome ou iniciais..." autocomplete="name"
-        class="w-full rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,0.2);"/>
+        class="w-full rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" style="background:#142032;color:#d7e3fc;border:1px solid rgba(255,255,255,0.1);"/>
     </div>
 
     <!-- Observation -->
     <div>
       <label class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider block mb-2">Observação (opcional)</label>
       <input id="observacao-input" type="text" inputmode="text" placeholder="Ex: caixa danificada..." maxlength="500"
-        class="w-full rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,0.2);"/>
+        class="w-full rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" style="background:#142032;color:#d7e3fc;border:1px solid rgba(255,255,255,0.1);"/>
     </div>
   </div>
 
   <!-- Footer -->
-  <div class="px-margin-mobile pb-8 pt-4 border-t border-white/5">
-    <button id="btn-registrar" class="w-full py-4 bg-primary text-on-primary rounded-xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(143,214,255,0.2)] hover:shadow-[0_0_30px_rgba(143,214,255,0.4)] transition-all text-[#003549]">
+  <div class="px-margin-mobile pt-4 border-t border-white/5" style="padding-bottom:max(2rem,env(safe-area-inset-bottom))">
+    <button id="btn-registrar" class="w-full py-4 bg-primary text-on-primary rounded-xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(143,214,255,0.2)] hover:shadow-[0_0_30px_rgba(143,214,255,0.4)] active:scale-[0.98] transition-all text-[#003549]">
       Registrar contagem
     </button>
     <p id="registrar-hint" class="text-center mt-2 text-code-sm font-code-sm text-on-surface-variant"></p>
@@ -417,7 +417,7 @@ tailwind.config = {
 </div>
 
 <!-- ═══ STATE: SUCESSO ═══ -->
-<div id="state-sucesso" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none">
+<div id="state-sucesso" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center" onclick="if(autoReturnTimer){clearInterval(autoReturnTimer);autoReturnTimer=null;returnToScanner()}">
   <div class="absolute inset-0 bg-tertiary/10 backdrop-blur-[2px]"></div>
   <div class="bg-surface-container/90 backdrop-blur-md border border-tertiary/30 rounded-2xl p-lg flex flex-col items-center shadow-[0_0_40px_rgba(16,235,138,0.2)] transform scale-105 relative z-10">
     <div class="w-16 h-16 rounded-full bg-tertiary/20 flex items-center justify-center mb-4">
@@ -726,16 +726,24 @@ function renderRecentes() {
     listEl.appendChild(btn)
   })
 }
+// States that respond to keyboard (visualViewport height clamping)
+const _KBD_STATES = new Set(['item', 'manual'])
+
 function showState(name) {
   STATES.forEach(s => {
     const el = document.getElementById(`state-${s}`)
     if (!el) return
     if (s === name) {
       el.classList.remove('hidden')
-      el.style.removeProperty('display') // remove qualquer override inline
+      el.style.removeProperty('display')
+      // For keyboard-aware states, clamp to visualViewport.height immediately
+      if (_KBD_STATES.has(s) && window.visualViewport) {
+        el.style.height = window.visualViewport.height + 'px'
+      }
     } else {
       el.classList.add('hidden')
-      el.style.removeProperty('display') // fonte única de verdade: classe hidden
+      el.style.removeProperty('display')
+      if (_KBD_STATES.has(s)) el.style.removeProperty('height') // limpa altura residual
     }
   })
   if (name === 'scanner') {
@@ -1392,12 +1400,18 @@ async function init() {
   }
 }
 
-// iOS Safari: visualViewport shrinks when keyboard opens — resize scanner to match
+// iOS/Android: visualViewport shrinks when keyboard opens — resize active keyboard-aware state
 if (window.visualViewport) {
   window.visualViewport.addEventListener('resize', () => {
-    const el = document.getElementById('state-scanner')
-    if (el && !el.classList.contains('hidden')) {
-      el.style.height = window.visualViewport.height + 'px'
+    const h = window.visualViewport.height + 'px'
+    _KBD_STATES.forEach(s => {
+      const el = document.getElementById(`state-${s}`)
+      if (el && !el.classList.contains('hidden')) el.style.height = h
+    })
+    // Also update scanner when keyboard is dismissed in scanner state
+    const scanner = document.getElementById('state-scanner')
+    if (scanner && !scanner.classList.contains('hidden')) {
+      scanner.style.height = window.visualViewport.height + 'px'
     }
   })
 }
