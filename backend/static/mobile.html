@@ -975,20 +975,27 @@ function updateQtyDisplay() {
 }
 
 // ── Qty controls
+// click handles mouse (desktop); touchend handles mobile tap (touchstart+preventDefault blocks synthetic click)
 document.getElementById('btn-minus').addEventListener('click', () => { currentQty = Math.max(0, currentQty-1); updateQtyDisplay() })
 document.getElementById('btn-plus').addEventListener('click', () => { currentQty++; updateQtyDisplay() })
 
-let longPressTimer = null, longPressInterval = null
+let longPressTimer = null, longPressInterval = null, _longPressActivated = false
 function startLongPress(delta) {
-  longPressTimer = setTimeout(() => { longPressInterval = setInterval(() => { currentQty = Math.max(0,currentQty+delta); updateQtyDisplay() }, 80) }, 400)
+  _longPressActivated = false
+  longPressTimer = setTimeout(() => {
+    _longPressActivated = true
+    longPressInterval = setInterval(() => { currentQty = Math.max(0,currentQty+delta); updateQtyDisplay() }, 80)
+  }, 400)
 }
 function stopLongPress() { clearTimeout(longPressTimer); clearInterval(longPressInterval); longPressTimer=null; longPressInterval=null }
 
 document.getElementById('btn-minus').addEventListener('mousedown', () => startLongPress(-1))
 document.getElementById('btn-minus').addEventListener('touchstart', e => { e.preventDefault(); startLongPress(-1) }, { passive:false })
+document.getElementById('btn-minus').addEventListener('touchend', e => { e.preventDefault(); stopLongPress(); if (!_longPressActivated) { currentQty = Math.max(0, currentQty-1); updateQtyDisplay() } })
 document.getElementById('btn-plus').addEventListener('mousedown', () => startLongPress(1))
 document.getElementById('btn-plus').addEventListener('touchstart', e => { e.preventDefault(); startLongPress(1) }, { passive:false })
-;['mouseup','mouseleave','touchend','touchcancel'].forEach(ev => {
+document.getElementById('btn-plus').addEventListener('touchend', e => { e.preventDefault(); stopLongPress(); if (!_longPressActivated) { currentQty++; updateQtyDisplay() } })
+;['mouseup','mouseleave','touchcancel'].forEach(ev => {
   document.getElementById('btn-minus').addEventListener(ev, stopLongPress)
   document.getElementById('btn-plus').addEventListener(ev, stopLongPress)
 })
