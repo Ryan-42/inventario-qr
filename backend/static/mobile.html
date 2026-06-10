@@ -762,23 +762,59 @@ function showState(name) {
 
 // ── Camera
 async function startCamera() {
+  const hintEl = document.getElementById('scan-hint-text')
   try {
     if (!stream) {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-      })
+      // Guard: API must exist (some browsers/contexts return undefined even on HTTPS)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw Object.assign(new Error('getUserMedia not available'), { name: 'NotSupportedError' })
+      }
+
+      // Attempt chain: back camera (exact) → back camera (ideal) → any camera
+      // No width/height constraints — they cause OverconstrainedError on many mobile browsers
+      const attempts = [
+        { video: { facingMode: 'environment' } },
+        { video: { facingMode: { ideal: 'environment' } } },
+        { video: true },
+      ]
+      let lastErr = null
+      for (const constraints of attempts) {
+        try { stream = await navigator.mediaDevices.getUserMedia(constraints); break }
+        catch (e) { lastErr = e; stream = null }
+      }
+      if (!stream) throw lastErr
+
       const video = videoEl()
       video.srcObject = stream
-      video.play().catch(() => {}) // autoplay attribute already starts playback; ignore AbortError
+      // Don't await play() — autoplay attribute already handles start; avoids AbortError
+      video.play().catch(() => {})
     }
+
     scanActive = true
     requestAnimationFrame(scanFrame)
+
+    // Restore hint after successful camera start
+    if (hintEl) hintEl.innerHTML = _barcodeDetector
+      ? '<span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>QR Code ou código de barras'
+      : '<span class="material-symbols-outlined text-[16px]">qr_code_scanner</span>Aponte para o QR'
+
   } catch(e) {
-    console.warn('Camera error:', e)
+    console.warn('Camera error:', e.name, e.message)
     stream = null
-    const hintEl = document.getElementById('scan-hint-text')
-    if (hintEl) hintEl.innerHTML = 'Câmera indisponível — use o campo abaixo'
     scanActive = false
+    if (hintEl) {
+      const msgs = {
+        NotAllowedError: 'Permissão negada — libere a câmera nas configurações do browser',
+        NotFoundError: 'Câmera não encontrada neste dispositivo',
+        NotReadableError: 'Câmera em uso por outro app — feche e tente novamente',
+        OverconstrainedError: 'Câmera incompatível — tente novamente',
+        NotSupportedError: 'Browser não suporta acesso à câmera',
+      }
+      const msg = msgs[e.name] || `Câmera indisponível (${e.name || 'erro'}) — use o campo abaixo`
+      hintEl.innerHTML = `<span class="material-symbols-outlined text-[14px]" style="color:#ffb4ab">videocam_off</span>`
+        + `<span style="color:#ffb4ab">${msg}</span>`
+        + `<button onclick="stream=null;startCamera()" style="margin-left:6px;background:rgba(143,214,255,0.12);border:1px solid rgba(143,214,255,0.25);border-radius:5px;padding:1px 7px;font-size:10px;color:#8fd6ff;text-transform:uppercase;letter-spacing:.05em">Tentar novamente</button>`
+    }
   }
 }
 
