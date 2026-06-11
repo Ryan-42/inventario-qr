@@ -1,13 +1,15 @@
-from sqlalchemy.orm import Session
-from sqlalchemy import func, case, and_
-from sqlalchemy.exc import IntegrityError
+from collections import defaultdict
 from datetime import datetime, timezone
 from typing import Optional
-from fastapi import HTTPException
 
-from app.models.sessao import Sessao, StatusSessao
+from fastapi import HTTPException
+from sqlalchemy import func, case, and_
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
+
+from app.models.contagem import Contagem, HistoricoContagem
 from app.models.item_base import ItemBase
-from app.models.contagem import Contagem
+from app.models.sessao import Sessao, StatusSessao
 
 
 def gerar_codigo_sessao(db: Session) -> str:
@@ -254,9 +256,6 @@ def calcular_metricas_sessao(db: Session, sessao_id: str) -> dict:
       por_operador           — lista de {operador, contagens, itens_unicos, primeiro, ultimo,
                                duracao_min, itens_por_minuto}
     """
-    from app.models.contagem import Contagem, HistoricoContagem
-    from datetime import datetime, timezone
-
     sessao = buscar_sessao(db, sessao_id)
     if not sessao:
         return {}
@@ -297,7 +296,6 @@ def calcular_metricas_sessao(db: Session, sessao_id: str) -> dict:
     itens_por_minuto = round(total_hist / duracao_min, 2) if duracao_min > 0 else 0.0
 
     # Breakdown por operador (agrupa histórico por operador)
-    from collections import defaultdict
     op_hist: dict[str, list] = defaultdict(list)
     for h in historico:
         op = h.operador or "(sem operador)"
@@ -305,7 +303,7 @@ def calcular_metricas_sessao(db: Session, sessao_id: str) -> dict:
 
     por_operador = []
     for op, registros in sorted(op_hist.items()):
-    # timestamps seguros
+        # normaliza timestamps para timezone-aware
         ts_list = [
             r.timestamp.replace(tzinfo=timezone.utc) if r.timestamp and r.timestamp.tzinfo is None else r.timestamp
             for r in registros if r.timestamp

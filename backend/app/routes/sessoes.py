@@ -1,6 +1,10 @@
-import secrets
 import hmac
+import json
+import logging
+import secrets
+import urllib.request
 from urllib.parse import urlparse
+
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks
 from sqlalchemy.orm import Session
 
@@ -11,17 +15,14 @@ from app.repositories import sessao_repo, item_repo
 from app.schemas import SessaoCreate, SessaoResponse, SessaoCreateResponse, SessaoStats, RodadasInfo, ProgressoRodada, ValorEstoqueStats
 from app.models.sessao import Sessao, StatusSessao
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sessoes", tags=["Sessões"])
-
-import logging as _logging
-_logger = _logging.getLogger(__name__)
 
 
 def _disparar_webhook(webhook_url: str, payload: dict) -> None:
     """Dispara HTTP POST para webhook_url com o payload JSON. Falhas são apenas logadas."""
-    import urllib.request, json as _json
     try:
-        data = _json.dumps(payload).encode()
+        data = json.dumps(payload).encode()
         req = urllib.request.Request(
             webhook_url, data=data,
             headers={"Content-Type": "application/json", "User-Agent": "INVIQ-Webhook/1.0"},
@@ -29,7 +30,7 @@ def _disparar_webhook(webhook_url: str, payload: dict) -> None:
         )
         urllib.request.urlopen(req, timeout=10)
     except Exception as exc:
-        _logger.warning("webhook_failed url=%s erro=%s", webhook_url, exc)
+        logger.warning("webhook_failed url=%s erro=%s", webhook_url, exc)
 
 
 @router.get("/", response_model=list[SessaoResponse])

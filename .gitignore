@@ -81,5 +81,5 @@ skills-lock.json
 # Scripts temporários
 create_readme.py
 
-# Stitch prototypes (uncomment to include)
-# _stitch_*.html
+# Stitch prototypes (protótipos locais de design, não fazem parte do código)
+_stitch_*.html
