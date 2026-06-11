@@ -17,12 +17,28 @@ _EXTENSOES_XLSX = (".xlsx", ".xls")
 _EXTENSOES_XLSX_CSV = (".xlsx", ".xls", ".csv")
 
 
+_TIPOS_MIME_ACEITOS = frozenset({
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "application/octet-stream",
+    "text/csv",
+    "application/csv",
+    "",  # ausente / não informado pelo cliente
+})
+
+
 def _validar_arquivo(file: UploadFile, permitir_csv: bool = False) -> None:
     extensoes = _EXTENSOES_XLSX_CSV if permitir_csv else _EXTENSOES_XLSX
     if not (file.filename or "").endswith(extensoes):
         raise HTTPException(
             status_code=400,
             detail=f"Arquivo deve ser {', '.join(extensoes)}",
+        )
+    mime = (file.content_type or "").split(";")[0].strip().lower()
+    if mime not in _TIPOS_MIME_ACEITOS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo de arquivo não aceito: {mime}. Use .xlsx, .xls ou .csv.",
         )
 
 
@@ -128,7 +144,8 @@ async def upload_planilha(
 
 
 @router.get("/{sessao_id}/itens", response_model=list[ItemComStatus])
-def listar_itens_com_status(sessao_id: str, db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+async def listar_itens_com_status(request: Request, sessao_id: str, db: Session = Depends(get_db)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -136,7 +153,8 @@ def listar_itens_com_status(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{sessao_id}/buscar/{codigo}", response_model=BuscaItemResponse)
-def buscar_item_por_codigo(sessao_id: str, codigo: str, db: Session = Depends(get_db)):
+@limiter.limit("200/minute")
+async def buscar_item_por_codigo(request: Request, sessao_id: str, codigo: str, db: Session = Depends(get_db)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")

@@ -1,6 +1,10 @@
-from pydantic import BaseModel, field_validator, Field
+import ipaddress
 from datetime import datetime
 from typing import Optional
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, field_validator, Field
+
 from app.models.sessao import StatusSessao
 
 
@@ -24,9 +28,31 @@ class SessaoCreate(BaseModel):
         if v is None:
             return v
         v = v.strip()
-        if v and not (v.startswith("http://") or v.startswith("https://")):
+        if not v:
+            return None
+        if not (v.startswith("http://") or v.startswith("https://")):
             raise ValueError("webhook_url deve começar com http:// ou https://")
-        return v or None
+        try:
+            parsed = urlparse(v)
+            host = (parsed.hostname or "").lower()
+            if not host:
+                raise ValueError("webhook_url inválida: host ausente")
+            if host in ("localhost", "localhost.localdomain"):
+                raise ValueError("webhook_url não pode apontar para endereços locais")
+            try:
+                ip = ipaddress.ip_address(host)
+                if (ip.is_private or ip.is_loopback or ip.is_link_local
+                        or ip.is_multicast or ip.is_reserved or ip.is_unspecified):
+                    raise ValueError("webhook_url não pode apontar para endereços privados ou reservados")
+            except ValueError as exc:
+                if "webhook_url" in str(exc):
+                    raise
+                # host is a domain name, not an IP — that's acceptable
+        except ValueError:
+            raise
+        except Exception:
+            raise ValueError("webhook_url inválida")
+        return v
 
 
 class SessaoResponse(BaseModel):
@@ -85,7 +111,7 @@ class ItemComStatus(BaseModel):
 
 class ContagemCreate(BaseModel):
     codigo: str = Field(..., max_length=100)
-    quantidade_encontrada: int
+    quantidade_encontrada: int = Field(..., ge=0, le=999_999)
     operador: Optional[str] = Field(default=None, max_length=100)
     observacao: Optional[str] = Field(default=None, max_length=500)
 

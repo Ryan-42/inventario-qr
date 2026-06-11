@@ -19,8 +19,32 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sessoes", tags=["Sessões"])
 
 
+def _webhook_url_segura(url: str) -> bool:
+    """Valida URL do webhook em tempo de dispatch — previne SSRF com IPs privados."""
+    import ipaddress as _ip
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        host = (parsed.hostname or "").lower()
+        if not host or host in ("localhost", "localhost.localdomain"):
+            return False
+        try:
+            addr = _ip.ip_address(host)
+            if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved or addr.is_unspecified:
+                return False
+        except ValueError:
+            pass  # hostname, not an IP — allow
+        return True
+    except Exception:
+        return False
+
+
 def _disparar_webhook(webhook_url: str, payload: dict) -> None:
     """Dispara HTTP POST para webhook_url com o payload JSON. Falhas são apenas logadas."""
+    if not _webhook_url_segura(webhook_url):
+        logger.warning("webhook_bloqueado url=%s (endereço privado ou inválido)", webhook_url)
+        return
     try:
         data = json.dumps(payload).encode()
         req = urllib.request.Request(
@@ -34,7 +58,8 @@ def _disparar_webhook(webhook_url: str, payload: dict) -> None:
 
 
 @router.get("/", response_model=list[SessaoResponse])
-def listar_sessoes(db: Session = Depends(get_db)):
+@limiter.limit("60/minute")
+async def listar_sessoes(request: Request, db: Session = Depends(get_db)):
     return sessao_repo.listar_sessoes_com_stats(db)
 
 
@@ -71,7 +96,8 @@ async def verificar_admin(request: Request, sessao_id: str, token: str, db: Sess
 
 
 @router.get("/{sessao_id}", response_model=SessaoResponse)
-def buscar_sessao(sessao_id: str, db: Session = Depends(get_db)):
+@limiter.limit("120/minute")
+async def buscar_sessao(request: Request, sessao_id: str, db: Session = Depends(get_db)):
     sessao_dict = sessao_repo.buscar_sessao_com_stats(db, sessao_id)
     if not sessao_dict:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -170,6 +196,11 @@ async def deletar_sessao(sessao_id: str, token_admin: str, db: Session = Depends
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     _verificar_token_admin(sessao, token_admin)
+    if sessao.status == StatusSessao.concluida:
+        raise HTTPException(
+            status_code=409,
+            detail="Sessão concluída não pode ser deletada — os dados fazem parte do registro de auditoria.",
+        )
     sessao_repo.deletar_sessao(db, sessao_id)
 
 
@@ -217,7 +248,7 @@ def get_token_acesso(sessao_id: str, db: Session = Depends(get_db)):
     if not sessao.token_acesso:
         # UPDATE atômico WHERE token_acesso IS NULL evita race condition entre dois requests
         # simultâneos gerando tokens diferentes — apenas um INSERT vence, o outro é no-op.
-        novo_token = secrets.token_hex(4).upper()
+        novo_token = secrets.token_hex(8).upper()
         db.execute(
             sa_update(Sessao)
             .where(Sessao.id == sessao_id,
@@ -281,7 +312,7 @@ def qrcode_acesso(sessao_id: str, base_url: str = "", db: Session = Depends(get_
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     if not sessao.token_acesso:
-        novo_token = secrets.token_hex(4).upper()
+        novo_token = secrets.token_hex(8).upper()
         db.execute(
             sa_update(Sessao)
             .where(Sessao.id == sessao_id,

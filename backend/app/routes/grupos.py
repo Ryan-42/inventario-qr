@@ -273,7 +273,7 @@ def get_token_supervisor(sessao_id: str, db: Session = Depends(get_db)):
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     if not sessao.token_supervisor:
-        sessao.token_supervisor = secrets.token_hex(4).upper()
+        sessao.token_supervisor = secrets.token_hex(8).upper()
         db.commit()
         db.refresh(sessao)
     return {
@@ -288,7 +288,7 @@ def gerar_token_supervisor(sessao_id: str, db: Session = Depends(get_db)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    sessao.token_supervisor = secrets.token_hex(4).upper()
+    sessao.token_supervisor = secrets.token_hex(8).upper()
     db.commit()
     db.refresh(sessao)
     return {
@@ -306,7 +306,7 @@ def qrcode_supervisor(sessao_id: str, base_url: str = "", db: Session = Depends(
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     if not sessao.token_supervisor:
-        sessao.token_supervisor = secrets.token_hex(4).upper()
+        sessao.token_supervisor = secrets.token_hex(8).upper()
         db.commit()
         db.refresh(sessao)
 

@@ -20,6 +20,9 @@ def _json_serial(obj):
     raise TypeError(f"Tipo não serializável: {type(obj)!r}")
 
 
+_MAX_CONNECTIONS_PER_SESSION = 50
+
+
 class ConnectionManager:
     """Gerencia conexões WebSocket agrupadas por sessao_id."""
 
@@ -27,15 +30,23 @@ class ConnectionManager:
         # sessao_id -> conjunto de WebSockets ativos
         self._connections: Dict[str, Set[WebSocket]] = {}
 
-    async def connect(self, websocket: WebSocket, sessao_id: str) -> None:
-        """Aceita a conexão e registra no grupo da sessão."""
+    async def connect(self, websocket: WebSocket, sessao_id: str) -> bool:
+        """Aceita a conexão e registra no grupo da sessão.
+
+        Retorna False e fecha o socket se o limite por sessão foi atingido.
+        """
         await websocket.accept()
         if sessao_id not in self._connections:
             self._connections[sessao_id] = set()
+        if len(self._connections[sessao_id]) >= _MAX_CONNECTIONS_PER_SESSION:
+            await websocket.close(code=1008, reason="Too many connections for this session")
+            logger.warning("WS rejeitado — sessao=%s limite=%d atingido", sessao_id, _MAX_CONNECTIONS_PER_SESSION)
+            return False
         self._connections[sessao_id].add(websocket)
         # Remove sessões sem conexões acumuladas (limpeza preventiva de memory leak)
         self._cleanup_empty()
         logger.info("WS conectado — sessao=%s total=%d", sessao_id, len(self._connections[sessao_id]))
+        return True
 
     def disconnect(self, websocket: WebSocket, sessao_id: str) -> None:
         """Remove a conexão do grupo da sessão."""

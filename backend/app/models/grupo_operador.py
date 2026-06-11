@@ -18,7 +18,7 @@ class GrupoOperador(Base):
     nome = Column(String, nullable=False)                 # ex: "Grupo A", "Corredor 1-5"
     filtro = Column(String, nullable=False, default="*")  # ex: "A" | "A,B" | "*" (todos)
     tipo_filtro = Column(String, nullable=False, default="prefixo")  # prefixo | lista | todos
-    token = Column(String, nullable=False, default=lambda: secrets.token_hex(4).upper())
+    token = Column(String, nullable=False, default=lambda: secrets.token_hex(8).upper())
     cor = Column(String, nullable=True)  # cor para identificação visual (#ff6b6b)
 
     sessao = relationship("Sessao", back_populates="grupos")

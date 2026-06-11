@@ -1,6 +1,17 @@
-import pandas as pd
 import io
+
+import pandas as pd
 from fastapi import HTTPException
+
+# Caracteres que iniciam fórmulas no Excel/Calc — prefixar com ' neutraliza a injeção
+_FORMULA_PREFIXES = frozenset("=+-@|\t\r")
+
+
+def _sanitizar_formula(v: str) -> str:
+    """Neutraliza formula injection: células que começam com =, +, -, @, | recebem prefixo '."""
+    if v and v[0] in _FORMULA_PREFIXES:
+        return "'" + v
+    return v
 
 
 # Aliases aceitos para cada coluna canônica.
@@ -129,8 +140,8 @@ def importar_planilha(conteudo: bytes, filename: str = "") -> list[dict]:
 
     itens = []
     for r in df[colunas_base].to_dict(orient="records"):
-        cod = str(r["codigo"]).strip()
-        prod = str(r["produto"]).strip()
+        cod = _sanitizar_formula(str(r["codigo"]).strip())
+        prod = _sanitizar_formula(str(r["produto"]).strip())
         if not cod or not prod:
             continue
         # NaN check explícito: pd.to_numeric com errors="coerce" produz float('nan') para células inválidas

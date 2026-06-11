@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import unicodedata
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -30,10 +31,13 @@ class ValidarItemsRequest(BaseModel):
     items: list[dict[str, Any]]
 
 
-_PROMPT_INJECTION_KEYWORDS = frozenset([
-    "ignore", "esqueça", "esquecer", "override", "instrução anterior",
-    "ignore previous", "forget", "system prompt", "jailbreak",
-])
+_PROMPT_INJECTION_KEYWORDS = frozenset(
+    unicodedata.normalize("NFKD", kw).lower()
+    for kw in [
+        "ignore", "esqueça", "esquecer", "override", "instrução anterior",
+        "ignore previous", "forget", "system prompt", "jailbreak",
+    ]
+)
 
 class ChatRequest(BaseModel):
     mensagem: str
@@ -82,9 +86,10 @@ def analisar_sessao(request: Request, sessao_id: str, db: Session = Depends(get_
 @limiter.limit("30/minute")
 def chat_sessao(request: Request, sessao_id: str, payload: ChatRequest, db: Session = Depends(get_db)) -> dict:
     """Chat em linguagem natural sobre a sessão — responde perguntas sobre o inventário."""
-    # Prevenção básica de prompt injection
-    msg_lower = payload.mensagem.lower()
-    if any(kw in msg_lower for kw in _PROMPT_INJECTION_KEYWORDS):
+    # Prevenção de prompt injection — normaliza unicode antes de comparar
+    # (evita bypass via caracteres acentuados: ÈSQUEÇA → esqueça após NFKD)
+    msg_normalizada = unicodedata.normalize("NFKD", payload.mensagem).lower()
+    if any(kw in msg_normalizada for kw in _PROMPT_INJECTION_KEYWORDS):
         raise HTTPException(status_code=400, detail="Mensagem contém conteúdo não permitido.")
 
     sessao = sessao_repo.buscar_sessao(db, sessao_id)

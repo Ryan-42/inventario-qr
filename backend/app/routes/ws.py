@@ -40,7 +40,9 @@ async def websocket_sessao(websocket: WebSocket, sessao_id: str,
         await websocket.close(code=4409, reason="Sessão cancelada")
         return
 
-    await manager.connect(websocket, sessao_id)
+    connected = await manager.connect(websocket, sessao_id)
+    if not connected:
+        return
     try:
         while True:
             # Mantém a conexão viva aguardando mensagens do cliente.
