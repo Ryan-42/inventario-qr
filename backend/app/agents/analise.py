@@ -26,6 +26,7 @@ class AnaliseAgent:
         divergencias: list[dict],
         itens_sample: list[dict],
         valor_estoque: dict | None = None,
+        metricas: dict | None = None,
     ) -> dict:
         """
         Analisa a sessão e retorna um dict com insights.
@@ -34,7 +35,7 @@ class AnaliseAgent:
         """
         from app.agents.provider import provider
 
-        basico = self._analise_basica(stats, divergencias, valor_estoque)
+        basico = self._analise_basica(stats, divergencias, valor_estoque, metricas)
 
         if not provider.disponivel:
             basico["fonte"] = "basico"
@@ -44,7 +45,7 @@ class AnaliseAgent:
             )
             return basico
 
-        ia_data = self._analisar_com_ia(provider, sessao, stats, divergencias, itens_sample, valor_estoque)
+        ia_data = self._analisar_com_ia(provider, sessao, stats, divergencias, itens_sample, valor_estoque, metricas)
         if ia_data:
             basico.update(ia_data)
             basico["fonte"] = "ia"
@@ -57,7 +58,7 @@ class AnaliseAgent:
     # Análise básica (sem IA)
     # ------------------------------------------------------------------
 
-    def _analise_basica(self, stats: dict, divergencias: list[dict], valor_estoque: dict | None = None) -> dict:
+    def _analise_basica(self, stats: dict, divergencias: list[dict], valor_estoque: dict | None = None, metricas: dict | None = None) -> dict:
         total = stats.get("total", 0)
         conferidos = stats.get("conferidos", 0)
         divs = stats.get("divergencias", 0)
@@ -101,12 +102,28 @@ class AnaliseAgent:
                 f" Impacto financeiro: de R$ {vi:,.2f} para R$ {vf:,.2f} ({sinal}{pct_var:.1f}%)."
             )
 
+        metricas_resumo: dict = {}
+        if metricas:
+            dur = metricas.get("duracao_minutos", 0)
+            dur_str = f"{int(dur // 60)}h {int(dur % 60)}min" if dur >= 60 else f"{int(dur)}min"
+            metricas_resumo = {
+                "duracao": dur_str,
+                "itens_por_minuto": metricas.get("itens_por_minuto"),
+                "taxa_retrabalho_pct": metricas.get("taxa_retrabalho_pct"),
+                "rastreabilidade_pct": metricas.get("pct_rastreabilidade"),
+            }
+            if metricas.get("taxa_retrabalho_pct", 0) > 10:
+                padroes.append(f"Retrabalho elevado: {metricas['taxa_retrabalho_pct']:.1f}% dos itens foram recontados.")
+            if metricas.get("pct_rastreabilidade", 100) < 90:
+                padroes.append(f"Rastreabilidade baixa: {metricas['pct_rastreabilidade']:.1f}% das contagens têm operador identificado.")
+
         return {
             "resumo": (
                 f"{conferidos}/{total} itens conferidos ({percentual:.1f}% de progresso). "
                 f"{divs} divergência(s) encontrada(s) ({taxa_divergencia:.1f}% dos itens conferidos)."
                 f"{resumo_financeiro}"
             ),
+            "metricas_produtividade": metricas_resumo,
             "padroes": padroes,
             "itens_criticos": [
                 {
@@ -138,6 +155,7 @@ class AnaliseAgent:
         divergencias: list[dict],
         itens_sample: list[dict],
         valor_estoque: dict | None = None,
+        metricas: dict | None = None,
     ) -> dict | None:
         divs_limitadas = divergencias[:_MAX_DIVERGENCIAS_PROMPT]
 
@@ -175,6 +193,25 @@ ANÁLISE FINANCEIRA:
                 return obj.isoformat()
             raise TypeError(f"Not serializable: {type(obj)}")
 
+        # Bloco de métricas de produtividade (novo)
+        bloco_metricas = ""
+        if metricas:
+            dur = metricas.get("duracao_minutos", 0)
+            dur_str = f"{int(dur // 60)}h {int(dur % 60)}min" if dur >= 60 else f"{int(dur)}min"
+            por_op = metricas.get("por_operador", [])[:5]
+            ops_str = "; ".join(
+                f"{o['operador']} ({o['contagens']} itens, {o.get('itens_por_minuto') or 0:.1f}/min)"
+                for o in por_op
+            )
+            bloco_metricas = f"""
+MÉTRICAS DE PRODUTIVIDADE:
+- Duração total: {dur_str}
+- Ritmo médio: {metricas.get('itens_por_minuto', 0):.2f} itens/min
+- Taxa de retrabalho: {metricas.get('taxa_retrabalho_pct', 0):.1f}% ({metricas.get('retrabalho_absoluto', 0)} recontagens extras)
+- Rastreabilidade: {metricas.get('pct_rastreabilidade', 0):.1f}% das contagens com operador identificado
+- Operadores: {ops_str or 'nenhum'}
+"""
+
         prompt = f"""Você é um especialista em gestão de inventário e controle de estoque.
 Analise os dados desta sessão de inventário e forneça insights acionáveis em português.
 
@@ -186,7 +223,7 @@ DADOS DA SESSÃO:
 - Itens pendentes: {stats.get('pendentes', 0)}
 - Divergências: {stats.get('divergencias', 0)}
 - Progresso: {stats.get('percentual', 0):.1f}%
-{bloco_financeiro}{bloco_locais}
+{bloco_metricas}{bloco_financeiro}{bloco_locais}
 
 ITENS COM DIVERGÊNCIA ({len(divergencias)} total, mostrando {len(divs_limitadas)}):
 {json.dumps(divs_limitadas, ensure_ascii=False, indent=2, default=_serializable)}
