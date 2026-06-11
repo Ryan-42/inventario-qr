@@ -190,6 +190,22 @@ def progresso_rodada(sessao_id: str, db: Session = Depends(get_db)):
     return item_repo.calcular_progresso_rodada(db, sessao_id)
 
 
+@router.get("/{sessao_id}/metricas")
+def metricas_sessao(sessao_id: str, db: Session = Depends(get_db)):
+    """
+    Retorna KPIs de produtividade derivados dos dados do inventário.
+
+    Inclui: duração, itens/min, taxa de divergência, taxa de retrabalho,
+    % de rastreabilidade e breakdown por operador.
+    Não requer autenticação — os dados são agregados, sem PII exposta além de nomes
+    de operador (que já constam nas contagens públicas da sessão).
+    """
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    return sessao_repo.calcular_metricas_sessao(db, sessao_id)
+
+
 @router.get("/{sessao_id}/token-acesso")
 def get_token_acesso(sessao_id: str, db: Session = Depends(get_db)):
     """Retorna o token e QR code de acesso mobile da sessão."""

@@ -241,6 +241,113 @@ def calcular_valor_estoque(db: Session, sessao_id: str) -> dict:
     }
 
 
+def calcular_metricas_sessao(db: Session, sessao_id: str) -> dict:
+    """
+    Deriva KPIs de produtividade, retrabalho e rastreabilidade dos dados já existentes.
+
+    Retorna:
+      duracao_minutos        — tempo total da sessão em minutos (data_fim ou now)
+      itens_por_minuto       — total de registros no histórico / duração
+      taxa_divergencia_pct   — itens divergentes / total_itens * 100
+      taxa_retrabalho_pct    — (entradas no histórico - itens únicos no histórico) / total_itens * 100
+      pct_rastreabilidade    — contagens com operador preenchido / total_contagens * 100
+      por_operador           — lista de {operador, contagens, itens_unicos, primeiro, ultimo,
+                               duracao_min, itens_por_minuto}
+    """
+    from app.models.contagem import Contagem, HistoricoContagem
+    from datetime import datetime, timezone
+
+    sessao = buscar_sessao(db, sessao_id)
+    if not sessao:
+        return {}
+
+    inicio = sessao.data_inicio
+    fim = sessao.data_fim or datetime.now(timezone.utc)
+    if inicio and inicio.tzinfo is None:
+        inicio = inicio.replace(tzinfo=timezone.utc)
+    if fim and fim.tzinfo is None:
+        fim = fim.replace(tzinfo=timezone.utc)
+
+    duracao_seg = (fim - inicio).total_seconds() if inicio else 0
+    duracao_min = round(duracao_seg / 60, 2) if duracao_seg > 0 else 0
+
+    # Contagens atuais (estado final de cada item)
+    contagens = db.query(Contagem).filter(Contagem.sessao_id == sessao_id).all()
+    total_itens = db.query(ItemBase).filter(ItemBase.sessao_id == sessao_id).count()
+    total_contagens = len(contagens)
+
+    divs = sum(1 for c in contagens if c.divergencia)
+    taxa_divergencia = round(divs / total_itens * 100, 2) if total_itens > 0 else 0.0
+
+    # Rastreabilidade: contagens com operador preenchido
+    com_operador = sum(1 for c in contagens if c.operador)
+    pct_rastreabilidade = round(com_operador / total_contagens * 100, 2) if total_contagens > 0 else 0.0
+
+    # Histórico: cada tentativa individual
+    historico = db.query(HistoricoContagem).filter(HistoricoContagem.sessao_id == sessao_id).all()
+    total_hist = len(historico)
+    codigos_unicos_hist = len({h.codigo for h in historico})
+
+    # Retrabalho = tentativas além da 1ª por item / total_itens contados
+    # (itens com mais de 1 entrada no histórico indicam recontagem)
+    retrabalho_abs = total_hist - codigos_unicos_hist  # tentativas extras
+    taxa_retrabalho = round(retrabalho_abs / total_itens * 100, 2) if total_itens > 0 else 0.0
+
+    # itens/min usando total de registros no histórico (cada scan conta)
+    itens_por_minuto = round(total_hist / duracao_min, 2) if duracao_min > 0 else 0.0
+
+    # Breakdown por operador (agrupa histórico por operador)
+    from collections import defaultdict
+    op_hist: dict[str, list] = defaultdict(list)
+    for h in historico:
+        op = h.operador or "(sem operador)"
+        op_hist[op].append(h)
+
+    por_operador = []
+    for op, registros in sorted(op_hist.items()):
+    # timestamps seguros
+        ts_list = [
+            r.timestamp.replace(tzinfo=timezone.utc) if r.timestamp and r.timestamp.tzinfo is None else r.timestamp
+            for r in registros if r.timestamp
+        ]
+        ts_list = [t for t in ts_list if t]
+        primeiro = min(ts_list).isoformat() if ts_list else None
+        ultimo = max(ts_list).isoformat() if ts_list else None
+        dur_op = round((max(ts_list) - min(ts_list)).total_seconds() / 60, 2) if len(ts_list) >= 2 else 0.0
+        itens_unicos_op = len({r.codigo for r in registros})
+        ipm_op = round(len(registros) / dur_op, 2) if dur_op > 0 else None
+        por_operador.append({
+            "operador": op,
+            "contagens": len(registros),
+            "itens_unicos": itens_unicos_op,
+            "primeiro_registro": primeiro,
+            "ultimo_registro": ultimo,
+            "duracao_minutos": dur_op,
+            "itens_por_minuto": ipm_op,
+        })
+
+    return {
+        "sessao_id": sessao_id,
+        "sessao_codigo": sessao.codigo,
+        "sessao_nome": sessao.nome,
+        "status": sessao.status.value if sessao.status else None,
+        "inicio": inicio.isoformat() if inicio else None,
+        "fim": fim.isoformat() if fim else None,
+        "duracao_minutos": duracao_min,
+        "total_itens": total_itens,
+        "total_contagens_atuais": total_contagens,
+        "total_tentativas_historico": total_hist,
+        "itens_por_minuto": itens_por_minuto,
+        "taxa_divergencia_pct": taxa_divergencia,
+        "divergencias_absolutas": divs,
+        "taxa_retrabalho_pct": taxa_retrabalho,
+        "retrabalho_absoluto": retrabalho_abs,
+        "pct_rastreabilidade": pct_rastreabilidade,
+        "contagens_com_operador": com_operador,
+        "por_operador": por_operador,
+    }
+
+
 def stats_sessao(db: Session, sessao_id: str) -> dict:
     row = (
         db.query(
