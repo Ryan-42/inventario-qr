@@ -447,6 +447,7 @@ def gerar_relatorio_final_excel(
     valor_estoque: dict | None = None,
     analise_ia: dict | None = None,
     historico: list | None = None,
+    metricas: dict | None = None,
 ) -> bytes:
     """Gera Excel com múltiplas abas: Resumo, Itens OK, Divergências, Impacto Financeiro, Recomendações."""
     from openpyxl.styles import PatternFill, Font, Alignment, Border, Side
@@ -566,6 +567,38 @@ def gerar_relatorio_final_excel(
             )
             resumo_hist.columns = ["Código", "Produto", "Total Contagens", "Rodadas", "Resultado Final", "Operadores"]
 
+    # ── Aba de Métricas de Produtividade ──────────────────────────────────────
+    df_metricas_resumo = None
+    df_metricas_por_op = None
+    if metricas:
+        met_rows = [
+            ("Duração Total (min)", metricas.get("duracao_minutos")),
+            ("Total de Itens", metricas.get("total_itens")),
+            ("Total de Contagens (estado atual)", metricas.get("total_contagens_atuais")),
+            ("Total de Tentativas (histórico)", metricas.get("total_tentativas_historico")),
+            ("Itens por Minuto (geral)", metricas.get("itens_por_minuto")),
+            ("Divergências (absoluto)", metricas.get("divergencias_absolutas")),
+            ("Taxa de Divergência (%)", metricas.get("taxa_divergencia_pct")),
+            ("Retrabalho (tentativas extras)", metricas.get("retrabalho_absoluto")),
+            ("Taxa de Retrabalho (%)", metricas.get("taxa_retrabalho_pct")),
+            ("Contagens com Operador", metricas.get("contagens_com_operador")),
+            ("% Rastreabilidade (operador+timestamp)", metricas.get("pct_rastreabilidade")),
+        ]
+        df_metricas_resumo = pd.DataFrame(met_rows, columns=["Métrica", "Valor"])
+
+        por_op = metricas.get("por_operador") or []
+        if por_op:
+            df_metricas_por_op = pd.DataFrame(por_op).reindex(
+                columns=["operador", "contagens", "itens_unicos",
+                         "primeiro_registro", "ultimo_registro",
+                         "duracao_minutos", "itens_por_minuto"]
+            )
+            df_metricas_por_op.columns = [
+                "Operador", "Tentativas", "Itens Únicos",
+                "Primeiro Registro", "Último Registro",
+                "Duração (min)", "Itens/min",
+            ]
+
     # ── Escreve para Excel com formatação ─────────────────────────────────────
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df_resumo.to_excel(writer, index=False, sheet_name="Resumo Executivo")
@@ -573,6 +606,10 @@ def gerar_relatorio_final_excel(
         if not df_divs.empty:
             df_divs.to_excel(writer, index=False, sheet_name="Divergências")
         df_recs.to_excel(writer, index=False, sheet_name="Recomendações")
+        if df_metricas_resumo is not None:
+            df_metricas_resumo.to_excel(writer, index=False, sheet_name="Métricas Produtividade")
+        if df_metricas_por_op is not None:
+            df_metricas_por_op.to_excel(writer, index=False, sheet_name="Produtividade por Operador")
         if df_hist is not None:
             resumo_hist.to_excel(writer, index=False, sheet_name="Resumo por Rodadas")
             df_hist.to_excel(writer, index=False, sheet_name="Histórico Detalhado")
@@ -638,6 +675,14 @@ def gerar_relatorio_final_excel(
         # Aba Recomendações
         ws_rec = wb["Recomendações"]
         _estilizar_aba(ws_rec, [6, 80, 14])
+
+        # Abas de Métricas de Produtividade
+        if df_metricas_resumo is not None and "Métricas Produtividade" in wb.sheetnames:
+            ws_met = wb["Métricas Produtividade"]
+            _estilizar_aba(ws_met, [40, 20])
+        if df_metricas_por_op is not None and "Produtividade por Operador" in wb.sheetnames:
+            ws_op = wb["Produtividade por Operador"]
+            _estilizar_aba(ws_op, [25, 14, 14, 22, 22, 16, 12])
 
         # Abas de Histórico de Rodadas
         if df_hist is not None:

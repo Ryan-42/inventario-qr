@@ -134,7 +134,7 @@ def exportar_relatorio_final_pdf(sessao_id: str, body: AdminBody, db: Session = 
 
 @router.post("/{sessao_id}/exportar/relatorio-final-excel")
 def exportar_relatorio_final_excel_endpoint(sessao_id: str, body: AdminBody, db: Session = Depends(get_db)):
-    """Gera Excel final com múltiplas abas: resumo, itens, divergências, recomendações e impacto financeiro."""
+    """Gera Excel final com múltiplas abas: resumo, itens, divergências, recomendações, impacto financeiro e métricas."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -150,8 +150,9 @@ def exportar_relatorio_final_excel_endpoint(sessao_id: str, body: AdminBody, db:
 
     analise_dict = _tentar_analise_ia(db, sessao)
     historico = item_repo.listar_historico(db, sessao_id, limit=None)
+    metricas_dict = sessao_repo.calcular_metricas_sessao(db, sessao_id)
 
-    arquivo = gerar_relatorio_final_excel(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict, historico=historico)
+    arquivo = gerar_relatorio_final_excel(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict, historico=historico, metricas=metricas_dict)
     nome = f"relatorio_final_{sessao.codigo}.xlsx"
     return Response(content=arquivo, media_type=XLSX_MEDIA_TYPE,
                     headers={"Content-Disposition": f'attachment; filename="{nome}"'})
