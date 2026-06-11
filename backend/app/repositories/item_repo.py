@@ -85,6 +85,16 @@ def buscar_contagem(db: Session, sessao_id: str, codigo: str) -> Optional[Contag
     ).first()
 
 
+def _buscar_contagem_para_update(db: Session, sessao_id: str, codigo: str) -> Optional[Contagem]:
+    # FOR UPDATE: PostgreSQL serializa múltiplos workers que tentam atualizar o mesmo item
+    # simultaneamente — o segundo worker aguarda o commit do primeiro antes de ler.
+    # SQLite ignora silenciosamente (serialização já garantida pelo file lock).
+    return db.query(Contagem).filter(
+        Contagem.sessao_id == sessao_id,
+        Contagem.codigo == codigo
+    ).with_for_update().first()
+
+
 def registrar_contagem(
     db: Session,
     sessao_id: str,
@@ -101,7 +111,10 @@ def registrar_contagem(
 
     divergencia = quantidade_encontrada != quantidade_base
 
-    existente = buscar_contagem(db, sessao_id, codigo)
+    # with_for_update() serializa workers concorrentes em PostgreSQL: o segundo worker
+    # espera o commit do primeiro antes de ler, evitando que dois writers leiam o mesmo
+    # estado e sobreescrevam um ao outro (last-write-wins silencioso).
+    existente = _buscar_contagem_para_update(db, sessao_id, codigo)
     nova_para_ajuste = False  # inicializado aqui para evitar UnboundLocalError no branch else
     if existente:
         mesma_qtd_anterior = (quantidade_encontrada == existente.quantidade_encontrada)
