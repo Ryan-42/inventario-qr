@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Integer, Enum as SAEnum, ForeignKey
+from sqlalchemy import Column, String, DateTime, Integer, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 import enum
@@ -33,7 +33,7 @@ class Sessao(Base):
     rodada_token = Column(Integer, nullable=True, default=1)
     token_admin = Column(String, nullable=True, default=lambda: secrets.token_hex(8).upper())  # token do criador do inventário
     token_supervisor = Column(String, nullable=True)  # token do supervisor (acesso somente-leitura)
-    filial_id = Column(String, ForeignKey("filiais.id"), nullable=True)
+    filial_id = Column(String, nullable=True)  # soft reference to filiais.id, not FK-enforced
     pausada_em = Column(DateTime(timezone=True), nullable=True)
     previsao_retomada = Column(String, nullable=True)  # ex: "14:00"
     webhook_url = Column(String, nullable=True)  # URL para POST ao concluir/cancelar
