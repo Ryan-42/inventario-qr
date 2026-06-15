@@ -16,11 +16,9 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Usa SQL puro com IF NOT EXISTS para ser idempotente — seguro mesmo que create_all()
-    # já tenha criado a tabela ou alguma coluna numa tentativa anterior de deploy.
-    conn = op.get_bind()
-
-    conn.execute(sa.text("""
+    # SQL puro com IF NOT EXISTS — idempotente mesmo que create_all() já tenha
+    # criado a tabela/coluna numa tentativa anterior de deploy.
+    op.execute(sa.text("""
         CREATE TABLE IF NOT EXISTS filiais (
             id TEXT PRIMARY KEY,
             nome TEXT NOT NULL,
@@ -33,21 +31,11 @@ def upgrade() -> None:
         )
     """))
 
-    conn.execute(sa.text(
-        "ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS filial_id TEXT"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS token_segunda_aprovacao TEXT"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS segunda_aprovacao_em TIMESTAMP WITH TIME ZONE"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS segunda_aprovacao_por TEXT"
-    ))
-    conn.execute(sa.text(
-        "ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS segunda_aprovacao_ok INTEGER DEFAULT 0"
-    ))
+    op.execute(sa.text("ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS filial_id TEXT"))
+    op.execute(sa.text("ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS token_segunda_aprovacao TEXT"))
+    op.execute(sa.text("ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS segunda_aprovacao_em TIMESTAMP WITH TIME ZONE"))
+    op.execute(sa.text("ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS segunda_aprovacao_por TEXT"))
+    op.execute(sa.text("ALTER TABLE sessoes ADD COLUMN IF NOT EXISTS segunda_aprovacao_ok INTEGER DEFAULT 0"))
 
 
 def downgrade() -> None:
