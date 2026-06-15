@@ -13,6 +13,7 @@ from app.models.sessao import StatusSessao
 class SessaoCreate(BaseModel):
     nome: str = Field(..., max_length=120)
     webhook_url: Optional[str] = Field(default=None, max_length=500)
+    filial_id: Optional[str] = Field(default=None, description="ID da filial à qual esta sessão pertence")
 
     @field_validator("nome")
     @classmethod
@@ -66,6 +67,7 @@ class SessaoResponse(BaseModel):
     itens_contados: int = 0
     total_divergencias: int = 0
     webhook_url: Optional[str] = None
+    filial_id: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

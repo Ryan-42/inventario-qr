@@ -84,6 +84,13 @@ tailwind.config = {
   #search-itens::placeholder { color: #87929b !important; }
   table thead th { color: #87929b !important; }
   tr:hover td { background: rgba(143,214,255,0.03) !important; }
+  /* WebSocket status dot */
+  .ws-dot { display:inline-block; width:7px; height:7px; border-radius:50%; flex-shrink:0; transition: background 0.3s; }
+  .ws-connected    { background:#10eb8a; box-shadow:0 0 6px rgba(16,235,138,0.7); animation:ws-pulse 2s ease-in-out infinite; }
+  .ws-connecting   { background:#ffcc44; animation:ws-blink 1.1s ease-in-out infinite; }
+  .ws-disconnected { background:#3d4850; }
+  @keyframes ws-pulse { 0%,100%{opacity:1;box-shadow:0 0 4px rgba(16,235,138,0.5)} 50%{opacity:.7;box-shadow:0 0 10px rgba(16,235,138,0.9)} }
+  @keyframes ws-blink { 0%,100%{opacity:1} 55%{opacity:.25} }
 </style>
 </head>
 <body class="min-h-screen relative font-sans overflow-x-hidden">
@@ -108,8 +115,8 @@ tailwind.config = {
     </div>
     <div class="flex items-center gap-xs shrink-0 flex-wrap justify-end">
       <div class="flex items-center gap-1 px-2 py-1 rounded-full bg-surface-variant/30 border border-white/5" style="font-size:0.65rem;color:#bcc8d1">
-        <span class="ws-dot ws-disconnected" id="ws-dot"></span>
-        <span id="ws-label" class="hide-mobile" style="font-size:.65rem">Offline</span>
+        <span class="ws-dot ws-connecting" id="ws-dot"></span>
+        <span id="ws-label" class="hide-mobile" style="font-size:.65rem">Conectando...</span>
       </div>
       <button id="btn-mostrar-qr" class="btn-stitch-ia text-tertiary border-tertiary/30 hover:bg-tertiary/10" title="QR Code de acesso mobile">
         <span class="material-symbols-outlined text-[18px]">qr_code_2</span>
@@ -118,10 +125,6 @@ tailwind.config = {
       <button id="btn-ai-analise" class="btn-stitch-ia text-secondary border-secondary/30 hover:bg-secondary/10" title="Análise de IA">
         <span class="material-symbols-outlined text-[18px]">psychology</span>
         <span class="hide-mobile">IA</span>
-      </button>
-      <button id="btn-ai-chat" class="btn-stitch-ia text-primary border-primary/30 hover:bg-primary/10" title="Chat com IA">
-        <span class="material-symbols-outlined text-[18px]">chat</span>
-        <span class="hide-mobile">Chat</span>
       </button>
       <button id="btn-concluir" class="btn-stitch-primary glow-cyan" style="display:none">
         <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
@@ -600,33 +603,11 @@ tailwind.config = {
   </div>
 </div>
 
-<!-- ── Modal: Chat IA ── -->
-<div id="modal-chat" class="modal-backdrop">
-  <div class="modal modal-lg" style="display:flex;flex-direction:column;max-height:85vh">
-    <div class="modal-header">
-      <span class="modal-title" style="display:flex;align-items:center;gap:.5rem">
-        <span class="material-symbols-outlined text-[15px]">chat</span>
-        Chat IA
-      </span>
-      <button class="modal-close" id="btn-close-chat">✕</button>
-    </div>
-    <div class="chat-messages" id="chat-messages" style="flex:1;min-height:0"></div>
-    <div id="chat-typing" style="display:none;padding:.5rem 0;font-size:.75rem;color:#87929b">
-      <span class="spinner-sm" style="display:inline-block;vertical-align:middle;margin-right:.375rem"></span>
-      IA respondendo...
-    </div>
-    <div class="chat-input-row" style="margin-top:.75rem">
-      <input id="chat-input" class="chat-input" type="text" placeholder="Pergunte sobre esta sessão..." autocomplete="off"/>
-      <button id="btn-chat-send" class="btn btn-primary btn-sm">Enviar</button>
-    </div>
-  </div>
-</div>
-
 <script type="module">
 import {
   buscarSessao, statsSessao, listarItens, listarContagens,
   concluirSessao, uploadPlanilha, validarPlanilha,
-  analisarSessao, chatSessao, rodadasSessao,
+  analisarSessao, rodadasSessao,
   exportarCompleto, exportarDivergencias, exportarPDF, exportarEtiquetas,
   exportarRelatorioFinalPDF, exportarRelatorioFinalExcel,
   valorEstoqueSessao, progressoSessao, getAdminToken,
@@ -637,7 +618,6 @@ import { SessionWS } from '/static/js/ws.js'
 const sessaoId = location.pathname.split('/').pop()
 let sessao = null, stats = null, itens = [], contagens = []
 let liveEvents = []
-let chatHistory = []
 let ws = null
 let itensLoaded = false
 let currentFilter = 'todos'
@@ -967,8 +947,8 @@ function handleWsEvent(ev) {
     loadRodadas(); return
   }
   if (ev.tipo === '_disconnected') {
-    document.getElementById('ws-dot').className = 'ws-dot ws-disconnected'
-    document.getElementById('ws-label').textContent = 'Offline'; return
+    document.getElementById('ws-dot').className = 'ws-dot ws-connecting'
+    document.getElementById('ws-label').textContent = 'Reconectando...'; return
   }
   if (ev.tipo === 'progresso_atualizado') {
     // Busca stats completos (inclui divergencias reais, que não vêm no evento de progresso)
@@ -1288,46 +1268,6 @@ document.getElementById('btn-ai-analise').addEventListener('click', async () => 
   }
 })
 document.getElementById('btn-close-analise').addEventListener('click', () => closeModal('modal-analise'))
-
-// ── Chat IA
-document.getElementById('btn-ai-chat').addEventListener('click', () => {
-  openModal('modal-chat')
-  if(chatHistory.length===0){renderChatMessages();appendChatMsg('assistant','Olá! Sou o assistente de inventário. Posso responder perguntas sobre esta sessão, divergências e padrões. O que deseja saber?')}
-})
-document.getElementById('btn-close-chat').addEventListener('click', () => closeModal('modal-chat'))
-
-function escapeHtml(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
-}
-
-function renderChatMessages() {
-  const el=document.getElementById('chat-messages')
-  el.innerHTML=chatHistory.map(m=>`<div class="chat-msg ${m.role}"><div class="chat-bubble">${escapeHtml(m.content).replace(/\n/g,'<br>')}</div></div>`).join('')
-  el.scrollTop=el.scrollHeight
-}
-
-function appendChatMsg(role,content) {
-  chatHistory.push({role,content})
-  if (chatHistory.length > 100) chatHistory.splice(0, chatHistory.length - 100)
-  renderChatMessages()
-}
-
-async function sendChat() {
-  const input=document.getElementById('chat-input'), msg=input.value.trim()
-  if(!msg) return; input.value=''
-  appendChatMsg('user',msg)
-  document.getElementById('chat-typing').style.display='block'
-  document.getElementById('btn-chat-send').disabled=true
-  try {
-    const historico=chatHistory.slice(0,-1).map(m=>({role:m.role,content:m.content}))
-    const result=await chatSessao(sessaoId,msg,historico)
-    appendChatMsg('assistant',result.resposta||result.response||result.content||'(sem resposta)')
-  } catch(e) { appendChatMsg('assistant',`Erro: ${e.message}`) }
-  finally { document.getElementById('chat-typing').style.display='none'; document.getElementById('btn-chat-send').disabled=false; document.getElementById('chat-messages').scrollTop=9999 }
-}
-
-document.getElementById('btn-chat-send').addEventListener('click', sendChat)
-document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()} })
 
 // ── Filter & Search
 document.getElementById('filter-row').addEventListener('click', e => {

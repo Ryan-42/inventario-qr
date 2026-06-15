@@ -19,7 +19,7 @@ load_dotenv()
 
 from app.database import create_tables
 from app.limiter import limiter
-from app.routes import sessoes, itens, contagens, exports, ws, agentes, grupos
+from app.routes import sessoes, itens, contagens, exports, ws, agentes, grupos, auditoria, integracoes, agendamentos, dashboard, filiais
 from app.websockets.manager import manager  # noqa: F401 — singleton inicializado aqui
 
 logging.basicConfig(
@@ -44,6 +44,10 @@ if _IS_PROD and not _DATABASE_URL.startswith("postgresql"):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
+    # Inicia scheduler de agendamentos em background
+    import asyncio
+    from app.services.scheduler import loop_agendamentos
+    asyncio.create_task(loop_agendamentos())
     yield
 
 
@@ -69,11 +73,27 @@ class SecurityHeadersMiddleware:
     """
     def __init__(self, app: ASGIApp, is_prod: bool = False) -> None:
         self.app = app
+        # CSP: permite CDN do Tailwind/MDI/Google Fonts e WebSocket local; bloqueia inline scripts
+        _csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "connect-src 'self' wss: ws:; "
+            "img-src 'self' data: blob:; "
+            "frame-ancestors 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self';"
+        )
         self._headers = [
             (b"x-content-type-options", b"nosniff"),
             (b"x-frame-options", b"DENY"),
+            (b"x-xss-protection", b"1; mode=block"),
             (b"referrer-policy", b"strict-origin-when-cross-origin"),
-            (b"permissions-policy", b"camera=self, microphone=(), geolocation=()"),
+            (b"permissions-policy", b"camera=self, microphone=(), geolocation=(), payment=()"),
+            (b"content-security-policy", _csp.encode()),
+            (b"cross-origin-opener-policy", b"same-origin"),
+            (b"cross-origin-resource-policy", b"same-origin"),
         ]
         if is_prod:
             self._headers.append(
@@ -81,9 +101,22 @@ class SecurityHeadersMiddleware:
             )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] != "http":
+        if scope["type"] not in ("http", "websocket"):
             await self.app(scope, receive, send)
             return
+
+        # Limite de body: rejeita requests > 50 MB antes de processar
+        if scope["type"] == "http":
+            content_length = dict(scope.get("headers", [])).get(b"content-length")
+            if content_length and int(content_length) > 50 * 1024 * 1024:
+                import json as _json
+                body = _json.dumps({"detail": "Request body muito grande (máximo 50 MB)."}).encode()
+                await send({"type": "http.response.start", "status": 413, "headers": [
+                    (b"content-type", b"application/json"),
+                    (b"content-length", str(len(body)).encode()),
+                ]})
+                await send({"type": "http.response.body", "body": body})
+                return
 
         async def send_with_headers(message):
             if message["type"] == "http.response.start":
@@ -123,6 +156,11 @@ app.include_router(contagens.router, prefix="/api")
 app.include_router(exports.router, prefix="/api")
 app.include_router(agentes.router, prefix="/api")
 app.include_router(grupos.router, prefix="/api")
+app.include_router(auditoria.router, prefix="/api")
+app.include_router(integracoes.router, prefix="/api")
+app.include_router(agendamentos.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
+app.include_router(filiais.router, prefix="/api")
 
 # Registra router WebSocket
 app.include_router(ws.router, prefix="/api")
@@ -162,6 +200,10 @@ if _STATIC.exists():
     @app.get("/")
     def index():
         return FileResponse(str(_STATIC / "index.html"))
+
+    @app.get("/dashboard")
+    def dashboard_page():
+        return FileResponse(str(_STATIC / "dashboard.html"))
 
     @app.get("/sessao/{sessao_id}")
     def sessao_page(sessao_id: str):

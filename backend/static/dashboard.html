@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html class="dark" lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>INVIQ — Dashboard Gerencial</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+tailwind.config = {
+  darkMode: "class",
+  theme: {
+    extend: {
+      colors: {
+        "surface-tint": "#7ad0ff","on-secondary": "#3f008e","secondary": "#d2bbff","outline-variant": "#3d4850",
+        "error-container": "#93000a","surface": "#071325","surface-container": "#142032","tertiary": "#10eb8a",
+        "primary-fixed-dim": "#7ad0ff","surface-variant": "#2a3548","on-error": "#690005","on-primary-container": "#004a65",
+        "inverse-primary": "#00668a","secondary-fixed-dim": "#d2bbff","error": "#ffb4ab","surface-bright": "#2e394d",
+        "inverse-surface": "#d7e3fc","on-surface": "#d7e3fc","on-error-container": "#ffdad6","primary": "#8fd6ff",
+        "surface-container-high": "#1f2a3d","background": "#071325","primary-container": "#00bfff",
+        "primary-fixed": "#c3e8ff","surface-container-low": "#101c2e","surface-container-highest": "#2a3548",
+        "on-secondary-container": "#c9aeff","secondary-container": "#6001d1","on-tertiary-container": "#00502b",
+        "on-primary": "#003549","tertiary-fixed-dim": "#00e384","tertiary-fixed": "#5affa2","on-tertiary": "#00391d",
+        "on-background": "#d7e3fc","inverse-on-surface": "#253144","on-primary-fixed": "#001e2c",
+        "secondary-fixed": "#eaddff","outline": "#87929b","surface-container-lowest": "#030e20",
+        "on-surface-variant": "#bcc8d1","tertiary-container": "#00cc76"
+      },
+      borderRadius: { DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem", full: "0.75rem" },
+      spacing: { gutter: "24px", base: "4px", sm: "8px", md: "16px", "margin-desktop": "48px", xs: "4px", lg: "24px", xl: "40px", "margin-mobile": "16px" },
+      fontFamily: { "headline-lg": ["Inter"], "headline-md": ["Inter"], "headline-xl": ["Inter"], "body-sm": ["Inter"], "code-sm": ["JetBrains Mono"], "body-md": ["Inter"], "body-lg": ["Inter"], "label-md": ["Inter"], "code-md": ["JetBrains Mono"] },
+      fontSize: {
+        "headline-lg": ["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"600"}],
+        "headline-md": ["24px",{"lineHeight":"32px","fontWeight":"600"}],
+        "headline-xl": ["40px",{"lineHeight":"48px","letterSpacing":"-0.02em","fontWeight":"700"}],
+        "body-sm": ["14px",{"lineHeight":"20px","fontWeight":"400"}],
+        "code-sm": ["12px",{"lineHeight":"16px","fontWeight":"500"}],
+        "body-md": ["16px",{"lineHeight":"24px","fontWeight":"400"}],
+        "body-lg": ["18px",{"lineHeight":"28px","fontWeight":"400"}],
+        "label-md": ["12px",{"lineHeight":"16px","letterSpacing":"0.05em","fontWeight":"600"}],
+        "code-md": ["14px",{"lineHeight":"20px","fontWeight":"500"}]
+      }
+    }
+  }
+}
+</script>
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .glass-panel { background: rgba(10,22,40,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a3548; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3d4850; }
+  .hidden { display: none !important; }
+  .spinner { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(143,214,255,0.12); border-top-color: #8fd6ff; animation: spin 0.75s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .kpi-card { transition: transform 0.18s, box-shadow 0.18s; }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+  .badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
+  .badge-ok  { background: rgba(16,235,138,0.12); color: #10eb8a; }
+  .badge-warn { background: rgba(255,204,68,0.12); color: #ffcc44; }
+  .badge-err  { background: rgba(255,180,171,0.12); color: #ffb4ab; }
+  .badge-info { background: rgba(143,214,255,0.12); color: #8fd6ff; }
+  .nav-link { display: flex; align-items: center; gap: 16px; padding: 8px 16px; border-radius: 8px; color: #bcc8d1; opacity: 0.7; transition: all 0.15s; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; }
+  .nav-link:hover { background: rgba(255,255,255,0.05); color: #8fd6ff; opacity: 1; }
+  .nav-link.active { background: rgba(143,214,255,0.1); color: #8fd6ff; opacity: 1; border-right: 3px solid #8fd6ff; }
+  .section-card { background: #0f1d30; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.25rem; }
+  .tbl th { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #87929b; text-transform: uppercase; padding: 0.5rem 0.75rem; }
+  .tbl td { font-size: 13px; padding: 0.625rem 0.75rem; border-top: 1px solid rgba(255,255,255,0.04); color: #d7e3fc; }
+  .tbl tr:hover td { background: rgba(255,255,255,0.03); }
+  .progress-bar { height: 5px; border-radius: 9999px; background: rgba(255,255,255,0.07); overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 9999px; transition: width 0.6s ease; }
+  .animate-in { animation: fadeUp 0.35s ease both; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+  #toast-container { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+  .toast { background: #0b1629; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.875rem; color: #d7e3fc; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 8px 48px rgba(0,0,0,0.9); animation: toast-in 0.25s ease; }
+  .toast-error { border-color: rgba(255,180,171,0.3); }
+  @keyframes toast-in { from { opacity:0; transform:translateX(1rem); } to { opacity:1; transform:translateX(0); } }
+</style>
+</head>
+<body class="bg-background text-on-surface flex h-screen overflow-hidden antialiased">
+
+<!-- Side Nav -->
+<nav class="hidden md:flex flex-col h-full py-lg bg-surface border-r border-white/5 w-64 shrink-0 z-50">
+  <div class="px-gutter mb-xl flex items-center gap-sm">
+    <span class="material-symbols-outlined text-2xl font-black text-primary">qr_code_scanner</span>
+    <div class="flex flex-col">
+      <span class="text-base font-black text-primary leading-none">INVIQ Core</span>
+      <span class="text-[10px] text-on-surface-variant uppercase tracking-widest">Operational Center</span>
+    </div>
+  </div>
+  <div class="flex-1 px-sm flex flex-col gap-base">
+    <a class="nav-link" href="/">
+      <span class="material-symbols-outlined">inventory_2</span>
+      <span>Inventário</span>
+    </a>
+    <a class="nav-link active" href="/dashboard">
+      <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">dashboard</span>
+      <span>Dashboard</span>
+    </a>
+  </div>
+  <div class="px-sm border-t border-white/5 pt-md mt-md">
+    <div class="flex items-center gap-sm px-md py-sm rounded-lg bg-white/[0.03] border border-white/5">
+      <span class="material-symbols-outlined text-tertiary text-base">verified_user</span>
+      <div>
+        <p class="text-xs font-semibold text-on-surface leading-none">INVIQ v1.2</p>
+        <p class="text-[10px] text-on-surface-variant mt-0.5">Enterprise Edition</p>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- Main -->
+<main class="flex-1 flex flex-col h-full overflow-auto">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-surface/90 backdrop-blur border-b border-white/5 px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <!-- Mobile menu icon -->
+      <span class="material-symbols-outlined md:hidden text-on-surface-variant cursor-pointer">menu</span>
+      <div>
+        <h1 class="text-headline-md font-headline-md leading-none">Dashboard Gerencial</h1>
+        <p class="text-body-sm text-on-surface-variant mt-0.5">Visão consolidada de todos os inventários</p>
+      </div>
+    </div>
+    <button onclick="carregarTudo()" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-sm text-on-surface-variant hover:text-primary transition-all">
+      <span class="material-symbols-outlined text-base" id="btn-refresh-icon">refresh</span>
+      <span class="hidden sm:inline">Atualizar</span>
+    </button>
+  </header>
+
+  <!-- Content -->
+  <div class="flex-1 p-6 space-y-6 max-w-screen-xl mx-auto w-full">
+
+    <!-- Loading overlay -->
+    <div id="loading-state" class="flex flex-col items-center justify-center py-24 gap-4">
+      <div class="spinner"></div>
+      <p class="text-on-surface-variant text-sm">Carregando dados…</p>
+    </div>
+
+    <!-- KPI Cards Row -->
+    <div id="kpi-row" class="hidden grid grid-cols-2 lg:grid-cols-4 gap-4 animate-in">
+      <!-- Sessões -->
+      <div class="kpi-card section-card flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <span class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest">Sessões</span>
+          <span class="material-symbols-outlined text-primary text-xl">folder_open</span>
+        </div>
+        <div>
+          <p class="text-3xl font-black text-on-surface" id="kpi-total-sessoes">—</p>
+          <p class="text-xs text-on-surface-variant mt-1">total cadastradas</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <span class="badge badge-ok" id="kpi-sessoes-ativas">— ativas</span>
+          <span class="badge badge-info" id="kpi-sessoes-concluidas">— concluídas</span>
+        </div>
+      </div>
+
+      <!-- Itens -->
+      <div class="kpi-card section-card flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <span class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest">Itens</span>
+          <span class="material-symbols-outlined text-secondary text-xl">category</span>
+        </div>
+        <div>
+          <p class="text-3xl font-black text-on-surface" id="kpi-total-itens">—</p>
+          <p class="text-xs text-on-surface-variant mt-1">na base de dados</p>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <span class="badge badge-warn" id="kpi-divergencias">— divergentes</span>
+        </div>
+      </div>
+
+      <!-- Taxa de acerto -->
+      <div class="kpi-card section-card flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <span class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest">Taxa de Acerto</span>
+          <span class="material-symbols-outlined text-tertiary text-xl">target</span>
+        </div>
+        <div>
+          <p class="text-3xl font-black" id="kpi-taxa" style="color:#10eb8a">—%</p>
+          <p class="text-xs text-on-surface-variant mt-1">geral (todos os inventários)</p>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill bg-tertiary" id="kpi-taxa-bar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Para ajuste -->
+      <div class="kpi-card section-card flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <span class="text-on-surface-variant text-xs font-semibold uppercase tracking-widest">Para Ajuste</span>
+          <span class="material-symbols-outlined text-error text-xl">warning</span>
+        </div>
+        <div>
+          <p class="text-3xl font-black text-error" id="kpi-para-ajuste">—</p>
+          <p class="text-xs text-on-surface-variant mt-1">itens aguardando envio ERP</p>
+        </div>
+        <a href="/" class="text-xs text-primary hover:underline mt-auto">Ver sessões →</a>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div id="charts-row" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-4 animate-in" style="animation-delay:0.08s">
+
+      <!-- Tendência de acerto (gráfico de linha) — 2/3 largura -->
+      <div class="section-card lg:col-span-2">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-base font-semibold text-on-surface">Tendência de Acerto</h2>
+            <p class="text-xs text-on-surface-variant">Taxa de acerto por inventário concluído</p>
+          </div>
+          <select id="sel-ultimas" onchange="carregarTendencias()" class="bg-surface-variant text-on-surface text-xs border border-white/10 rounded-lg px-2 py-1 focus:outline-none">
+            <option value="5">Últimos 5</option>
+            <option value="10" selected>Últimos 10</option>
+            <option value="20">Últimos 20</option>
+          </select>
+        </div>
+        <div id="chart-empty" class="hidden flex flex-col items-center justify-center py-12 gap-2 text-on-surface-variant">
+          <span class="material-symbols-outlined text-4xl opacity-30">show_chart</span>
+          <p class="text-sm">Nenhuma sessão concluída ainda</p>
+        </div>
+        <canvas id="chart-tendencia" height="200"></canvas>
+      </div>
+
+      <!-- Sessões recentes — 1/3 largura -->
+      <div class="section-card flex flex-col gap-3 overflow-hidden">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-semibold text-on-surface">Sessões Recentes</h2>
+          <a href="/" class="text-xs text-primary hover:underline">Ver todas</a>
+        </div>
+        <div id="sessoes-recentes-list" class="flex flex-col gap-2 overflow-y-auto">
+          <div class="flex items-center justify-center py-8">
+            <div class="spinner" style="width:20px;height:20px;border-width:2px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Row -->
+    <div id="bottom-row" class="hidden grid grid-cols-1 lg:grid-cols-2 gap-4 animate-in" style="animation-delay:0.16s">
+
+      <!-- Top itens problemáticos -->
+      <div class="section-card">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-base font-semibold text-on-surface">Itens mais Problemáticos</h2>
+            <p class="text-xs text-on-surface-variant">Maiores taxas de divergência históricas</p>
+          </div>
+          <span class="material-symbols-outlined text-error opacity-60">trending_down</span>
+        </div>
+        <div id="itens-problematicos-empty" class="hidden text-center py-8 text-on-surface-variant text-sm">Nenhuma divergência registrada ainda.</div>
+        <div class="overflow-x-auto">
+          <table class="tbl w-full" id="tbl-itens">
+            <thead>
+              <tr>
+                <th class="text-left">Código / Produto</th>
+                <th class="text-right">Contagens</th>
+                <th class="text-right">Divergências</th>
+                <th class="text-right">Taxa</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-itens-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Ranking de operadores -->
+      <div class="section-card">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-base font-semibold text-on-surface">Ranking de Operadores</h2>
+            <p class="text-xs text-on-surface-variant">Performance consolidada por operador</p>
+          </div>
+          <span class="material-symbols-outlined text-primary opacity-60">leaderboard</span>
+        </div>
+        <div id="operadores-empty" class="hidden text-center py-8 text-on-surface-variant text-sm">Nenhuma contagem com operador identificado.</div>
+        <div class="overflow-x-auto">
+          <table class="tbl w-full" id="tbl-operadores">
+            <thead>
+              <tr>
+                <th class="text-left">#</th>
+                <th class="text-left">Operador</th>
+                <th class="text-right">Contagens</th>
+                <th class="text-right">Taxa Acerto</th>
+              </tr>
+            </thead>
+            <tbody id="tbl-operadores-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div><!-- /content -->
+</main>
+
+<div id="toast-container"></div>
+
+<script>
+let chartTendencia = null;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function toast(msg, tipo = 'error') {
+  const el = document.createElement('div');
+  el.className = `toast ${tipo === 'error' ? 'toast-error' : ''}`;
+  el.innerHTML = `<span class="material-symbols-outlined text-base">${tipo === 'error' ? 'error' : 'info'}</span><span>${msg}</span>`;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+async function api(path) {
+  const r = await fetch('/api' + path);
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.json();
+}
+
+function statusBadge(status) {
+  const map = {
+    ativa:     ['badge-ok',   'radio_button_checked', 'Ativa'],
+    pausada:   ['badge-warn', 'pause_circle',          'Pausada'],
+    concluida: ['badge-info', 'check_circle',          'Concluída'],
+    cancelada: ['badge-err',  'cancel',                'Cancelada'],
+  };
+  const [cls, icon, label] = map[status] || ['badge-info', 'help', status];
+  return `<span class="badge ${cls}"><span class="material-symbols-outlined text-[10px]" style="font-variation-settings:'FILL' 1">${icon}</span>${label}</span>`;
+}
+
+function taxaColor(taxa) {
+  if (taxa >= 90) return '#10eb8a';
+  if (taxa >= 70) return '#ffcc44';
+  return '#ffb4ab';
+}
+
+// ── KPIs ─────────────────────────────────────────────────────────────────────
+
+async function carregarResumo() {
+  const d = await api('/dashboard/resumo');
+  document.getElementById('kpi-total-sessoes').textContent = d.sessoes.total;
+  document.getElementById('kpi-sessoes-ativas').textContent = `${d.sessoes.ativas} ativas`;
+  document.getElementById('kpi-sessoes-concluidas').textContent = `${d.sessoes.concluidas} concluídas`;
+  document.getElementById('kpi-total-itens').textContent = d.itens.total_base.toLocaleString('pt-BR');
+  document.getElementById('kpi-divergencias').textContent = `${d.itens.divergentes.toLocaleString('pt-BR')} divergentes`;
+  document.getElementById('kpi-para-ajuste').textContent = d.itens.para_ajuste.toLocaleString('pt-BR');
+
+  const taxa = d.taxa_acerto_pct;
+  const taxaEl = document.getElementById('kpi-taxa');
+  taxaEl.textContent = taxa + '%';
+  taxaEl.style.color = taxaColor(taxa);
+  document.getElementById('kpi-taxa-bar').style.width = taxa + '%';
+  document.getElementById('kpi-taxa-bar').style.background = taxaColor(taxa);
+}
+
+// ── Tendência (gráfico de linha) ──────────────────────────────────────────────
+
+async function carregarTendencias() {
+  const n = document.getElementById('sel-ultimas').value;
+  const d = await api(`/dashboard/tendencias?ultimas_n=${n}`);
+
+  const canvas = document.getElementById('chart-tendencia');
+  const empty = document.getElementById('chart-empty');
+
+  if (!d.pontos.length) {
+    canvas.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+  canvas.classList.remove('hidden');
+  empty.classList.add('hidden');
+
+  const labels = d.pontos.map(p => {
+    const name = p.sessao_nome.length > 14 ? p.sessao_nome.slice(0, 14) + '…' : p.sessao_nome;
+    return name;
+  });
+  const taxas = d.pontos.map(p => p.taxa_acerto_pct);
+  const divs  = d.pontos.map(p => p.divergencias);
+
+  if (chartTendencia) chartTendencia.destroy();
+  chartTendencia = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Taxa de Acerto (%)',
+          data: taxas,
+          borderColor: '#10eb8a',
+          backgroundColor: 'rgba(16,235,138,0.08)',
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: '#10eb8a',
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Divergências',
+          data: divs,
+          borderColor: '#ffb4ab',
+          backgroundColor: 'rgba(255,180,171,0)',
+          borderDash: [4, 4],
+          fill: false,
+          tension: 0.4,
+          pointBackgroundColor: '#ffb4ab',
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          yAxisID: 'y1',
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#bcc8d1', font: { size: 11 } } },
+        tooltip: { backgroundColor: '#0b1629', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#d7e3fc', bodyColor: '#bcc8d1' },
+      },
+      scales: {
+        x:  { ticks: { color: '#87929b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y:  { min: 0, max: 100, ticks: { color: '#87929b', font: { size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' }, position: 'left' },
+        y1: { min: 0, ticks: { color: '#ffb4ab', font: { size: 10 } }, grid: { display: false }, position: 'right' },
+      },
+    },
+  });
+}
+
+// ── Sessões recentes ──────────────────────────────────────────────────────────
+
+async function carregarSessoesRecentes() {
+  const d = await api('/dashboard/sessoes-recentes?limite=6');
+  const el = document.getElementById('sessoes-recentes-list');
+  if (!d.sessoes.length) {
+    el.innerHTML = '<p class="text-center text-on-surface-variant text-sm py-8">Nenhuma sessão criada.</p>';
+    return;
+  }
+  el.innerHTML = d.sessoes.map(s => {
+    const prog = s.progresso_pct || 0;
+    const cor = taxaColor(100 - (s.divergencias / Math.max(s.itens_contados, 1)) * 100);
+    return `
+    <a href="/sessao/${s.id}" class="block p-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 transition-all group">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <p class="text-sm font-semibold text-on-surface truncate group-hover:text-primary transition-colors">${s.nome}</p>
+          <p class="text-[10px] text-on-surface-variant font-mono mt-0.5">${s.codigo}</p>
+        </div>
+        ${statusBadge(s.status)}
+      </div>
+      <div class="mt-2 progress-bar">
+        <div class="progress-fill" style="width:${prog}%;background:${cor}"></div>
+      </div>
+      <div class="flex justify-between mt-1">
+        <span class="text-[10px] text-on-surface-variant">${s.itens_contados}/${s.total_itens} itens</span>
+        <span class="text-[10px]" style="color:${s.divergencias > 0 ? '#ffb4ab' : '#10eb8a'}">${s.divergencias} diverg.</span>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+// ── Top itens problemáticos ───────────────────────────────────────────────────
+
+async function carregarTopItens() {
+  const d = await api('/dashboard/top-itens-problematicos?limite=8');
+  const tbody = document.getElementById('tbl-itens-body');
+  const empty = document.getElementById('itens-problematicos-empty');
+  const tbl   = document.getElementById('tbl-itens');
+
+  if (!d.itens.length) {
+    tbl.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+  tbl.classList.remove('hidden');
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = d.itens.map((it, i) => {
+    const cor = taxaColor(100 - it.taxa_divergencia_pct);
+    const rankIcon = i === 0 ? '🔴' : i === 1 ? '🟠' : i === 2 ? '🟡' : '⚪';
+    return `<tr>
+      <td>
+        <div class="flex items-center gap-2">
+          <span class="text-xs">${rankIcon}</span>
+          <div>
+            <p class="font-mono text-xs text-primary">${it.codigo}</p>
+            <p class="text-xs text-on-surface-variant truncate max-w-[160px]">${it.produto}</p>
+          </div>
+        </div>
+      </td>
+      <td class="text-right text-on-surface-variant text-xs">${it.total_contagens}</td>
+      <td class="text-right"><span class="badge badge-err">${it.total_divergencias}</span></td>
+      <td class="text-right">
+        <span class="text-xs font-semibold" style="color:${cor}">${it.taxa_divergencia_pct}%</span>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Ranking operadores ────────────────────────────────────────────────────────
+
+async function carregarOperadores() {
+  const d = await api('/dashboard/operadores');
+  const tbody = document.getElementById('tbl-operadores-body');
+  const empty = document.getElementById('operadores-empty');
+  const tbl   = document.getElementById('tbl-operadores');
+
+  if (!d.operadores.length) {
+    tbl.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+  tbl.classList.remove('hidden');
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = d.operadores.slice(0, 8).map((op, i) => {
+    const taxa = op.taxa_acerto_pct;
+    const cor = taxaColor(taxa);
+    const medals = ['🥇','🥈','🥉'];
+    const rank = medals[i] || `${i+1}º`;
+    return `<tr>
+      <td class="text-sm">${rank}</td>
+      <td>
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+            ${(op.operador || '?').charAt(0).toUpperCase()}
+          </div>
+          <span class="text-sm font-medium truncate max-w-[120px]">${op.operador || '—'}</span>
+        </div>
+      </td>
+      <td class="text-right text-on-surface-variant text-xs">${op.total_contagens.toLocaleString('pt-BR')}</td>
+      <td class="text-right">
+        <div class="flex items-center justify-end gap-2">
+          <div class="progress-bar w-12 flex-shrink-0">
+            <div class="progress-fill" style="width:${taxa}%;background:${cor}"></div>
+          </div>
+          <span class="text-xs font-bold" style="color:${cor}">${taxa}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Carregar tudo ─────────────────────────────────────────────────────────────
+
+async function carregarTudo() {
+  document.getElementById('loading-state').classList.remove('hidden');
+  ['kpi-row','charts-row','bottom-row'].forEach(id => document.getElementById(id).classList.add('hidden'));
+
+  const icon = document.getElementById('btn-refresh-icon');
+  icon.style.animation = 'spin 0.75s linear infinite';
+
+  try {
+    await Promise.all([
+      carregarResumo(),
+      carregarTendencias(),
+      carregarSessoesRecentes(),
+      carregarTopItens(),
+      carregarOperadores(),
+    ]);
+    document.getElementById('loading-state').classList.add('hidden');
+    ['kpi-row','charts-row','bottom-row'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+  } catch (err) {
+    document.getElementById('loading-state').classList.add('hidden');
+    ['kpi-row','charts-row','bottom-row'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+    toast('Erro ao carregar dados: ' + err.message);
+  } finally {
+    icon.style.animation = '';
+  }
+}
+
+carregarTudo();
+</script>
+</body>
+</html>

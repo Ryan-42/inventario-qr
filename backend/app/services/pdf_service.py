@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any
@@ -79,7 +80,7 @@ def gerar_relatorio_pdf(sessao: Any, stats: dict, itens: list[dict]) -> bytes:
 
     # ── Header block ─────────────────────────────────────────────────────────
     story.append(Paragraph("INVENTÁRIO QR", s_app))
-    story.append(Paragraph(sessao.nome, s_title))
+    story.append(Paragraph(_x(sessao.nome), s_title))
 
     status_label = {"ativa": "Ativa", "concluida": "Concluída", "cancelada": "Cancelada"}
     story.append(Paragraph(
@@ -166,13 +167,13 @@ def gerar_relatorio_pdf(sessao: Any, stats: dict, itens: list[dict]) -> bytes:
         else:
             status_par = Paragraph(status, s_cell_ok)
         rows.append([
-            Paragraph(str(item.get("codigo", "")), s_cell_code),
-            Paragraph(str(item.get("produto", "")), s_cell),  # wrap automático em nomes longos
-            Paragraph(str(item.get("quantidade_base", "")), s_cell_bold),
-            Paragraph("—" if item.get("quantidade_encontrada") is None else str(item["quantidade_encontrada"]), s_cell_bold),
+            Paragraph(_x(item.get("codigo", "")), s_cell_code),
+            Paragraph(_x(item.get("produto", "")), s_cell),
+            Paragraph(_x(item.get("quantidade_base", "")), s_cell_bold),
+            Paragraph("—" if item.get("quantidade_encontrada") is None else _x(item["quantidade_encontrada"]), s_cell_bold),
             Paragraph(diff_str, s_cell_bold),
             status_par,
-            Paragraph(str(item.get("operador") or "—"), s_cell),
+            Paragraph(_x(item.get("operador") or "—"), s_cell),
         ])
 
     items_table = Table(rows, colWidths=col_widths, repeatRows=1)
@@ -393,6 +394,11 @@ def gerar_etiquetas_pdf(itens: list[dict], nome_sessao: str = "") -> bytes:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _x(text: Any) -> str:
+    """Escape HTML entities so ReportLab's XML parser doesn't crash on product names like '<M4>'."""
+    return html.escape(str(text)) if text is not None else ""
+
 
 def _fmt(dt: Any) -> str:
     if dt is None:

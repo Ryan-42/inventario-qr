@@ -226,13 +226,18 @@ def listar_historico(
     db: Session,
     sessao_id: str,
     codigo: str | None = None,
-    limit: int = 500,
+    limit: int | None = 500,
     offset: int = 0,
 ) -> list[HistoricoContagem]:
     q = db.query(HistoricoContagem).filter(HistoricoContagem.sessao_id == sessao_id)
     if codigo:
         q = q.filter(HistoricoContagem.codigo == codigo)
-    return q.order_by(HistoricoContagem.timestamp.asc()).offset(offset).limit(limit).all()
+    q = q.order_by(HistoricoContagem.timestamp.asc())
+    if offset:
+        q = q.offset(offset)
+    if limit is not None:
+        q = q.limit(limit)
+    return q.all()
 
 
 def listar_contagens(db: Session, sessao_id: str,

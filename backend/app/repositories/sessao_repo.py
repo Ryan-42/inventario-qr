@@ -32,13 +32,18 @@ def gerar_codigo_sessao(db: Session) -> str:
     return f"INV-{ano}-{proximo:04d}"
 
 
-def criar_sessao(db: Session, nome: str, webhook_url: str | None = None) -> Sessao:
+def criar_sessao(
+    db: Session,
+    nome: str,
+    webhook_url: str | None = None,
+    filial_id: str | None = None,
+) -> Sessao:
     # Retry loop: em caso de race condition (dois requests simultâneos gerando o mesmo código),
     # o segundo recebe IntegrityError e tenta novamente com o próximo número disponível.
     for _ in range(5):
         try:
             codigo = gerar_codigo_sessao(db)
-            sessao = Sessao(nome=nome, codigo=codigo, webhook_url=webhook_url)
+            sessao = Sessao(nome=nome, codigo=codigo, webhook_url=webhook_url, filial_id=filial_id)
             db.add(sessao)
             db.commit()
             db.refresh(sessao)

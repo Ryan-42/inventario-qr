@@ -4,6 +4,7 @@ Inclui erros, acertos, orientações de melhoria e impacto financeiro.
 """
 from __future__ import annotations
 
+import html
 from datetime import datetime, timezone
 from io import BytesIO
 from typing import Any
@@ -42,6 +43,11 @@ _SLATE_400  = colors.HexColor("#94A3B8")
 _SLATE_200  = colors.HexColor("#E2E8F0")
 _SLATE_50   = colors.HexColor("#F8FAFC")
 _WHITE      = colors.white
+
+
+def _x(text: Any) -> str:
+    """Escape HTML entities for ReportLab XML parser."""
+    return html.escape(str(text)) if text is not None else ""
 
 
 def _fmt_brl(valor: float | None) -> str:
@@ -137,7 +143,7 @@ def gerar_relatorio_final_pdf(
 
     # ── Capa / Header ─────────────────────────────────────────────────────────
     story.append(Paragraph("INVENTÁRIO QR — RELATÓRIO FINAL", s_app))
-    story.append(Paragraph(sessao.nome, s_title))
+    story.append(Paragraph(_x(sessao.nome), s_title))
     story.append(Paragraph(
         f"Sessão: <b>{sessao.codigo}</b> &nbsp;·&nbsp; "
         f"Início: <b>{_fmt_dt(sessao.data_inicio)}</b> &nbsp;·&nbsp; "
@@ -231,10 +237,10 @@ def gerar_relatorio_final_pdf(
 
         if perdas or ganhos:
             def _tabela_top(titulo, items_list, cor):
-                rows_top = [[Paragraph(titulo, _sty(f"T{titulo}", fontSize=8, textColor=cor, fontName="Helvetica-Bold"))]]
+                rows_top = [[Paragraph(_x(titulo), _sty(f"T{titulo}", fontSize=8, textColor=cor, fontName="Helvetica-Bold"))]]
                 for it in items_list:
                     rows_top.append([Paragraph(
-                        f"<b>{it.get('codigo','—')}</b> — {it.get('produto','')} &nbsp;"
+                        f"<b>{_x(it.get('codigo','—'))}</b> — {_x(it.get('produto',''))} &nbsp;"
                         f"<font color='{'#16A34A' if cor==_GREEN else '#DC2626'}'>"
                         f"{'+'if cor==_GREEN else ''}{_fmt_brl(it.get('diferenca_valor'))}</font>",
                         _sty(f"R{titulo}", fontSize=7.5, textColor=_SLATE_700, leading=11)
@@ -265,7 +271,7 @@ def gerar_relatorio_final_pdf(
         if resumo:
             resumo_block = [
                 [Paragraph("Resumo Executivo", _sty("ResHdr", fontSize=8, textColor=_PURPLE, fontName="Helvetica-Bold"))],
-                [Paragraph(resumo, s_body)],
+                [Paragraph(_x(resumo), s_body)],
             ]
             rt = Table(resumo_block, colWidths=[180*mm])
             rt.setStyle(TableStyle([
@@ -287,7 +293,7 @@ def gerar_relatorio_final_pdf(
             for i, rec in enumerate(recs[:10], 1):
                 text = rec if isinstance(rec, str) else (rec.get("texto") or rec.get("text") or str(rec))
                 story.append(Paragraph(
-                    f"<b>{i}.</b> {text}",
+                    f"<b>{i}.</b> {_x(text)}",
                     _sty(f"Rec{i}", fontSize=8.5, textColor=_SLATE_700, leading=13, leftIndent=8)
                 ))
                 story.append(Spacer(1, 1*mm))
@@ -318,14 +324,14 @@ def gerar_relatorio_final_pdf(
         else:
             sp = Paragraph(status, s_cell_ok)
         rows.append([
-            Paragraph(str(item.get("codigo", "")), s_code),
-            Paragraph(str(item.get("produto", "")), s_cell),
-            Paragraph(str(item.get("quantidade_base", "")), s_cell_c),
-            Paragraph("—" if item.get("quantidade_encontrada") is None else str(item["quantidade_encontrada"]), s_cell_c),
+            Paragraph(_x(item.get("codigo", "")), s_code),
+            Paragraph(_x(item.get("produto", "")), s_cell),
+            Paragraph(_x(item.get("quantidade_base", "")), s_cell_c),
+            Paragraph("—" if item.get("quantidade_encontrada") is None else _x(item["quantidade_encontrada"]), s_cell_c),
             Paragraph(diff_str, s_cell_c),
             sp,
-            Paragraph(str(item.get("operador") or "—"), s_cell),
-            Paragraph(str(item.get("rodada") or "—"), s_cell_c),
+            Paragraph(_x(item.get("operador") or "—"), s_cell),
+            Paragraph(_x(item.get("rodada") or "—"), s_cell_c),
         ])
 
     items_table = Table(rows, colWidths=col_widths, repeatRows=1)
@@ -395,12 +401,12 @@ def gerar_relatorio_final_pdf(
                 produto = next((it.get("produto") for it in itens if it.get("codigo") == cod), "—")
                 resultado = "Para Ajuste" if pa else ("Divergente" if div else "OK")
                 rod_rows.append([
-                    Paragraph(cod, s_cell),
-                    Paragraph(str(produto), s_cell),
+                    Paragraph(_x(cod), s_cell),
+                    Paragraph(_x(produto), s_cell),
                     Paragraph(str(len(regs)), s_cell_c),
                     Paragraph(", ".join(str(r) for r in rodadas), s_cell_c),
-                    Paragraph(resultado, s_cell_c),
-                    Paragraph(", ".join(operadores[:3]), s_cell),
+                    Paragraph(_x(resultado), s_cell_c),
+                    Paragraph(_x(", ".join(operadores[:3])), s_cell),
                 ])
 
             rod_table = Table(rod_rows, colWidths=rod_widths, repeatRows=1)

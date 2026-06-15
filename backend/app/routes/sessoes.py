@@ -66,7 +66,12 @@ async def listar_sessoes(request: Request, db: Session = Depends(get_db)):
 @router.post("/", response_model=SessaoCreateResponse, status_code=201)
 @limiter.limit("20/hour")
 async def criar_sessao(request: Request, payload: SessaoCreate, db: Session = Depends(get_db)):
-    sessao = sessao_repo.criar_sessao(db, nome=payload.nome, webhook_url=payload.webhook_url)
+    # Valida filial se informada
+    if getattr(payload, "filial_id", None):
+        from app.models.filial import Filial
+        if not db.query(Filial).filter(Filial.id == payload.filial_id).first():
+            raise HTTPException(status_code=404, detail="Filial não encontrada.")
+    sessao = sessao_repo.criar_sessao(db, nome=payload.nome, webhook_url=payload.webhook_url, filial_id=getattr(payload, "filial_id", None))
     return {
         "id": sessao.id,
         "codigo": sessao.codigo,
@@ -163,6 +168,29 @@ async def concluir_sessao(sessao_id: str, token_admin: str,
             "conferidos": stats_wh.get("conferidos", 0),
             "divergencias": stats_wh.get("divergencias", 0),
         })
+    # Notificação por e-mail ao concluir
+    try:
+        stats_email = sessao_repo.stats_sessao(db, sessao_id)
+        total_email = stats_email.get("total", 0)
+        divs_email  = stats_email.get("divergencias", 0)
+        taxa_email  = round((total_email - divs_email) / total_email * 100, 1) if total_email else 0
+        ops_email   = list({c.operador for c in item_repo.listar_contagens(db, sessao_id) if c.operador})
+        from app.services.email_service import notificar_sessao_concluida, notificar_alta_divergencia
+        from app.services.sessao_service import montar_divergencias
+        background_tasks.add_task(
+            notificar_sessao_concluida,
+            sessao_id, sessao.nome, sessao.codigo,
+            total_email, divs_email, taxa_email, ops_email,
+        )
+        if divs_email > 0:
+            taxa_div = round(divs_email / total_email * 100, 1) if total_email else 0
+            background_tasks.add_task(
+                notificar_alta_divergencia,
+                sessao_id, sessao.nome, sessao.codigo,
+                taxa_div, montar_divergencias(db, sessao_id),
+            )
+    except Exception as _exc:
+        logger.warning("Email notification failed (non-fatal): %s", _exc)
     # Retorna dict com stats reais em vez do ORM sem os campos calculados
     return sessao_repo.buscar_sessao_com_stats(db, sessao_id) or concluido
 
@@ -407,4 +435,127 @@ def rodadas_sessao(sessao_id: str, db: Session = Depends(get_db)):
         "rodadas": resumos,
         "itens_segunda": itens_segunda,
         "itens_terceira": [],  # subsumido em itens_segunda (sem rodada fixa)
+    }
+
+
+# ── Aprovação 4 olhos ─────────────────────────────────────────────────────────
+
+@router.get("/{sessao_id}/segunda-aprovacao")
+def status_segunda_aprovacao(sessao_id: str, db: Session = Depends(get_db)) -> dict:
+    """
+    Retorna o status da segunda aprovação.
+    Expõe o token para que o gestor envie ao segundo aprovador (por e-mail, etc.)
+    """
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    status_map = {0: "pendente", 1: "aprovada", 2: "rejeitada"}
+    ok_val = getattr(sessao, "segunda_aprovacao_ok", 0) or 0
+    return {
+        "sessao_id": sessao_id,
+        "status": status_map.get(ok_val, "pendente"),
+        "aprovada": ok_val == 1,
+        "rejeitada": ok_val == 2,
+        "segunda_aprovacao_por": getattr(sessao, "segunda_aprovacao_por", None),
+        "segunda_aprovacao_em": (
+            sessao.segunda_aprovacao_em.isoformat()
+            if getattr(sessao, "segunda_aprovacao_em", None) else None
+        ),
+        "token_segunda_aprovacao": getattr(sessao, "token_segunda_aprovacao", None),
+    }
+
+
+@router.post("/{sessao_id}/segunda-aprovacao/aprovar")
+def aprovar_segunda_vez(
+    sessao_id: str,
+    token_segunda_aprovacao: str,
+    aprovador: str = "Segundo Aprovador",
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Segundo aprovador confirma o inventário, liberando o envio ao TOTVS.
+    Usa token_segunda_aprovacao (diferente do token_admin do criador).
+
+    Workflow:
+    1. Gestor 1 conclui a sessão (PATCH /concluir com token_admin)
+    2. Gestor 2 acessa este endpoint com token_segunda_aprovacao para aprovar
+    3. Apenas sessões concluídas e com segunda_aprovacao_ok == 0 podem ser aprovadas
+    """
+    from datetime import datetime, timezone as _tz
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    status_sessao = str(sessao.status.value if hasattr(sessao.status, "value") else sessao.status)
+    if status_sessao != "concluida":
+        raise HTTPException(
+            status_code=422,
+            detail="Só é possível aprovar sessões com status 'concluida'."
+        )
+
+    ok_val = getattr(sessao, "segunda_aprovacao_ok", 0) or 0
+    if ok_val == 1:
+        raise HTTPException(status_code=409, detail="Esta sessão já foi aprovada pelo segundo aprovador.")
+    if ok_val == 2:
+        raise HTTPException(status_code=409, detail="Esta sessão foi rejeitada. Não pode ser aprovada.")
+
+    token_esperado = getattr(sessao, "token_segunda_aprovacao", None) or ""
+    if not hmac.compare_digest(token_esperado, token_segunda_aprovacao or ""):
+        raise HTTPException(status_code=403, detail="Token de segunda aprovação inválido.")
+
+    sessao.segunda_aprovacao_ok = 1
+    sessao.segunda_aprovacao_por = aprovador
+    sessao.segunda_aprovacao_em = datetime.now(_tz.utc)
+    db.commit()
+
+    logger.info("segunda_aprovacao aprovada sessao=%s por=%s", sessao_id, aprovador)
+    return {
+        "mensagem": "Segunda aprovação confirmada. O inventário está liberado para envio ao ERP.",
+        "aprovador": aprovador,
+        "aprovado_em": sessao.segunda_aprovacao_em.isoformat(),
+    }
+
+
+@router.post("/{sessao_id}/segunda-aprovacao/rejeitar")
+def rejeitar_segunda_vez(
+    sessao_id: str,
+    token_segunda_aprovacao: str,
+    motivo: str = "Divergências não justificadas",
+    aprovador: str = "Segundo Aprovador",
+    db: Session = Depends(get_db),
+) -> dict:
+    """
+    Segundo aprovador rejeita o inventário, impedindo o envio ao TOTVS.
+    A sessão pode ser reaberta pelo gestor para correções.
+    """
+    from datetime import datetime, timezone as _tz
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    status_sessao = str(sessao.status.value if hasattr(sessao.status, "value") else sessao.status)
+    if status_sessao != "concluida":
+        raise HTTPException(status_code=422, detail="Só é possível rejeitar sessões com status 'concluida'.")
+
+    ok_val = getattr(sessao, "segunda_aprovacao_ok", 0) or 0
+    if ok_val == 1:
+        raise HTTPException(status_code=409, detail="Esta sessão já foi aprovada. Não pode ser rejeitada.")
+    if ok_val == 2:
+        raise HTTPException(status_code=409, detail="Esta sessão já foi rejeitada.")
+
+    token_esperado = getattr(sessao, "token_segunda_aprovacao", None) or ""
+    if not hmac.compare_digest(token_esperado, token_segunda_aprovacao or ""):
+        raise HTTPException(status_code=403, detail="Token de segunda aprovação inválido.")
+
+    sessao.segunda_aprovacao_ok = 2
+    sessao.segunda_aprovacao_por = aprovador
+    sessao.segunda_aprovacao_em = datetime.now(_tz.utc)
+    db.commit()
+
+    logger.info("segunda_aprovacao rejeitada sessao=%s por=%s motivo=%s", sessao_id, aprovador, motivo)
+    return {
+        "mensagem": f"Segunda aprovação rejeitada: {motivo}",
+        "aprovador": aprovador,
+        "rejeitado_em": sessao.segunda_aprovacao_em.isoformat(),
     }

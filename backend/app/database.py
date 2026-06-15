@@ -49,7 +49,7 @@ def get_db():
 
 
 def create_tables():
-    from app.models import sessao, item_base, contagem, grupo_operador  # noqa — registra todos os modelos
+    from app.models import sessao, item_base, contagem, grupo_operador, agendamento, filial  # noqa — registra todos os modelos
     Base.metadata.create_all(bind=engine)
     _migrate_sqlite()
 
@@ -72,6 +72,11 @@ def _migrate_sqlite():
         _add_col_if_missing(conn, "sessoes", "previsao_retomada", "TEXT")
         _add_col_if_missing(conn, "sessoes", "token_admin", "TEXT")
         _add_col_if_missing(conn, "sessoes", "webhook_url", "TEXT")
+        _add_col_if_missing(conn, "sessoes", "filial_id", "TEXT")
+        _add_col_if_missing(conn, "sessoes", "token_segunda_aprovacao", "TEXT")
+        _add_col_if_missing(conn, "sessoes", "segunda_aprovacao_em", "TIMESTAMP")
+        _add_col_if_missing(conn, "sessoes", "segunda_aprovacao_por", "TEXT")
+        _add_col_if_missing(conn, "sessoes", "segunda_aprovacao_ok", "INTEGER NOT NULL DEFAULT 0")
         _add_col_if_missing(conn, "historico_contagens", "para_ajuste", "INTEGER NOT NULL DEFAULT 0")
         # Cria tabela grupos_operador se não existir
         try:
