@@ -1284,19 +1284,29 @@ document.getElementById('search-itens').addEventListener('input', e => {
 })
 
 // ── Lazy Load Itens
+async function _fetchItens() {
+  const placeholder=document.getElementById('itens-loading-placeholder')
+  if(placeholder) placeholder.innerHTML='<div class="spinner" style="margin:0 auto"></div>'
+  try {
+    const [fetchedItens,fetchedConts]=await Promise.all([listarItens(sessaoId),listarContagens(sessaoId)])
+    itens=fetchedItens||[]
+    if(!contagens.length){contagens=fetchedConts||[];renderChart(contagens);renderOperators(contagens)}
+    itensLoaded=true; renderItens(currentFilter,currentSearch)
+  } catch(e) {
+    const c=document.getElementById('itens-container')
+    if(c) c.innerHTML=`<div class="empty-state" style="flex-direction:column;gap:.75rem">
+      <div class="empty-state-text">Erro ao carregar itens</div>
+      <button onclick="_fetchItens()" style="padding:.4rem 1rem;border-radius:.5rem;background:#2a3548;color:#d7e3fc;border:1px solid #3d4850;cursor:pointer;font-size:.8rem">Tentar novamente</button>
+    </div>`
+  }
+}
+
 function setupLazyItens() {
   const sentinel=document.getElementById('itens-sentinel'), loadingText=document.getElementById('itens-loading-text')
   if(stats&&stats.total>0&&loadingText) loadingText.textContent=`${stats.total} itens — rolar para carregar`
   const observer=new IntersectionObserver(async(entries)=>{
     if(!entries[0].isIntersecting||itensLoaded) return; observer.disconnect()
-    const placeholder=document.getElementById('itens-loading-placeholder')
-    placeholder.innerHTML='<div class="spinner" style="margin:0 auto"></div>'
-    try {
-      const [fetchedItens,fetchedConts]=await Promise.all([listarItens(sessaoId),listarContagens(sessaoId)])
-      itens=fetchedItens||[]
-      if(!contagens.length){contagens=fetchedConts||[];renderChart(contagens);renderOperators(contagens)}
-      itensLoaded=true; renderItens(currentFilter,currentSearch)
-    } catch(e) { document.getElementById('itens-container').innerHTML='<div class="empty-state"><div class="empty-state-text">Erro ao carregar itens</div></div>' }
+    await _fetchItens()
   },{threshold:0.1})
   observer.observe(sentinel)
 }

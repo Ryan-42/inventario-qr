@@ -38,7 +38,7 @@ export class SessionWS {
 
   _open() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-    const url = `${proto}://${location.host}/api/ws/${this._sessaoId}`
+    const url = `${proto}://${location.host}/api/ws/sessao/${this._sessaoId}`
     try { this._ws = new WebSocket(url) } catch { this._scheduleReconnect(); return }
 
     this._ws.onopen = () => {
