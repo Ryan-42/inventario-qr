@@ -8,8 +8,9 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from app.auth import verificar_token_admin as _verificar_token_admin, get_admin_logado
+from app.auth import get_admin_logado
 from app.database import get_db
+from app.websockets.manager import manager
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
 from app.schemas import SessaoCreate, SessaoResponse, SessaoCreateResponse, SessaoStats, RodadasInfo, ProgressoRodada, ValorEstoqueStats
@@ -17,6 +18,13 @@ from app.models.sessao import Sessao, StatusSessao
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sessoes", tags=["Sessões"])
+
+
+async def _broadcast_safe(sessao_id: str, data: dict) -> None:
+    try:
+        await manager.broadcast(sessao_id, data)
+    except Exception as exc:
+        logger.warning("Falha no broadcast WebSocket — sessao=%s erro=%s", sessao_id, exc)
 
 
 def _webhook_url_segura(url: str) -> bool:
@@ -151,8 +159,7 @@ async def concluir_sessao(sessao_id: str, background_tasks: BackgroundTasks,
     concluido = sessao_repo.concluir_sessao(db, sessao_id)
     if not concluido:
         raise HTTPException(status_code=409, detail="Sessão não pôde ser concluída (conflito). Tente novamente.")
-    from app.websockets.manager import manager
-    background_tasks.add_task(manager.broadcast, sessao_id, {
+    background_tasks.add_task(_broadcast_safe, sessao_id, {
         "tipo": "sessao_status_alterado", "status": "concluida",
         "mensagem": "O inventário foi concluído pelo administrador.",
     })
@@ -209,8 +216,7 @@ async def cancelar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
     cancelado = sessao_repo.cancelar_sessao(db, sessao_id)
     if not cancelado:
         raise HTTPException(status_code=409, detail="Sessão não pôde ser cancelada. Tente novamente.")
-    from app.websockets.manager import manager
-    background_tasks.add_task(manager.broadcast, sessao_id, {
+    background_tasks.add_task(_broadcast_safe, sessao_id, {
         "tipo": "sessao_status_alterado", "status": "cancelada",
         "mensagem": "O inventário foi cancelado pelo administrador.",
     })

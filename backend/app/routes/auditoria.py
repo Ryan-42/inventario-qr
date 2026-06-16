@@ -191,7 +191,7 @@ def relatorio_operadores(
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
 
-    historico = item_repo.listar_historico(db, sessao_id, limit=None)
+    historico = item_repo.listar_historico(db, sessao_id, limit=10_000)
     contagens = item_repo.listar_contagens(db, sessao_id)
 
     # Agrupa por operador

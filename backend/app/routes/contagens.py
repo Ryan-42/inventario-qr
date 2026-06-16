@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
+from app.auth import get_admin_logado
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
@@ -163,7 +164,8 @@ def listar_historico(
 @limiter.limit("60/minute")
 async def deletar_contagem(request: Request, sessao_id: str, codigo: str,
                            background_tasks: BackgroundTasks,
-                           db: Session = Depends(get_db)):
+                           db: Session = Depends(get_db),
+                           _admin=Depends(get_admin_logado)):
     """Remove a contagem atual de um item (mantém histórico). Libera o item para recontagem."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:

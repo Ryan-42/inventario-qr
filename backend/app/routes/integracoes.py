@@ -71,6 +71,8 @@ def enviar_ajuste_totvs(
     # Bloqueia envio ao ERP apenas em sessões concluídas que ainda aguardam segunda aprovação
     if status_str == "concluida":
         ok_val = getattr(sessao, "segunda_aprovacao_ok", None)
+        if ok_val is None:
+            ok_val = 0  # NULL no banco = pendente de aprovação
         if ok_val == 0:
             raise HTTPException(
                 status_code=403,

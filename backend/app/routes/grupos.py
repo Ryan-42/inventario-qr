@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.auth import verificar_token_admin, get_admin_logado
+from app.auth import get_admin_logado
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo, grupo_repo
@@ -26,6 +26,13 @@ from app.models.sessao import StatusSessao
 from app.websockets.manager import manager
 
 logger = logging.getLogger(__name__)
+
+
+async def _broadcast_safe(sessao_id: str, data: dict) -> None:
+    try:
+        await manager.broadcast(sessao_id, data)
+    except Exception as exc:
+        logger.warning("Falha no broadcast WebSocket — sessao=%s erro=%s", sessao_id, exc)
 
 
 def _validar_base_url(base_url: str) -> None:
@@ -377,7 +384,7 @@ async def pausar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
     sessao.previsao_retomada = previsao_retomada
     db.commit()
     db.refresh(sessao)
-    background_tasks.add_task(manager.broadcast, sessao_id, {
+    background_tasks.add_task(_broadcast_safe, sessao_id, {
         "tipo": "sessao_status_alterado", "status": "pausada",
         "mensagem": "Sessão pausada pelo administrador. Aguarde retomada.",
         "previsao_retomada": previsao_retomada,
@@ -404,7 +411,7 @@ async def retomar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
         sessao.rodada_token = 1
     db.commit()
     db.refresh(sessao)
-    background_tasks.add_task(manager.broadcast, sessao_id, {
+    background_tasks.add_task(_broadcast_safe, sessao_id, {
         "tipo": "sessao_status_alterado", "status": "ativa",
         "mensagem": "Sessão retomada! Use o novo token para continuar.",
         "novo_token": sessao.token_acesso,

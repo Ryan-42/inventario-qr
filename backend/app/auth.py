@@ -8,7 +8,7 @@ import threading
 import time
 import uuid
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
@@ -42,7 +42,7 @@ def verificar_senha(senha: str, hash_: str) -> bool:
 def criar_token(dados: dict, horas: int = _TOKEN_HORAS) -> str:
     payload = dados.copy()
     payload.update({
-        "exp": datetime.utcnow() + timedelta(hours=horas),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=horas),
         "jti": str(uuid.uuid4()),
     })
     return jwt.encode(payload, _SECRET_KEY, algorithm=_ALGORITHM)

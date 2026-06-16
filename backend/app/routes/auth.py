@@ -97,7 +97,7 @@ async def login(request: Request, payload: LoginPayload, db: Session = Depends(g
 async def logout(request: Request, admin=Depends(get_admin_logado)):
     from jose import jwt as _jwt
     from app.services.token_blacklist import revoke
-    from datetime import datetime
+    from datetime import datetime, timezone
 
     from app.auth import _SECRET_KEY, _ALGORITHM  # noqa
 
@@ -114,7 +114,7 @@ async def logout(request: Request, admin=Depends(get_admin_logado)):
             jti = payload.get("jti")
             exp = payload.get("exp")
             if jti and exp:
-                revoke(jti, datetime.utcfromtimestamp(exp))
+                revoke(jti, datetime.fromtimestamp(exp, tz=timezone.utc))
         except Exception:
             pass
 
