@@ -826,10 +826,11 @@ deletarConfirmBtn.addEventListener('click', async () => {
   deletarLbl.textContent = 'Deletando…'
   deletarSpinner.classList.remove('hidden')
   try {
-    await deletarSessao(_deletarId)
+    const idDeletado = _deletarId
+    await deletarSessao(idDeletado)
     closeModalDeletar()
     // Remove do array local e re-renderiza sem recarregar do servidor
-    allSessions = allSessions.filter(s => s.id !== _deletarId)
+    allSessions = allSessions.filter(s => s.id !== idDeletado)
     updateStats(allSessions)
     renderGrid()
     toast('Sessão deletada com sucesso.', 'success')

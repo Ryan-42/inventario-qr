@@ -165,9 +165,13 @@ def cancelar_sessao(db: Session, sessao_id: str) -> Optional[Sessao]:
 
 
 def deletar_sessao(db: Session, sessao_id: str) -> bool:
+    from app.models.contagem import HistoricoContagem
     sessao = buscar_sessao(db, sessao_id)
     if not sessao:
         return False
+    # HistoricoContagem não tem cascade no ORM — deve ser deletado explicitamente
+    # para evitar FK violation em PostgreSQL
+    db.query(HistoricoContagem).filter(HistoricoContagem.sessao_id == sessao_id).delete()
     db.delete(sessao)
     db.commit()
     return True

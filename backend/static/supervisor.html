@@ -247,6 +247,11 @@ async function carregarItens() {
       return
     }
 
+    // Garante que state-app está visível e state-aguardando escondido
+    // (pode ter sido invertido numa chamada anterior quando !data.ativo)
+    document.getElementById('state-aguardando').classList.add('hidden')
+    document.getElementById('state-app').classList.remove('hidden')
+
     itensData = data.itens || []
     atualizarStats()
     renderItens()

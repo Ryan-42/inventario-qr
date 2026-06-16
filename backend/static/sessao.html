@@ -126,6 +126,10 @@ tailwind.config = {
         <span class="material-symbols-outlined text-[18px]">psychology</span>
         <span class="hide-mobile">IA</span>
       </button>
+      <button id="btn-cancelar" class="btn-stitch-ia" style="display:none;border-color:rgba(255,180,171,0.4);color:#ffb4ab" title="Cancelar sessão">
+        <span class="material-symbols-outlined text-[16px]">cancel</span>
+        <span class="hide-mobile">Cancelar</span>
+      </button>
       <button id="btn-concluir" class="btn-stitch-primary glow-cyan" style="display:none">
         <span class="material-symbols-outlined text-[16px]" style="font-variation-settings:'FILL' 1;">check_circle</span>
         <span class="hide-mobile">Concluir Sessão</span>
@@ -606,7 +610,7 @@ tailwind.config = {
 <script type="module">
 import {
   buscarSessao, statsSessao, listarItens, listarContagens,
-  concluirSessao, uploadPlanilha, validarPlanilha,
+  concluirSessao, cancelarSessao, uploadPlanilha, validarPlanilha,
   analisarSessao, rodadasSessao,
   exportarCompleto, exportarDivergencias, exportarPDF, exportarEtiquetas,
   exportarRelatorioFinalPDF, exportarRelatorioFinalExcel,
@@ -694,8 +698,10 @@ function renderHeader() {
   badge.className = `badge badge-dot ${cls}`
   badge.textContent = txt
 
-  document.getElementById('btn-concluir').style.display = sessao.status === 'ativa' ? '' : 'none'
-  document.getElementById('btn-upload-planilha').style.display = sessao.status === 'ativa' ? '' : 'none'
+  const isAtiva = sessao.status === 'ativa'
+  document.getElementById('btn-concluir').style.display = isAtiva ? '' : 'none'
+  document.getElementById('btn-cancelar').style.display = isAtiva && getAdminToken(sessaoId) ? '' : 'none'
+  document.getElementById('btn-upload-planilha').style.display = isAtiva ? '' : 'none'
 }
 
 // ── Render Stats
@@ -1070,6 +1076,22 @@ async function openConcluir() {
   }
   openModal('modal-concluir')
 }
+
+document.getElementById('btn-cancelar').addEventListener('click', async () => {
+  if (!confirm('Cancelar esta sessão? Esta ação não pode ser desfeita.')) return
+  const btn = document.getElementById('btn-cancelar')
+  btn.disabled = true
+  try {
+    await cancelarSessao(sessaoId)
+    sessao.status = 'cancelada'
+    renderHeader()
+    if (ws) ws.disconnect()
+    toast('Sessão cancelada.', 'success')
+  } catch(e) {
+    toast(e.message || 'Erro ao cancelar.', 'error')
+    btn.disabled = false
+  }
+})
 
 document.getElementById('btn-concluir').addEventListener('click', openConcluir)
 document.getElementById('btn-close-concluir').addEventListener('click', () => closeModal('modal-concluir'))
