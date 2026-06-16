@@ -9,8 +9,11 @@ import os
 import sys
 import uuid
 
-# Garante que o backend está no path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "backend"))
+# Garante que o backend está no path e que o working directory é o backend
+# (o DATABASE_URL sqlite:///./inventario.db resolve relativo ao cwd)
+_backend_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
+sys.path.insert(0, _backend_dir)
+os.chdir(_backend_dir)
 
 from app.database import SessionLocal, create_tables
 from app.models.admin import Admin
