@@ -74,7 +74,6 @@ coverage.xml
 .railway/
 
 # Claude Code / agentes locais
-.agents/
 .claude/
 skills-lock.json
 
