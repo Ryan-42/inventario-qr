@@ -8,6 +8,8 @@ from typing import Dict, Set
 
 from fastapi import WebSocket
 
+from app.config import MAX_CONNECTIONS_PER_SESSION
+
 logger = logging.getLogger(__name__)
 
 
@@ -20,7 +22,6 @@ def _json_serial(obj):
     raise TypeError(f"Tipo não serializável: {type(obj)!r}")
 
 
-_MAX_CONNECTIONS_PER_SESSION = 50
 
 
 class ConnectionManager:
@@ -38,9 +39,9 @@ class ConnectionManager:
         await websocket.accept()
         if sessao_id not in self._connections:
             self._connections[sessao_id] = set()
-        if len(self._connections[sessao_id]) >= _MAX_CONNECTIONS_PER_SESSION:
+        if len(self._connections[sessao_id]) >= MAX_CONNECTIONS_PER_SESSION:
             await websocket.close(code=1008, reason="Too many connections for this session")
-            logger.warning("WS rejeitado — sessao=%s limite=%d atingido", sessao_id, _MAX_CONNECTIONS_PER_SESSION)
+            logger.warning("WS rejeitado — sessao=%s limite=%d atingido", sessao_id, MAX_CONNECTIONS_PER_SESSION)
             return False
         self._connections[sessao_id].add(websocket)
         # Remove sessões sem conexões acumuladas (limpeza preventiva de memory leak)
@@ -89,6 +90,13 @@ class ConnectionManager:
             grupo.discard(ws)
         if not grupo:
             self._connections.pop(sessao_id, None)
+
+    async def broadcast_safe(self, sessao_id: str, data: dict) -> None:
+        """Versão segura do broadcast — captura qualquer exceção e apenas loga."""
+        try:
+            await self.broadcast(sessao_id, data)
+        except Exception as exc:
+            logger.warning("Falha no broadcast WebSocket — sessao=%s erro=%s", sessao_id, exc)
 
     @property
     def active_count(self) -> int:

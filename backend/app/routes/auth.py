@@ -115,8 +115,8 @@ async def logout(request: Request, admin=Depends(get_admin_logado)):
             exp = payload.get("exp")
             if jti and exp:
                 revoke(jti, datetime.fromtimestamp(exp, tz=timezone.utc))
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("logout: não foi possível revogar JTI (token inválido ou expirado): %s", exc)
 
     logger.info("logout email=%s", admin.email)
     return {"ok": True}

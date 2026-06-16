@@ -94,10 +94,10 @@ async def registrar_contagem(request: Request,
         "rodada": contagem.rodada,
         "timestamp": contagem.timestamp.isoformat() if contagem.timestamp else None,
     }
-    background_tasks.add_task(_broadcast_safe, sessao_id, evento_contagem)
+    background_tasks.add_task(manager.broadcast_safe, sessao_id, evento_contagem)
 
     # ── Progresso atualizado — scanner exibe contador em tempo real
-    background_tasks.add_task(_broadcast_safe, sessao_id, {
+    background_tasks.add_task(manager.broadcast_safe, sessao_id, {
         "tipo": "progresso_atualizado",
         "rodada_atual": progresso_depois["rodada_atual"],
         "faltando": progresso_depois["faltando"],
@@ -124,7 +124,7 @@ async def registrar_contagem(request: Request,
                 divs = progresso_depois["divergencias_r2"]
             proxima_necessaria = (rodada_num == 1 and divs > 0)
             tudo_concluido = progresso_depois["completa"]
-            background_tasks.add_task(_broadcast_safe, sessao_id, {
+            background_tasks.add_task(manager.broadcast_safe, sessao_id, {
                 "tipo": "rodada_completa",
                 "rodada_concluida": rodada_num,
                 "divergencias_pendentes": divs,
@@ -179,7 +179,7 @@ async def deletar_contagem(request: Request, sessao_id: str, codigo: str,
     db.commit()
     # Notifica operadores mobile em tempo real que o item voltou para "não contado"
     progresso = item_repo.calcular_progresso_rodada(db, sessao_id)
-    background_tasks.add_task(_broadcast_safe, sessao_id, {
+    background_tasks.add_task(manager.broadcast_safe, sessao_id, {
         "tipo": "contagem_deletada",
         "codigo": codigo,
         "rodada_atual": progresso["rodada_atual"],
@@ -187,13 +187,6 @@ async def deletar_contagem(request: Request, sessao_id: str, codigo: str,
         "total_rodada": progresso["total_rodada"],
         "contados_rodada": progresso["contados_rodada"],
     })
-
-
-async def _broadcast_safe(sessao_id: str, data: dict) -> None:
-    try:
-        await manager.broadcast(sessao_id, data)
-    except Exception as exc:
-        logger.warning("Falha no broadcast WebSocket — sessao=%s erro=%s", sessao_id, exc)
 
 
 def _rodar_alerta(sessao_id: str, codigo: str, qtd_encontrada: int, qtd_base: int, operador: str | None) -> None:

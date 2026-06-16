@@ -23,9 +23,8 @@ logger = logging.getLogger(__name__)
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
 
-_SECRET_KEY = os.getenv("SECRET_KEY", "inviq-local-dev-inseguro")
+from app.config import SECRET_KEY as _SECRET_KEY, TOKEN_EXPIRE_HORAS as _TOKEN_HORAS
 _ALGORITHM  = "HS256"
-_TOKEN_HORAS = int(os.getenv("TOKEN_EXPIRE_HORAS", "8"))
 
 _pwd_ctx = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 _oauth2  = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
@@ -90,8 +89,8 @@ def get_admin_logado(
 # Rastreia tentativas falhas por IP em memória (TTL de 15 minutos).
 # Thread-safe via lock; sem dependência de Redis para facilitar o deploy.
 
-_TENTATIVAS_MAX   = 10   # falhas até bloqueio por IP
-_JANELA_SEGUNDOS  = 900  # 15 minutos
+from app.config import BRUTE_FORCE_MAX_TENTATIVAS as _TENTATIVAS_MAX
+from app.config import BRUTE_FORCE_JANELA_SEG as _JANELA_SEGUNDOS
 _BLOQUEIO_SEGUNDOS = 300  # 5 minutos de bloqueio após exceder limite
 
 _falhas: dict[str, list[float]] = defaultdict(list)

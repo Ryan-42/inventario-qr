@@ -6,10 +6,7 @@ from typing import Optional
 
 from app.models.item_base import ItemBase
 from app.models.contagem import Contagem, HistoricoContagem
-
-# Garantia de terminação: após este número de rodadas com quantidades sempre diferentes,
-# o item é forçado para PARA_AJUSTE para evitar deadlock permanente no inventário.
-MAX_RODADAS_DIVERGENCIA = 5
+from app.config import MAX_RODADAS_DIVERGENCIA
 
 
 # ── Items ────────────────────────────────────────────────────────────────────

@@ -20,12 +20,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/sessoes", tags=["Sessões"])
 
 
-async def _broadcast_safe(sessao_id: str, data: dict) -> None:
-    try:
-        await manager.broadcast(sessao_id, data)
-    except Exception as exc:
-        logger.warning("Falha no broadcast WebSocket — sessao=%s erro=%s", sessao_id, exc)
-
 
 def _webhook_url_segura(url: str) -> bool:
     """Valida URL do webhook em tempo de dispatch — previne SSRF com IPs privados."""
@@ -159,7 +153,7 @@ async def concluir_sessao(sessao_id: str, background_tasks: BackgroundTasks,
     concluido = sessao_repo.concluir_sessao(db, sessao_id)
     if not concluido:
         raise HTTPException(status_code=409, detail="Sessão não pôde ser concluída (conflito). Tente novamente.")
-    background_tasks.add_task(_broadcast_safe, sessao_id, {
+    background_tasks.add_task(manager.broadcast_safe, sessao_id, {
         "tipo": "sessao_status_alterado", "status": "concluida",
         "mensagem": "O inventário foi concluído pelo administrador.",
     })
@@ -216,7 +210,7 @@ async def cancelar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
     cancelado = sessao_repo.cancelar_sessao(db, sessao_id)
     if not cancelado:
         raise HTTPException(status_code=409, detail="Sessão não pôde ser cancelada. Tente novamente.")
-    background_tasks.add_task(_broadcast_safe, sessao_id, {
+    background_tasks.add_task(manager.broadcast_safe, sessao_id, {
         "tipo": "sessao_status_alterado", "status": "cancelada",
         "mensagem": "O inventário foi cancelado pelo administrador.",
     })

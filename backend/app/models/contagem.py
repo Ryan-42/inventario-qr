@@ -13,6 +13,7 @@ class Contagem(Base):
         UniqueConstraint("sessao_id", "codigo", name="uq_contagens_sessao_codigo"),
         Index("ix_contagens_sessao_divergencia", "sessao_id", "divergencia"),
         Index("ix_contagens_sessao_rodada", "sessao_id", "rodada"),
+        Index("ix_contagens_sessao_para_ajuste", "sessao_id", "para_ajuste"),
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -35,6 +36,12 @@ class Contagem(Base):
 class HistoricoContagem(Base):
     """Registro imutável de cada contagem individual (append-only, auditoria)."""
     __tablename__ = "historico_contagens"
+    __table_args__ = (
+        Index("ix_historico_sessao_id", "sessao_id"),
+        Index("ix_historico_sessao_codigo", "sessao_id", "codigo"),
+        Index("ix_historico_sessao_divergencia", "sessao_id", "divergencia"),
+        Index("ix_historico_sessao_operador", "sessao_id", "operador"),
+    )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     sessao_id = Column(String, ForeignKey("sessoes.id"), nullable=False)

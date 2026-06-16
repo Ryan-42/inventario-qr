@@ -29,8 +29,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-_APP_ENV = os.getenv("APP_ENV", "development")
-_IS_PROD = _APP_ENV == "production"
+from app.config import APP_ENV, validar_config_producao
+
+_IS_PROD = APP_ENV == "production"
+
+# Valida configurações críticas de produção (SECRET_KEY, etc.)
+validar_config_producao()
 
 # Em produção, valida que o banco é PostgreSQL
 _DATABASE_URL = os.getenv("DATABASE_URL", "")
@@ -186,7 +190,7 @@ async def health():
         content={
             "status": status,
             "sistema": "INVIQ",
-            "env": _APP_ENV,
+            "env": APP_ENV,
             "db": "ok" if db_ok else "error",
             "ws_connections": manager.active_count,
         },

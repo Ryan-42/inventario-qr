@@ -222,8 +222,8 @@ class TestRateLimitingSmoke:
 
 class TestWebSocketLimite:
     def test_constante_limite_definida_e_razoavel(self):
-        from app.websockets.manager import _MAX_CONNECTIONS_PER_SESSION
-        assert 1 <= _MAX_CONNECTIONS_PER_SESSION <= 500
+        from app.config import MAX_CONNECTIONS_PER_SESSION
+        assert 1 <= MAX_CONNECTIONS_PER_SESSION <= 500
 
     def test_connect_retorna_bool(self):
         """Metodo connect agora retorna bool (True=aceita, False=rejeitado)."""
