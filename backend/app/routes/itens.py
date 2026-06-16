@@ -1,14 +1,29 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.auth import verificar_token_admin
 from app.database import get_db
 from app.limiter import limiter
-from app.repositories import sessao_repo, item_repo
+from app.repositories import sessao_repo, item_repo, grupo_repo
 from app.services.excel_service import importar_planilha
 from app.schemas import ItemBaseResponse, BuscaItemResponse, ItemComStatus, ItemListaOperador
 from app.services.sessao_service import montar_inventario_completo
 from app.models.sessao import StatusSessao
+
+
+def _filtrar_por_grupo(itens: list[dict], grupo) -> list[dict]:
+    prefixos = [p.strip().upper() for p in (grupo.filtro or '').split(',') if p.strip()]
+    tipo = grupo.tipo_filtro or 'todos'
+    if tipo == 'todos' or '*' in prefixos:
+        return itens
+    return [
+        i for i in itens
+        if (tipo == 'prefixo' and any(i['codigo'].upper().startswith(p) for p in prefixos))
+        or (tipo == 'lista' and i['codigo'].upper() in prefixos)
+    ]
+
 
 router = APIRouter(prefix="/sessoes", tags=["Itens"])
 
@@ -154,12 +169,24 @@ async def listar_itens_com_status(request: Request, sessao_id: str, db: Session 
 
 @router.get("/{sessao_id}/itens-operador", response_model=list[ItemListaOperador])
 @limiter.limit("60/minute")
-async def listar_itens_operador(request: Request, sessao_id: str, db: Session = Depends(get_db)):
+async def listar_itens_operador(
+    request: Request,
+    sessao_id: str,
+    token: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     """Lista itens para o operador (contagem cega): código, descrição e local — sem quantidade."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    return item_repo.listar_itens_para_operador(db, sessao_id)
+    if sessao.status != StatusSessao.ativa:
+        raise HTTPException(status_code=409, detail="Sessão não está ativa")
+    itens = item_repo.listar_itens_para_operador(db, sessao_id)
+    if token:
+        grupo = grupo_repo.buscar_grupo_por_token(db, sessao_id, token)
+        if grupo:
+            itens = _filtrar_por_grupo(itens, grupo)
+    return itens
 
 
 @router.get("/{sessao_id}/buscar/{codigo}", response_model=BuscaItemResponse)

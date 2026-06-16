@@ -229,6 +229,15 @@ if _STATIC.exists():
             "Allow: /\n"
         )
 
+    @app.get("/sw.js", response_class=FileResponse)
+    def service_worker():
+        """Service Worker para cache offline e PWA."""
+        return FileResponse(
+            str(_STATIC / "sw.js"),
+            media_type="application/javascript",
+            headers={"Service-Worker-Allowed": "/"},
+        )
+
     @app.get("/manifest.json")
     def manifest():
         """PWA manifest para instalação como app no celular do operador."""
@@ -237,19 +246,22 @@ if _STATIC.exists():
             "short_name": "INVIQ",
             "description": "Inventário físico por QR Code em tempo real",
             "start_url": "/",
+            "scope": "/",
             "display": "standalone",
             "background_color": "#071325",
             "theme_color": "#8fd6ff",
             "orientation": "portrait",
+            "categories": ["productivity", "utilities"],
             "icons": [
-                {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
-                {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"},
+                {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+                {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
             ],
             "shortcuts": [
                 {
                     "name": "Scanner",
                     "url": "/mobile/",
                     "description": "Abrir scanner de inventário",
+                    "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}],
                 }
             ],
         }

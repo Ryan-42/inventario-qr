@@ -66,10 +66,10 @@ class SopCoachAgent:
     def _fallback(self, ultima_msg: str) -> str:
         if "offline" in ultima_msg or "internet" in ultima_msg:
             return (
-                "Se o sinal cair, continue contando normalmente! O INVIQ salva tudo no celular e sincroniza "
-                "sozinho assim que a conexão retornar. Só não feche a aba do navegador."
+                "Se o sinal cair, continue contando normalmente! O INVIQ salva na fila local do celular e sincroniza "
+                "automaticamente quando a internet voltar. Só não feche a aba do navegador."
             )
-        if any(p in ultima_msg for p in ("danificado", "rasgado", "qr", "ler")):
+        if any(p in ultima_msg for p in ("danificado", "rasgad", "etiqueta", "qr", "ler")):
             return (
                 "Se a etiqueta estiver rasgada, mude para a busca manual e digite o código SKU ou nome do produto. "
                 "Se não der certo, chame o supervisor para colar uma nova etiqueta QR."

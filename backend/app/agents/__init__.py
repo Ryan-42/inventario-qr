@@ -19,11 +19,16 @@ def _load(name: str):
         return sys.modules[full]
     spec = importlib.util.spec_from_file_location(full, f)
     mod = importlib.util.module_from_spec(spec)
-    sys.modules[full] = mod
-    spec.loader.exec_module(mod)
+    try:
+        sys.modules[full] = mod
+        spec.loader.exec_module(mod)
+    except Exception:
+        sys.modules.pop(full, None)
+        raise
     return mod
 
 
-for _d in sorted(_AGENTS_ROOT.iterdir()):
-    if _d.is_dir() and not _d.name.startswith('.') and _d.name not in _SKIP:
-        _load(_d.name)
+if _AGENTS_ROOT.is_dir():
+    for _d in sorted(_AGENTS_ROOT.iterdir()):
+        if _d.is_dir() and not _d.name.startswith('.') and _d.name not in _SKIP:
+            _load(_d.name)

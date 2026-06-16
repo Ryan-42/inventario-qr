@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="INVIQ"/>
 <link rel="manifest" href="/manifest.json"/>
+<link rel="apple-touch-icon" href="/static/icon-192.png"/>
 <title>Scanner — INVIQ</title>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -665,8 +666,13 @@ let itensCache = []  // lista de {codigo, produto, local_fisico} carregada uma v
 
 async function carregarItensParaFuzzy() {
   if (itensCache.length > 0) return
+  // Reutiliza itensLista se já carregado (evita segunda requisição)
+  if (itensLista.length > 0) {
+    itensCache = itensLista.map(i => ({ codigo: i.codigo || '', produto: i.produto || '', local_fisico: i.local_fisico || '' }))
+    return
+  }
   try {
-    const r = await fetch(`/api/sessoes/${sessaoId}/itens`)
+    const r = await fetch(`/api/sessoes/${sessaoId}/itens-operador${tokenAtivo ? '?token=' + encodeURIComponent(tokenAtivo) : ''}`)
     if (r.ok) {
       const data = await r.json()
       itensCache = data.map(i => ({
@@ -786,7 +792,7 @@ function renderRecentes() {
   })
 }
 // States that respond to keyboard (visualViewport height clamping)
-const _KBD_STATES = new Set(['item', 'manual'])
+const _KBD_STATES = new Set(['item', 'manual', 'lista'])
 
 function showState(name) {
   STATES.forEach(s => {
@@ -1095,6 +1101,12 @@ function salvarOffline(payload) {
     queue.push({ sessaoId, payload, ts: Date.now() })
     localStorage.setItem('inventario_offline_queue', JSON.stringify(queue))
     showHintNotif('Sem conexão — salvo para envio posterior', 4000)
+    // Registra Background Sync se o SW suportar (progressive enhancement)
+    if ('serviceWorker' in navigator && 'SyncManager' in window) {
+      navigator.serviceWorker.ready
+        .then(reg => reg.sync.register('inviq-offline-queue'))
+        .catch(() => {})
+    }
   } catch {
     console.warn('[INVIQ] falha ao salvar contagem offline — localStorage corrompido ou cheio')
   }
@@ -1122,11 +1134,6 @@ async function handleRegistrar() {
   if (registrarLock) return
   const opInput = document.getElementById('operador-input'), opName=(opInput?.value||'').trim()||operador||'Anônimo'
   if (opInput?.value?.trim()) { operador=opInput.value.trim(); localStorage.setItem('inventario_operador',operador); updateOperatorLabel() }
-  const base = currentItem?.quantidade_base ?? currentItem?.quantidade
-  if (base!=null && currentQty!==base) {
-    document.getElementById('confirm-detalhe').textContent = 'Há divergência detectada. Deseja registrar assim mesmo?'
-    showState('confirmar'); return
-  }
   await submitContagem(opName)
 }
 
@@ -1282,7 +1289,7 @@ function connectWS() {
       atualizarBotaoOffline()
       if (ev.tipo === 'contagem_deletada' && ev.codigo) {
         const idx = itensLista.findIndex(i => i.codigo === ev.codigo)
-        if (idx !== -1) { itensLista[idx] = { ...itensLista[idx], ja_contado: false }; renderLista() }
+        if (idx !== -1) { itensLista[idx] = { ...itensLista[idx], ja_contado: false }; if (!document.getElementById('state-lista')?.classList.contains('hidden')) renderLista() }
       }
       return
     }
@@ -1312,7 +1319,7 @@ function connectWS() {
       showHintNotif(`${opName}: ${code} — ${ev.quantidade_encontrada??'?'} ${isDiv?'⚠ DIV':'✓ OK'}`)
       // Atualiza status na lista sem recarregar do servidor
       const idx = itensLista.findIndex(i => i.codigo === code)
-      if (idx !== -1) { itensLista[idx] = { ...itensLista[idx], ja_contado: true }; renderLista() }
+      if (idx !== -1) { itensLista[idx] = { ...itensLista[idx], ja_contado: true }; if (!document.getElementById('state-lista')?.classList.contains('hidden')) renderLista() }
     }
   })
   ws.connect()
@@ -1485,14 +1492,19 @@ async function carregarListaOperador(forcar = false) {
   if (loading) { loading.classList.remove('hidden'); loading.classList.add('flex') }
   if (itemsEl) itemsEl.innerHTML = ''
   try {
-    const res = await fetch(`/api/sessoes/${sessaoId}/itens-operador`)
+    const res = await fetch(`/api/sessoes/${sessaoId}/itens-operador${tokenAtivo ? '?token=' + encodeURIComponent(tokenAtivo) : ''}`)
     if (!res.ok) throw new Error('Falha ao carregar lista')
     itensLista = await res.json()
     renderLista()
   } catch {
     if (loading) { loading.classList.add('hidden'); loading.classList.remove('flex') }
-    const vazia = document.getElementById('lista-vazia')
-    if (vazia) { vazia.classList.remove('hidden'); vazia.classList.add('flex') }
+    const itemsEl2 = document.getElementById('lista-items')
+    if (itemsEl2) itemsEl2.innerHTML = `
+      <div class="flex flex-col items-center gap-3 py-12 text-center">
+        <span class="material-symbols-outlined text-[40px] text-error opacity-60">cloud_off</span>
+        <p class="text-body-md font-body-md text-on-surface-variant">Erro ao carregar a lista.</p>
+        <button onclick="carregarListaOperador(true)" class="btn-secondary text-sm px-4 py-2">Tentar novamente</button>
+      </div>`
   }
 }
 
@@ -1527,7 +1539,7 @@ function renderLista() {
   const _esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 
   // Agrupa por local_fisico para separadores visuais
-  let localAtual = '__init__'
+  let localAtual = undefined
   let html = ''
   for (const it of itens) {
     const local = it.local_fisico || null
@@ -1564,7 +1576,7 @@ function renderLista() {
       const item = e.target.closest('.lista-item')
       if (!item) return
       const code = item.dataset.code
-      if (code) { showState('scanner'); setTimeout(() => processCode(code), 80) }
+      if (code) { showState('scanner'); setTimeout(() => { if (!document.getElementById('state-scanner')?.classList.contains('hidden')) processCode(code) }, 80) }
     }
   }
 }
@@ -1628,6 +1640,28 @@ if (window.visualViewport) {
 }
 
 init()
+
+// ── Service Worker ─────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    .then(reg => {
+      // Notifica o app quando uma nova versão do SW está pronta
+      reg.addEventListener('updatefound', () => {
+        const sw = reg.installing
+        sw?.addEventListener('statechange', () => {
+          if (sw.state === 'installed' && navigator.serviceWorker.controller) {
+            showHintNotif('Nova versão disponível — recarregue para atualizar', 6000)
+          }
+        })
+      })
+    })
+    .catch(err => console.warn('[INVIQ] SW não registrado:', err))
+
+  // Escuta mensagem do SW para disparar flush da fila offline
+  navigator.serviceWorker.addEventListener('message', ev => {
+    if (ev.data?.type === 'FLUSH_QUEUE') flushOfflineQueue()
+  })
+}
 </script>
 </body>
 </html>

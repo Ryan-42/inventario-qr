@@ -79,7 +79,7 @@ def listar_itens_para_operador(db: Session, sessao_id: str) -> list[dict]:
     """Retorna itens sem quantidade_base para contagem cega. Ordenado por local → código."""
     itens = listar_itens(db, sessao_id)
     codigos_contados = {
-        c.codigo for c in db.query(Contagem).filter(Contagem.sessao_id == sessao_id).all()
+        row[0] for row in db.query(Contagem.codigo).filter(Contagem.sessao_id == sessao_id)
     }
     return sorted(
         [
