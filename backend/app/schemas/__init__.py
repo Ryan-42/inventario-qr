@@ -96,6 +96,16 @@ class ItemBaseResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ItemListaOperador(BaseModel):
+    """Item visível ao operador durante contagem — sem quantidade_base (contagem cega)."""
+    codigo: str
+    produto: str
+    local_fisico: Optional[str] = None
+    ja_contado: bool
+
+    model_config = {"from_attributes": True}
+
+
 class ItemComStatus(BaseModel):
     codigo: str
     produto: str

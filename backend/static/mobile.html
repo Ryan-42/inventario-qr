@@ -81,6 +81,13 @@ tailwind.config = {
   /* App.css modal overrides for operator modal */
   #modal-operador .modal { background:#0b1629;border:1px solid rgba(255,255,255,0.08);padding:1.5rem; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* Lista operador */
+  .lista-filtro-chip { background:transparent; border-color:rgba(255,255,255,0.15); color:#87929b; cursor:pointer; }
+  .lista-filtro-chip.active { background:rgba(143,214,255,0.1); border-color:rgba(143,214,255,0.4); color:#8fd6ff; }
+  .lista-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; transition:background .15s; border-radius:8px; padding-left:8px; padding-right:8px; }
+  .lista-item:active { background:rgba(143,214,255,0.06); }
+  .lista-item-contado { opacity:0.55; }
+  .lista-local-tag { font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:99px; border:1px solid rgba(255,255,255,0.12); color:#87929b; background:rgba(255,255,255,0.04); white-space:nowrap; flex-shrink:0; }
 </style>
 </head>
 <body class="bg-background text-on-background h-screen w-screen relative select-none">
@@ -160,6 +167,9 @@ tailwind.config = {
         <div id="ws-dot" class="ws-dot ws-disconnected"></div>
         <span id="ws-label" class="text-code-sm font-code-sm text-tertiary tracking-wider uppercase" style="font-size:10px">Sync</span>
       </div>
+      <button id="btn-lista" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-primary transition-colors active:scale-95" title="Ver lista de itens">
+        <span class="material-symbols-outlined text-[20px]">format_list_bulleted</span>
+      </button>
       <button id="btn-modo-manual" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant hover:text-primary transition-colors active:scale-95" title="Digitar código manualmente">
         <span class="material-symbols-outlined text-[20px]">keyboard</span>
       </button>
@@ -451,6 +461,54 @@ tailwind.config = {
 </div>
 
 
+<!-- ═══ STATE: LISTA ═══ -->
+<div id="state-lista" class="hidden absolute inset-0 z-40 bg-background flex flex-col">
+  <!-- Header -->
+  <div class="flex items-center gap-3 px-margin-mobile pb-4 border-b border-white/5 bg-surface-container/80 backdrop-blur-md" style="padding-top:max(2.5rem,env(safe-area-inset-top))">
+    <button id="btn-back-lista" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-variant/50 border border-white/10 text-on-surface-variant active:scale-95">
+      <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+    </button>
+    <div class="flex-1 min-w-0">
+      <h2 class="font-semibold text-on-surface leading-tight" style="font-size:18px">Lista de Itens</h2>
+      <p id="lista-subtitulo" class="text-code-sm font-code-sm text-on-surface-variant uppercase tracking-wider">Carregando...</p>
+    </div>
+    <div id="lista-grupo-label" class="hidden text-code-sm font-code-sm text-primary/70 bg-primary/10 border border-primary/20 px-2 py-1 rounded-lg"></div>
+  </div>
+
+  <!-- Busca e filtros -->
+  <div class="px-margin-mobile pt-3 pb-2 border-b border-white/5" style="background:rgba(20,32,50,0.6)">
+    <div class="relative">
+      <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <span class="material-symbols-outlined text-on-surface-variant text-[18px]">search</span>
+      </div>
+      <input id="lista-search" type="text" inputmode="search" placeholder="Buscar código, descrição ou local..."
+        class="w-full rounded-xl py-2.5 pl-9 pr-9 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-body-sm"
+        style="background:#142032;color:#d7e3fc;border:1px solid rgba(255,255,255,0.1);"/>
+      <button id="lista-search-clear" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-on-surface-variant active:text-primary">
+        <span class="material-symbols-outlined text-[18px]">close</span>
+      </button>
+    </div>
+    <div class="flex gap-2 mt-2 overflow-x-auto pb-1" style="scrollbar-width:none">
+      <button id="lista-filtro-todos" class="lista-filtro-chip active px-3 py-1 rounded-full text-code-sm font-code-sm border transition-colors whitespace-nowrap">Todos</button>
+      <button id="lista-filtro-pendentes" class="lista-filtro-chip px-3 py-1 rounded-full text-code-sm font-code-sm border transition-colors whitespace-nowrap">Pendentes</button>
+      <button id="lista-filtro-contados" class="lista-filtro-chip px-3 py-1 rounded-full text-code-sm font-code-sm border transition-colors whitespace-nowrap">Contados</button>
+    </div>
+  </div>
+
+  <!-- Conteúdo da lista -->
+  <div id="lista-container" class="flex-1 overflow-y-auto overscroll-contain touch-pan-y" style="padding:0 16px 32px;scrollbar-width:none">
+    <div id="lista-loading" class="flex flex-col items-center justify-center py-16 gap-4 text-on-surface-variant">
+      <div class="w-10 h-10 border-2 border-surface-container-high border-t-primary rounded-full" style="animation:spin .75s linear infinite"></div>
+      <span class="text-code-sm font-code-sm uppercase tracking-widest">Carregando itens...</span>
+    </div>
+    <div id="lista-vazia" class="hidden flex-col items-center justify-center py-16 gap-3 text-on-surface-variant text-center">
+      <span class="material-symbols-outlined text-[40px] opacity-40">inventory_2</span>
+      <p class="text-body-sm font-body-sm">Nenhum item encontrado</p>
+    </div>
+    <div id="lista-items"></div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: Operator Name ═══ -->
 <div id="modal-operador">
   <div class="modal">
@@ -478,6 +536,7 @@ import { SessionWS } from '/static/js/ws.js'
 
 // ── State
 const sessaoId = location.pathname.split('/').filter(Boolean).pop() ?? ''
+
 let sessao = null
 let currentItem = null
 let currentCodigo = null
@@ -504,7 +563,7 @@ const canvasEl = () => document.getElementById('scanner-canvas')
 function vibrate(ms) { try { if (navigator.vibrate) navigator.vibrate(ms) } catch {} }
 
 // ── showState
-const STATES = ['loading','token','scanner','manual','rodada-completa','item','confirmar','sucesso','erro','inativa']
+const STATES = ['loading','token','scanner','manual','rodada-completa','item','confirmar','sucesso','erro','inativa','lista']
 
 // ── Progresso state — campos que chegam no WS progresso_atualizado
 let progressoAtual = { rodada_atual: 1, faltando: 0, total_rodada: 0, contados_rodada: 0, completa: false }
@@ -760,6 +819,9 @@ function showState(name) {
     if (inp) { inp.value = ''; document.getElementById('fuzzy-sugestoes').classList.add('hidden') }
     document.getElementById('btn-submit-manual').disabled = true
     setTimeout(() => inp?.focus(), 150)
+  }
+  if (name === 'lista') {
+    abrirLista()
   }
   if (name === 'scanner') {
     atualizarBarraProgresso(progressoAtual)
@@ -1218,6 +1280,10 @@ function connectWS() {
       progressoAtual = { rodada_atual, faltando, total_rodada, contados_rodada, completa }
       atualizarBarraProgresso(progressoAtual)
       atualizarBotaoOffline()
+      if (ev.tipo === 'contagem_deletada' && ev.codigo) {
+        const idx = itensLista.findIndex(i => i.codigo === ev.codigo)
+        if (idx !== -1) { itensLista[idx] = { ...itensLista[idx], ja_contado: false }; renderLista() }
+      }
       return
     }
     if (ev.tipo === 'rodada_completa') {
@@ -1244,6 +1310,9 @@ function connectWS() {
     if (ev.tipo==='contagem_registrada') {
       const opName=ev.operador||'Op', code=ev.codigo||'—', isDiv=ev.divergencia
       showHintNotif(`${opName}: ${code} — ${ev.quantidade_encontrada??'?'} ${isDiv?'⚠ DIV':'✓ OK'}`)
+      // Atualiza status na lista sem recarregar do servidor
+      const idx = itensLista.findIndex(i => i.codigo === code)
+      if (idx !== -1) { itensLista[idx] = { ...itensLista[idx], ja_contado: true }; renderLista() }
     }
   })
   ws.connect()
@@ -1403,6 +1472,144 @@ async function init() {
     else { showState('erro'); document.getElementById('erro-titulo').textContent='Erro de conexão'; document.getElementById('erro-msg').textContent=e.message||'Verifique sua conexão e tente novamente.' }
   }
 }
+
+// ── Lista de Itens (contagem cega)
+let itensLista = []
+let listaFiltroAtivo = 'todos'
+let listaSearchQuery = ''
+
+async function carregarListaOperador(forcar = false) {
+  if (itensLista.length > 0 && !forcar) { renderLista(); return }
+  const loading = document.getElementById('lista-loading')
+  const itemsEl = document.getElementById('lista-items')
+  if (loading) { loading.classList.remove('hidden'); loading.classList.add('flex') }
+  if (itemsEl) itemsEl.innerHTML = ''
+  try {
+    const res = await fetch(`/api/sessoes/${sessaoId}/itens-operador`)
+    if (!res.ok) throw new Error('Falha ao carregar lista')
+    itensLista = await res.json()
+    renderLista()
+  } catch {
+    if (loading) { loading.classList.add('hidden'); loading.classList.remove('flex') }
+    const vazia = document.getElementById('lista-vazia')
+    if (vazia) { vazia.classList.remove('hidden'); vazia.classList.add('flex') }
+  }
+}
+
+function renderLista() {
+  const loading = document.getElementById('lista-loading')
+  const itemsEl = document.getElementById('lista-items')
+  const vaziaEl = document.getElementById('lista-vazia')
+  if (loading) { loading.classList.add('hidden'); loading.classList.remove('flex') }
+
+  const q = listaSearchQuery.toLowerCase()
+  let itens = itensLista.filter(it => {
+    if (listaFiltroAtivo === 'pendentes' && it.ja_contado) return false
+    if (listaFiltroAtivo === 'contados' && !it.ja_contado) return false
+    if (!q) return true
+    return it.codigo.toLowerCase().includes(q)
+      || it.produto.toLowerCase().includes(q)
+      || (it.local_fisico || '').toLowerCase().includes(q)
+  })
+
+  const total = itensLista.length
+  const pendentes = itensLista.filter(i => !i.ja_contado).length
+  const sub = document.getElementById('lista-subtitulo')
+  if (sub) sub.textContent = `${total - pendentes}/${total} contados`
+
+  if (itens.length === 0) {
+    if (itemsEl) itemsEl.innerHTML = ''
+    if (vaziaEl) { vaziaEl.classList.remove('hidden'); vaziaEl.classList.add('flex') }
+    return
+  }
+  if (vaziaEl) { vaziaEl.classList.add('hidden'); vaziaEl.classList.remove('flex') }
+
+  const _esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+
+  // Agrupa por local_fisico para separadores visuais
+  let localAtual = '__init__'
+  let html = ''
+  for (const it of itens) {
+    const local = it.local_fisico || null
+    if (local !== localAtual) {
+      localAtual = local
+      if (local) {
+        html += `<div class="flex items-center gap-2 mt-4 mb-1">
+          <span class="material-symbols-outlined text-[14px] text-on-surface-variant opacity-60">place</span>
+          <span class="text-label-md font-label-md text-on-surface-variant uppercase tracking-widest opacity-70">${_esc(local)}</span>
+          <div class="flex-1 h-px bg-white/5"></div>
+        </div>`
+      }
+    }
+    const statusIcon = it.ja_contado
+      ? `<span class="material-symbols-outlined text-[20px]" style="color:#10eb8a;font-variation-settings:'FILL' 1">check_circle</span>`
+      : `<span class="material-symbols-outlined text-[20px] text-on-surface-variant opacity-30">radio_button_unchecked</span>`
+
+    html += `<div class="lista-item${it.ja_contado ? ' lista-item-contado' : ''}" data-code="${_esc(it.codigo)}">
+      <div class="flex-shrink-0">${statusIcon}</div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2">
+          <span class="font-mono text-code-sm font-code-sm text-primary" style="font-family:'JetBrains Mono',monospace">${_esc(it.codigo)}</span>
+        </div>
+        <p class="text-body-sm font-body-sm text-on-background truncate leading-tight mt-0.5">${_esc(it.produto)}</p>
+      </div>
+      ${local ? '' : `<span class="lista-local-tag">Sem local</span>`}
+      <span class="material-symbols-outlined text-[16px] text-on-surface-variant opacity-30 flex-shrink-0">chevron_right</span>
+    </div>`
+  }
+
+  if (itemsEl) {
+    itemsEl.innerHTML = html
+    itemsEl.onclick = e => {
+      const item = e.target.closest('.lista-item')
+      if (!item) return
+      const code = item.dataset.code
+      if (code) { showState('scanner'); setTimeout(() => processCode(code), 80) }
+    }
+  }
+}
+
+function abrirLista() {
+  // Reseta busca ao abrir
+  const searchEl = document.getElementById('lista-search')
+  if (searchEl) { searchEl.value = ''; listaSearchQuery = '' }
+  document.getElementById('lista-search-clear')?.classList.add('hidden')
+  // Recarrega sempre para refletir contagens feitas durante a sessão
+  carregarListaOperador(true)
+}
+
+// ── Filtros da lista
+document.getElementById('lista-filtro-todos').addEventListener('click', () => {
+  listaFiltroAtivo = 'todos'; _ativarFiltrochip('lista-filtro-todos'); renderLista()
+})
+document.getElementById('lista-filtro-pendentes').addEventListener('click', () => {
+  listaFiltroAtivo = 'pendentes'; _ativarFiltrochip('lista-filtro-pendentes'); renderLista()
+})
+document.getElementById('lista-filtro-contados').addEventListener('click', () => {
+  listaFiltroAtivo = 'contados'; _ativarFiltrochip('lista-filtro-contados'); renderLista()
+})
+function _ativarFiltrochip(id) {
+  ['lista-filtro-todos','lista-filtro-pendentes','lista-filtro-contados'].forEach(cid => {
+    document.getElementById(cid)?.classList.toggle('active', cid === id)
+  })
+}
+
+// ── Busca na lista
+document.getElementById('lista-search').addEventListener('input', e => {
+  listaSearchQuery = e.target.value.trim()
+  const clearBtn = document.getElementById('lista-search-clear')
+  if (clearBtn) clearBtn.classList.toggle('hidden', !listaSearchQuery)
+  renderLista()
+})
+document.getElementById('lista-search-clear').addEventListener('click', () => {
+  const searchEl = document.getElementById('lista-search')
+  if (searchEl) { searchEl.value = ''; listaSearchQuery = '' }
+  document.getElementById('lista-search-clear')?.classList.add('hidden')
+  renderLista()
+})
+
+document.getElementById('btn-back-lista').addEventListener('click', () => showState('scanner'))
+document.getElementById('btn-lista').addEventListener('click', () => showState('lista'))
 
 // iOS/Android: visualViewport shrinks when keyboard opens — resize active keyboard-aware state
 if (window.visualViewport) {

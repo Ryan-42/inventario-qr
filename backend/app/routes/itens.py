@@ -6,7 +6,7 @@ from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
 from app.services.excel_service import importar_planilha
-from app.schemas import ItemBaseResponse, BuscaItemResponse, ItemComStatus
+from app.schemas import ItemBaseResponse, BuscaItemResponse, ItemComStatus, ItemListaOperador
 from app.services.sessao_service import montar_inventario_completo
 from app.models.sessao import StatusSessao
 
@@ -150,6 +150,16 @@ async def listar_itens_com_status(request: Request, sessao_id: str, db: Session 
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     return montar_inventario_completo(db, sessao_id)
+
+
+@router.get("/{sessao_id}/itens-operador", response_model=list[ItemListaOperador])
+@limiter.limit("60/minute")
+async def listar_itens_operador(request: Request, sessao_id: str, db: Session = Depends(get_db)):
+    """Lista itens para o operador (contagem cega): código, descrição e local — sem quantidade."""
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    return item_repo.listar_itens_para_operador(db, sessao_id)
 
 
 @router.get("/{sessao_id}/buscar/{codigo}", response_model=BuscaItemResponse)

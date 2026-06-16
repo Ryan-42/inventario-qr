@@ -75,6 +75,26 @@ def buscar_itens_por_codigos(db: Session, sessao_id: str, codigos: list[str]) ->
     ).all()
 
 
+def listar_itens_para_operador(db: Session, sessao_id: str) -> list[dict]:
+    """Retorna itens sem quantidade_base para contagem cega. Ordenado por local → código."""
+    itens = listar_itens(db, sessao_id)
+    codigos_contados = {
+        c.codigo for c in db.query(Contagem).filter(Contagem.sessao_id == sessao_id).all()
+    }
+    return sorted(
+        [
+            {
+                "codigo": item.codigo,
+                "produto": item.produto,
+                "local_fisico": item.local_fisico,
+                "ja_contado": item.codigo in codigos_contados,
+            }
+            for item in itens
+        ],
+        key=lambda i: (i["local_fisico"] or "\xff", i["codigo"]),
+    )
+
+
 # ── Contagens ─────────────────────────────────────────────────────────────────
 
 def buscar_contagem(db: Session, sessao_id: str, codigo: str) -> Optional[Contagem]:
