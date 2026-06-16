@@ -238,7 +238,7 @@ def executar_agora(
     Útil para testar o agendamento ou forçar criação manual.
     """
 
-    from app.services.scheduler import _executar_agendamento
+    from app.services.scheduler import _executar_agendamento_com_db
 
     a = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
     if not a:
@@ -248,7 +248,7 @@ def executar_agora(
 
     try:
         agora = datetime.now(timezone.utc)
-        sessao_id = _executar_agendamento(db, a, agora)
+        sessao_id = _executar_agendamento_com_db(db, a, agora)
         return {
             "mensagem": "Agendamento executado com sucesso.",
             "sessao_criada_id": sessao_id,

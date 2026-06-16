@@ -417,7 +417,7 @@ tailwind.config = {
 </div>
 
 <!-- ═══ STATE: SUCESSO ═══ -->
-<div id="state-sucesso" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center" onclick="if(autoReturnTimer){clearInterval(autoReturnTimer);autoReturnTimer=null;returnToScanner()}">
+<div id="state-sucesso" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center">
   <div class="absolute inset-0 bg-tertiary/10 backdrop-blur-[2px]"></div>
   <div class="bg-surface-container/90 backdrop-blur-md border border-tertiary/30 rounded-2xl p-lg flex flex-col items-center shadow-[0_0_40px_rgba(16,235,138,0.2)] transform scale-105 relative z-10">
     <div class="w-16 h-16 rounded-full bg-tertiary/20 flex items-center justify-center mb-4">
@@ -477,7 +477,7 @@ import { buscarSessao, buscarItem, registrarContagem, alertaSessao } from '/stat
 import { SessionWS } from '/static/js/ws.js'
 
 // ── State
-const sessaoId = location.pathname.split('/').pop()
+const sessaoId = location.pathname.split('/').filter(Boolean).pop() ?? ''
 let sessao = null
 let currentItem = null
 let currentCodigo = null
@@ -1122,6 +1122,16 @@ function startCountdown() {
 
 function returnToScanner() { currentItem=null; currentCodigo=null; currentQty=0; const obsInput=document.getElementById('observacao-input'); if(obsInput) obsInput.value=''; showState('scanner') }
 
+// Expõe funções referenciadas por onclick inline (escopo de módulo ES6 não alcança onclick)
+window.startCamera = startCamera
+window.returnToScanner = returnToScanner
+
+// Clique no overlay de sucesso cancela o countdown e volta ao scanner
+document.getElementById('state-sucesso').addEventListener('click', () => {
+  if (autoReturnTimer) { clearInterval(autoReturnTimer); autoReturnTimer = null }
+  returnToScanner()
+})
+
 function escapeHtmlLista(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
 function escapeHtmlAttr(s) { return String(s||'').replace(/"/g,'&quot;') }
 
@@ -1208,12 +1218,6 @@ function connectWS() {
       progressoAtual = { rodada_atual, faltando, total_rodada, contados_rodada, completa }
       atualizarBarraProgresso(progressoAtual)
       atualizarBotaoOffline()
-      // Invalida cache da lista; aguarda 150ms para garantir que progresso
-      // já foi atualizado antes de recarregar (evita rodada desincronizada)
-      if (ev.tipo === 'contagem_deletada') {
-        listaCarregada = false
-        setTimeout(() => { if (listaCarregada === false) carregarLista() }, 150)
-      }
       return
     }
     if (ev.tipo === 'rodada_completa') {

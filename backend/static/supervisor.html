@@ -182,7 +182,7 @@ tailwind.config = {
 <script type="module">
 import { SessionWS } from '/static/js/ws.js'
 
-const sessaoId = location.pathname.split('/').pop()
+const sessaoId = location.pathname.split('/').filter(Boolean).pop() ?? ''
 const urlToken = new URLSearchParams(location.search).get('token') || ''
 let tokenSupervisor = ''
 let itensData = []

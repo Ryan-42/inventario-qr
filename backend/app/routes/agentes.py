@@ -12,6 +12,11 @@ from app.agents.analise import AnaliseAgent
 from app.agents.alerta import AlertaAgent
 from app.agents.relatorio import RelatorioExecutivoAgent
 from app.agents.ajuste import RecomendacaoAjusteAgent
+from app.agents.preditor import PredictionAgent
+from app.agents.antifraude import AntiFraudeAgent
+from app.agents.sync_erp import SyncERPAgent
+from app.agents.sop_coach import SopCoachAgent
+from app.agents.plano_acao import PlanoAcaoAgent
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
@@ -26,6 +31,11 @@ _analise_agent = AnaliseAgent()
 _alerta_agent = AlertaAgent()
 _relatorio_agent = RelatorioExecutivoAgent()
 _ajuste_agent = RecomendacaoAjusteAgent()
+_prediction_agent = PredictionAgent()
+_antifraude_agent = AntiFraudeAgent()
+_sync_erp_agent = SyncERPAgent()
+_sop_coach_agent = SopCoachAgent()
+_plano_acao_agent = PlanoAcaoAgent()
 
 
 class ValidarItemsRequest(BaseModel):
@@ -216,3 +226,71 @@ async def recomendar_ajuste(
     except Exception as exc:
         logger.error("Falha no RecomendacaoAjusteAgent: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail="Erro interno na recomendação.") from exc
+
+
+# ---------------------------------------------------------------------------
+# Novos Agentes Integrados (SaaS / Groq)
+# ---------------------------------------------------------------------------
+
+class ERPConfigRequest(BaseModel):
+    erp_nome: str
+
+
+class SopChatRequest(BaseModel):
+    mensagens: list[dict[str, Any]]
+    contexto_extra: str | None = None
+
+
+@router.post("/predicao/{sessao_id}")
+@limiter.limit("20/minute")
+def prever_sessao(request: Request, sessao_id: str, db: Session = Depends(get_db)) -> dict:
+    """Previsão preventiva de riscos e tempo estimado para a sessão."""
+    try:
+        return _prediction_agent.prever(sessao_id, db)
+    except Exception as exc:
+        logger.error("Falha no PredictionAgent: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro interno no PredictionAgent.") from exc
+
+
+@router.post("/antifraude/{sessao_id}")
+@limiter.limit("20/minute")
+def auditar_fraude_sessao(request: Request, sessao_id: str, db: Session = Depends(get_db)) -> dict:
+    """Auditoria comportamental de operadores para detecção de fraudes."""
+    try:
+        return _antifraude_agent.auditar(sessao_id, db)
+    except Exception as exc:
+        logger.error("Falha no AntiFraudeAgent: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro interno no AntiFraudeAgent.") from exc
+
+
+@router.post("/sync-erp/{sessao_id}")
+@limiter.limit("20/minute")
+def conciliar_erp_sessao(request: Request, sessao_id: str, payload: ERPConfigRequest, db: Session = Depends(get_db)) -> dict:
+    """Traduz os ajustes de estoque confirmados em um payload pronto para conciliação no ERP."""
+    try:
+        return _sync_erp_agent.conciliar(sessao_id, payload.erp_nome, db)
+    except Exception as exc:
+        logger.error("Falha no SyncERPAgent: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro interno no SyncERPAgent.") from exc
+
+
+@router.post("/sop-coach/{sessao_id}")
+@limiter.limit("40/minute")
+def responder_operador(request: Request, sessao_id: str, payload: SopChatRequest) -> dict:
+    """Chatbot de suporte operacional para orientar operadores sobre POPs do depósito."""
+    try:
+        return _sop_coach_agent.responder(payload.mensagens, payload.contexto_extra)
+    except Exception as exc:
+        logger.error("Falha no SopCoachAgent: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro interno no SopCoachAgent.") from exc
+
+
+@router.post("/plano-acao/{sessao_id}")
+@limiter.limit("20/minute")
+def gerar_plano_acao_sessao(request: Request, sessao_id: str, db: Session = Depends(get_db)) -> dict:
+    """Gera um plano de ação estruturado 5W2H pós-inventário para melhoria contínua."""
+    try:
+        return _plano_acao_agent.gerar_plano(sessao_id, db)
+    except Exception as exc:
+        logger.error("Falha no PlanoAcaoAgent: %s", exc, exc_info=True)
+        raise HTTPException(status_code=500, detail="Erro interno no PlanoAcaoAgent.") from exc

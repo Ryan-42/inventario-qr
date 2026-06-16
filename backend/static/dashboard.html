@@ -336,6 +336,10 @@ function taxaColor(taxa) {
   return '#ffb4ab';
 }
 
+function escapeHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#x27;');
+}
+
 // ── KPIs ─────────────────────────────────────────────────────────────────────
 
 async function carregarResumo() {
@@ -444,8 +448,8 @@ async function carregarSessoesRecentes() {
     <a href="/sessao/${s.id}" class="block p-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.07] border border-white/5 transition-all group">
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
-          <p class="text-sm font-semibold text-on-surface truncate group-hover:text-primary transition-colors">${s.nome}</p>
-          <p class="text-[10px] text-on-surface-variant font-mono mt-0.5">${s.codigo}</p>
+          <p class="text-sm font-semibold text-on-surface truncate group-hover:text-primary transition-colors">${escapeHtml(s.nome)}</p>
+          <p class="text-[10px] text-on-surface-variant font-mono mt-0.5">${escapeHtml(s.codigo)}</p>
         </div>
         ${statusBadge(s.status)}
       </div>
@@ -468,7 +472,7 @@ async function carregarTopItens() {
   const empty = document.getElementById('itens-problematicos-empty');
   const tbl   = document.getElementById('tbl-itens');
 
-  if (!d.itens.length) {
+  if (!d?.itens?.length) {
     tbl.classList.add('hidden');
     empty.classList.remove('hidden');
     return;
@@ -484,8 +488,8 @@ async function carregarTopItens() {
         <div class="flex items-center gap-2">
           <span class="text-xs">${rankIcon}</span>
           <div>
-            <p class="font-mono text-xs text-primary">${it.codigo}</p>
-            <p class="text-xs text-on-surface-variant truncate max-w-[160px]">${it.produto}</p>
+            <p class="font-mono text-xs text-primary">${escapeHtml(it.codigo)}</p>
+            <p class="text-xs text-on-surface-variant truncate max-w-[160px]">${escapeHtml(it.produto)}</p>
           </div>
         </div>
       </td>
@@ -506,7 +510,7 @@ async function carregarOperadores() {
   const empty = document.getElementById('operadores-empty');
   const tbl   = document.getElementById('tbl-operadores');
 
-  if (!d.operadores.length) {
+  if (!d?.operadores?.length) {
     tbl.classList.add('hidden');
     empty.classList.remove('hidden');
     return;
@@ -526,7 +530,7 @@ async function carregarOperadores() {
           <div class="w-7 h-7 rounded-full bg-surface-variant flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
             ${(op.operador || '?').charAt(0).toUpperCase()}
           </div>
-          <span class="text-sm font-medium truncate max-w-[120px]">${op.operador || '—'}</span>
+          <span class="text-sm font-medium truncate max-w-[120px]">${escapeHtml(op.operador) || '—'}</span>
         </div>
       </td>
       <td class="text-right text-on-surface-variant text-xs">${op.total_contagens.toLocaleString('pt-BR')}</td>
@@ -552,7 +556,7 @@ async function carregarTudo() {
   icon.style.animation = 'spin 0.75s linear infinite';
 
   try {
-    await Promise.all([
+    const results = await Promise.allSettled([
       carregarResumo(),
       carregarTendencias(),
       carregarSessoesRecentes(),
@@ -561,6 +565,8 @@ async function carregarTudo() {
     ]);
     document.getElementById('loading-state').classList.add('hidden');
     ['kpi-row','charts-row','bottom-row'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+    const erros = results.filter(r => r.status === 'rejected');
+    if (erros.length) toast('Erro ao carregar ' + erros.length + ' seção(ões) do dashboard.');
   } catch (err) {
     document.getElementById('loading-state').classList.add('hidden');
     ['kpi-row','charts-row','bottom-row'].forEach(id => document.getElementById(id).classList.remove('hidden'));

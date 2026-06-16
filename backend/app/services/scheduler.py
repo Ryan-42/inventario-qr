@@ -44,10 +44,12 @@ async def _processar_agendamentos_pendentes():
 
         for agendamento in pendentes:
             try:
-                sessao_id = await asyncio.to_thread(_executar_agendamento, db, agendamento, agora)
+                # Passa apenas o ID para evitar compartilhar a Session entre threads
+                agendamento_id = agendamento.id
+                sessao_id = await asyncio.to_thread(_executar_agendamento_por_id, agendamento_id, agora)
                 logger.info(
-                    "Agendamento executado id=%s nome='%s' sessao_criada=%s",
-                    agendamento.id, agendamento.nome_template, sessao_id,
+                    "Agendamento executado id=%s sessao_criada=%s",
+                    agendamento_id, sessao_id,
                 )
             except Exception as exc:
                 logger.error("Agendamento %s falhou: %s", agendamento.id, exc, exc_info=True)
@@ -58,22 +60,14 @@ async def _processar_agendamentos_pendentes():
                     pass
 
 
-def _executar_agendamento(db, agendamento, agora: datetime) -> str | None:
-    """
-    Cria uma nova sessão baseada no template do agendamento.
-    Copia os itens da sessão de referência se configurado.
-    Atualiza próxima execução conforme a frequência.
-    """
-    from app.models.sessao import Sessao
+def _executar_agendamento_com_db(db, agendamento, agora: datetime) -> str | None:
+    """Versão síncrona para uso no route executar-agora — reutiliza a Session existente."""
     from app.repositories import sessao_repo, item_repo
-    import secrets
 
-    # Cria a nova sessão
     nome = f"{agendamento.nome_template} — {agora.strftime('%d/%m/%Y %H:%M')}"
     nova_sessao = sessao_repo.criar_sessao(db, nome)
     agendamento.ultima_sessao_criada_id = nova_sessao.id
 
-    # Copia itens da sessão template se configurado
     if agendamento.sessao_template_id:
         itens_template = item_repo.listar_itens(db, agendamento.sessao_template_id)
         if itens_template:
@@ -88,21 +82,63 @@ def _executar_agendamento(db, agendamento, agora: datetime) -> str | None:
                 for i in itens_template
             ]
             item_repo.criar_itens_bulk(db, nova_sessao.id, itens_dict)
-            logger.info(
-                "Agendamento %s: copiados %d itens da sessão template %s",
-                agendamento.id, len(itens_dict), agendamento.sessao_template_id,
-            )
 
-    # Atualiza campos do agendamento
     agendamento.ultima_execucao = agora
     agendamento.proxima_execucao = _calcular_proxima_execucao(agendamento, agora)
 
-    # Desativa agendamentos únicos após execução
     if agendamento.frequencia == "unico":
         agendamento.ativo = False
 
     db.commit()
     return nova_sessao.id
+
+
+def _executar_agendamento_por_id(agendamento_id: str, agora: datetime) -> str | None:
+    """
+    Cria uma nova sessão baseada no template do agendamento.
+    Abre sua própria Session — não recebe db como parâmetro para evitar uso
+    cross-thread de SQLAlchemy Session (não thread-safe).
+    """
+    from app.database import SessionLocal
+    from app.models.agendamento import AgendamentoSessao
+    from app.repositories import sessao_repo, item_repo
+
+    with SessionLocal() as db:
+        agendamento = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
+        if not agendamento:
+            return None
+
+        nome = f"{agendamento.nome_template} — {agora.strftime('%d/%m/%Y %H:%M')}"
+        nova_sessao = sessao_repo.criar_sessao(db, nome)
+        agendamento.ultima_sessao_criada_id = nova_sessao.id
+
+        if agendamento.sessao_template_id:
+            itens_template = item_repo.listar_itens(db, agendamento.sessao_template_id)
+            if itens_template:
+                itens_dict = [
+                    {
+                        "codigo": i.codigo,
+                        "produto": i.produto,
+                        "quantidade_base": i.quantidade_base,
+                        "local_fisico": i.local_fisico,
+                        "valor_estoque": float(i.valor_estoque) if i.valor_estoque else None,
+                    }
+                    for i in itens_template
+                ]
+                item_repo.criar_itens_bulk(db, nova_sessao.id, itens_dict)
+                logger.info(
+                    "Agendamento %s: copiados %d itens da sessão template %s",
+                    agendamento.id, len(itens_dict), agendamento.sessao_template_id,
+                )
+
+        agendamento.ultima_execucao = agora
+        agendamento.proxima_execucao = _calcular_proxima_execucao(agendamento, agora)
+
+        if agendamento.frequencia == "unico":
+            agendamento.ativo = False
+
+        db.commit()
+        return nova_sessao.id
 
 
 def _calcular_proxima_execucao(agendamento, referencia: datetime) -> datetime | None:

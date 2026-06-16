@@ -267,11 +267,12 @@ def lista_operador(sessao_id: str, token: str = "", rodada: int = 1,
 # ── Supervisor ────────────────────────────────────────────────────────────────
 
 @router.get("/{sessao_id}/token-supervisor")
-def get_token_supervisor(sessao_id: str, db: Session = Depends(get_db)):
-    """Retorna o token do supervisor (cria se não existir)."""
+def get_token_supervisor(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+    """Retorna o token do supervisor (cria se não existir). Requer token_admin."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    verificar_token_admin(sessao, token_admin)
     if not sessao.token_supervisor:
         sessao.token_supervisor = secrets.token_hex(8).upper()
         db.commit()
@@ -283,11 +284,12 @@ def get_token_supervisor(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{sessao_id}/gerar-token-supervisor")
-def gerar_token_supervisor(sessao_id: str, db: Session = Depends(get_db)):
-    """Regenera o token do supervisor (invalida o anterior)."""
+def gerar_token_supervisor(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+    """Regenera o token do supervisor (invalida o anterior). Requer token_admin."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    verificar_token_admin(sessao, token_admin)
     sessao.token_supervisor = secrets.token_hex(8).upper()
     db.commit()
     db.refresh(sessao)

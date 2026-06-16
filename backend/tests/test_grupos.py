@@ -161,7 +161,8 @@ def test_supervisor_so_ve_divergentes_ativos(client, sessao_com_itens):
     _reg(client, sid, "ABC-003", 20) # OK
 
     # Cria token supervisor
-    r_tok = client.get(f"/api/sessoes/{sid}/token-supervisor")
+    admin_tok = sessao_com_itens["token_admin"]
+    r_tok = client.get(f"/api/sessoes/{sid}/token-supervisor?token_admin={admin_tok}")
     tok = r_tok.json()["token"]
 
     r = client.get(f"/api/sessoes/{sid}/itens-supervisor?token={tok}")
@@ -183,7 +184,8 @@ def test_supervisor_token_invalido_retorna_403(client, sessao_com_itens):
 def test_supervisor_inativo_em_r1(client, sessao_com_itens):
     """Supervisor só fica ativo após conclusão da 1ª rodada."""
     sid = sessao_com_itens["id"]
-    r_tok = client.get(f"/api/sessoes/{sid}/token-supervisor")
+    admin_tok = sessao_com_itens["token_admin"]
+    r_tok = client.get(f"/api/sessoes/{sid}/token-supervisor?token_admin={admin_tok}")
     tok = r_tok.json()["token"]
     r = client.get(f"/api/sessoes/{sid}/itens-supervisor?token={tok}")
     assert r.json()["ativo"] is False

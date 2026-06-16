@@ -8,6 +8,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -57,7 +58,11 @@ def criar_filial(payload: FilialCreate, db: Session = Depends(get_db)) -> dict:
         cidade=payload.cidade,
     )
     db.add(f)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail=f"Já existe uma filial com o código '{payload.codigo}'.")
     db.refresh(f)
     logger.info("Filial criada id=%s codigo=%s", f.id, f.codigo)
     return _to_dict(f)

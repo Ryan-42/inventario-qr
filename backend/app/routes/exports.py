@@ -124,7 +124,7 @@ def exportar_relatorio_final_pdf(sessao_id: str, body: AdminBody, db: Session = 
         ve_dict = None
 
     analise_dict = _tentar_analise_ia(db, sessao)
-    historico = item_repo.listar_historico(db, sessao_id, limit=None)
+    historico = item_repo.listar_historico(db, sessao_id, limit=50_000)
 
     arquivo = gerar_relatorio_final_pdf(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict, historico=historico)
     nome = f"relatorio_final_{sessao.codigo}.pdf"
@@ -149,7 +149,7 @@ def exportar_relatorio_final_excel_endpoint(sessao_id: str, body: AdminBody, db:
         ve_dict = None
 
     analise_dict = _tentar_analise_ia(db, sessao)
-    historico = item_repo.listar_historico(db, sessao_id, limit=None)
+    historico = item_repo.listar_historico(db, sessao_id, limit=50_000)
     metricas_dict = sessao_repo.calcular_metricas_sessao(db, sessao_id)
 
     arquivo = gerar_relatorio_final_excel(sessao, stats, itens, valor_estoque=ve_dict, analise_ia=analise_dict, historico=historico, metricas=metricas_dict)

@@ -106,7 +106,8 @@ class TestTokenEntropy:
 
     def test_supervisor_token_tem_16_caracteres_hex(self, client, sessao):
         sid = sessao["id"]
-        r = client.get(f"/api/sessoes/{sid}/token-supervisor")
+        tok_admin = sessao["token_admin"]
+        r = client.get(f"/api/sessoes/{sid}/token-supervisor?token_admin={tok_admin}")
         assert r.status_code == 200
         sup_token = r.json()["token"]
         assert len(sup_token) >= 16, f"Token supervisor curto demais: {sup_token!r}"
