@@ -1,22 +1,25 @@
-"""
-PlanoAcaoAgent — Agente de melhoria contínua e planos de ação.
-Gera planos estruturados 5W2H para correção de processos logísticos baseados em divergências.
+"""PlanoAcaoAgent — geração de planos de ação 5W2H para melhoria contínua.
+
+Gera planos estruturados baseados em divergências e métricas de produtividade
+para que a gestão possa agir de forma sistemática após cada inventário.
 """
 from __future__ import annotations
 
+import json
 import logging
-from sqlalchemy.orm import Session
-from app.models.sessao import Sessao
-from app.repositories import sessao_repo
-from app.services.sessao_service import montar_divergencias
-from app.agents.provider import provider
 
 logger = logging.getLogger(__name__)
+
 
 class PlanoAcaoAgent:
     """Gera um plano de ação estratégico 5W2H pós-inventário para corrigir gargalos no armazém."""
 
-    def gerar_plano(self, sessao_id: str, db: Session) -> dict:
+    def gerar_plano(self, sessao_id: str, db) -> dict:
+        from app.models.sessao import Sessao
+        from app.repositories import sessao_repo
+        from app.services.sessao_service import montar_divergencias
+        from app.agents.provider import provider
+
         sessao = db.query(Sessao).filter(Sessao.id == sessao_id).first()
         if not sessao:
             return {"erro": "Sessão não encontrada"}
@@ -26,12 +29,10 @@ class PlanoAcaoAgent:
         divergencias = montar_divergencias(db, sessao_id)
         metricas = sessao_repo.calcular_metricas_sessao(db, sessao_id)
 
-        # Montar resumo das principais perdas e setores
         top_perdas = valor_estoque.get("maiores_perdas", [])[:3]
         total_divergencias = len(divergencias)
         perda_financeira = valor_estoque.get("diferenca", 0.0)
 
-        # 1. Fallback / Plano determinístico local
         plano_local = [
             {
                 "o_que": "Auditoria de divergências críticas de alto valor",
@@ -40,7 +41,7 @@ class PlanoAcaoAgent:
                 "quem": "Supervisor de Inventário + Auditores Externos",
                 "quando": "Imediatamente (nas próximas 48 horas)",
                 "como": "Realizar contagem cega testemunhada dos itens com desvio absoluto superior a R$ 5.000.",
-                "quanto": "Custo operacional interno existente (R$ 0,00)"
+                "quanto": "Custo operacional interno existente (R$ 0,00)",
             },
             {
                 "o_que": "Revisão física das prateleiras de maior divergência",
@@ -49,8 +50,8 @@ class PlanoAcaoAgent:
                 "quem": "Operador Líder do Turno",
                 "quando": "Próximos 7 dias",
                 "como": "Validar se os produtos estão alocados nas prateleiras descritas na planilha ou se há trocas de local.",
-                "quanto": "R$ 0,00"
-            }
+                "quanto": "R$ 0,00",
+            },
         ]
 
         if total_divergencias > 5:
@@ -61,7 +62,7 @@ class PlanoAcaoAgent:
                 "quem": "Líder de TI / Equipe de Qualidade",
                 "quando": "Próximo mês",
                 "como": "Treinar operadores sobre o uso adequado da câmera do celular, estabilidade física e verificação de quantidade.",
-                "quanto": "Custo de 2 horas de treinamento interno"
+                "quanto": "Custo de 2 horas de treinamento interno",
             })
 
         resultado_basico = {
@@ -70,14 +71,16 @@ class PlanoAcaoAgent:
             "resumo_problemas": {
                 "total_divergencias": total_divergencias,
                 "impacto_financeiro": perda_financeira,
-                "taxa_retrabalho_pct": metricas.get("taxa_retrabalho_pct", 0.0)
+                "taxa_retrabalho_pct": metricas.get("taxa_retrabalho_pct", 0.0),
             },
             "plano_5w2h": plano_local,
-            "conclusao_gestao": "Recomenda-se a imediata homologação deste plano junto aos líderes logísticos para evitar perdas fiscais recorrentes.",
-            "fonte": "basico"
+            "conclusao_gestao": (
+                "Recomenda-se a imediata homologação deste plano junto aos líderes logísticos "
+                "para evitar perdas fiscais recorrentes."
+            ),
+            "fonte": "basico",
         }
 
-        # 2. Chamar Groq/Llama se disponível
         if not provider.disponivel:
             resultado_basico["mensagem_ia"] = "IA indisponível. Usando plano de ação padrão estruturado localmente."
             return resultado_basico
@@ -89,8 +92,8 @@ MÉTRICAS DO INVENTÁRIO:
 - Código: {sessao.codigo}
 - Total de Divergências: {total_divergencias}
 - Impacto Financeiro Total: R$ {perda_financeira:,.2f}
-- Taxa de Retrabalho: {metricas.get('taxa_retrabalho_pct', 0.0)}%
-- Maiores Perdas: {top_perdas}
+- Taxa de Retrabalho: {metricas.get('taxa_retrabalho_pct', 0.0):.1f}%
+- Maiores Perdas: {json.dumps(top_perdas, ensure_ascii=False)}
 
 Gere o plano de melhoria contínua e responda EXCLUSIVAMENTE em JSON válido com o seguinte formato:
 {{
@@ -113,7 +116,7 @@ Gere o plano de melhoria contínua e responda EXCLUSIVAMENTE em JSON válido com
             resultado_basico.update({
                 "plano_5w2h": ia_data.get("plano_5w2h", plano_local),
                 "conclusao_gestao": ia_data.get("conclusao_gestao"),
-                "fonte": "ia"
+                "fonte": "ia",
             })
 
         return resultado_basico

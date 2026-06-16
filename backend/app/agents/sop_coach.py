@@ -1,24 +1,15 @@
-"""
-SopCoachAgent — Agente de suporte operacional conversacional ao operador.
-Guia operadores em campo sobre Procedimentos Operacionais Padrão (POPs) e regras de contagem.
+"""SopCoachAgent — suporte operacional conversacional ao operador em campo.
+
+Guia operadores sobre Procedimentos Operacionais Padrão (POPs) e regras de contagem.
+Funciona com fallback determinístico quando a IA não está disponível.
 """
 from __future__ import annotations
 
 import logging
-from app.agents.provider import provider
 
 logger = logging.getLogger(__name__)
 
-class SopCoachAgent:
-    """Responde dúvidas de contagem dos operadores em tempo real com base nas regras do negócio."""
-
-    def responder(self, mensagens: list[dict], contexto_extra: str | None = None) -> dict:
-        """
-        mensagens: lista de dicts com 'role' e 'content'
-        contexto_extra: informações sobre o item atual ou status do scanner
-        """
-        # Sistema de prompts com as Regras de Negócio do INVIQ
-        prompt_sistema = """Você é o Assistente do INVIQ, um robô de suporte operacional no depósito de inventário físico.
+_SYSTEM_PROMPT = """Você é o Assistente do INVIQ, um robô de suporte operacional no depósito de inventário físico.
 Seu objetivo é ajudar operadores e supervisores a executarem suas contagens corretamente e resolverem problemas operacionais em tempo real.
 
 REGRAS DE OPERAÇÃO DO INVIQ:
@@ -38,51 +29,57 @@ REGRAS DE OPERAÇÃO DO INVIQ:
 
 Responda de forma curta, objetiva e muito amigável para operadores que estão em pé no depósito trabalhando com o celular."""
 
-        messages_payload = [{"role": "system", "content": prompt_sistema}]
-        if contexto_extra:
-            messages_payload.append({"role": "system", "content": f"Contexto atual do scanner: {contexto_extra}"})
 
-        # Adiciona histórico do usuário
-        messages_payload.extend(mensagens)
+class SopCoachAgent:
+    """Responde dúvidas de contagem dos operadores em tempo real com base nas regras do negócio."""
 
-        # Fallback local determinístico se IA não estiver disponível
-        resposta_fallback = (
-            "Desculpe, o suporte inteligente por IA está offline no momento. "
-            "Por favor, procure seu supervisor de campo ou verifique se o QR code/código está legível."
-        )
+    def responder(self, mensagens: list[dict], contexto_extra: str | None = None) -> dict:
+        """
+        mensagens: lista de dicts com 'role' e 'content'
+        contexto_extra: informações sobre o item atual ou status do scanner
+        """
+        from app.agents.provider import provider
 
         ultima_msg = mensagens[-1]["content"].lower() if mensagens else ""
-        if "offline" in ultima_msg or "internet" in ultima_msg:
-            resposta_fallback = (
-                "Se o sinal cair, continue contando normalmente! O INVIQ salva tudo no celular e sincroniza "
-                "sozinho assim que a conexão retornar. Só não feche a aba do navegador."
-            )
-        elif "danificado" in ultima_msg or "rasgado" in ultima_msg or "qr" in ultima_msg or "ler" in ultima_msg:
-            resposta_fallback = (
-                "Se a etiqueta estiver rasgada, mude para a busca manual e digite o código SKU ou nome do produto. "
-                "Se não der certo, chame o supervisor para colar uma nova etiqueta QR."
-            )
-        elif "supervisor" in ultima_msg:
-            resposta_fallback = (
-                "Para itens de alto valor ou divergências extremas (acima de 100%), o supervisor deve "
-                "testemunhar a contagem. O token de supervisor permite que ele valide a área diretamente no painel."
-            )
+        resposta_fallback = self._fallback(ultima_msg)
 
         resultado = {
             "resposta": resposta_fallback,
             "contexto_verificado": True,
-            "fonte": "basico"
+            "fonte": "basico",
         }
 
         if not provider.disponivel:
             return resultado
 
-        # Executa chat completion via Groq
+        messages_payload: list[dict] = [{"role": "system", "content": _SYSTEM_PROMPT}]
+        if contexto_extra:
+            messages_payload.append({"role": "system", "content": f"Contexto atual do scanner: {contexto_extra}"})
+        messages_payload.extend(mensagens)
+
         ia_resposta = provider.completar_chat(messages_payload, max_tokens=300)
         if ia_resposta:
-            resultado.update({
-                "resposta": ia_resposta,
-                "fonte": "ia"
-            })
+            resultado.update({"resposta": ia_resposta, "fonte": "ia"})
 
         return resultado
+
+    def _fallback(self, ultima_msg: str) -> str:
+        if "offline" in ultima_msg or "internet" in ultima_msg:
+            return (
+                "Se o sinal cair, continue contando normalmente! O INVIQ salva tudo no celular e sincroniza "
+                "sozinho assim que a conexão retornar. Só não feche a aba do navegador."
+            )
+        if any(p in ultima_msg for p in ("danificado", "rasgado", "qr", "ler")):
+            return (
+                "Se a etiqueta estiver rasgada, mude para a busca manual e digite o código SKU ou nome do produto. "
+                "Se não der certo, chame o supervisor para colar uma nova etiqueta QR."
+            )
+        if "supervisor" in ultima_msg:
+            return (
+                "Para itens de alto valor ou divergências extremas (acima de 100%), o supervisor deve "
+                "testemunhar a contagem. O token de supervisor permite que ele valide a área diretamente no painel."
+            )
+        return (
+            "Desculpe, o suporte inteligente por IA está offline no momento. "
+            "Por favor, procure seu supervisor de campo ou verifique se o QR code/código está legível."
+        )
