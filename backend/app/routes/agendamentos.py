@@ -3,6 +3,7 @@ CRUD de agendamentos — criação automática de sessões de inventário.
 """
 from __future__ import annotations
 
+import hmac
 import logging
 from datetime import datetime, timezone
 from typing import Literal
@@ -68,8 +69,8 @@ class AgendamentoUpdate(BaseModel):
     ativo: bool | None = None
 
 
-def _to_dict(a) -> dict:
-    return {
+def _to_dict(a, include_token: bool = False) -> dict:
+    d = {
         "id": a.id,
         "nome_template": a.nome_template,
         "descricao": a.descricao,
@@ -83,8 +84,10 @@ def _to_dict(a) -> dict:
         "ultima_execucao": a.ultima_execucao.isoformat() if a.ultima_execucao else None,
         "ultima_sessao_criada_id": a.ultima_sessao_criada_id,
         "criado_em": a.criado_em.isoformat() if a.criado_em else None,
-        "token_admin": a.token_admin,
     }
+    if include_token:
+        d["token_admin"] = a.token_admin
+    return d
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -146,7 +149,7 @@ def criar_agendamento(payload: AgendamentoCreate, db: Session = Depends(get_db))
     db.refresh(agendamento)
 
     logger.info("Agendamento criado id=%s freq=%s proxima=%s", agendamento.id, payload.frequencia, proxima)
-    return _to_dict(agendamento)
+    return _to_dict(agendamento, include_token=True)
 
 
 @router.get("/")
@@ -179,8 +182,6 @@ def atualizar_agendamento(
     db: Session = Depends(get_db),
 ) -> dict:
     """Atualiza campos do agendamento. Requer token_admin do agendamento."""
-
-    import hmac
 
     a = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
     if not a:
@@ -216,8 +217,6 @@ def deletar_agendamento(
 ):
     """Remove permanentemente um agendamento. Requer token_admin do agendamento."""
 
-    import hmac
-
     a = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
@@ -240,7 +239,6 @@ def executar_agora(
     """
 
     from app.services.scheduler import _executar_agendamento
-    import hmac
 
     a = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
     if not a:

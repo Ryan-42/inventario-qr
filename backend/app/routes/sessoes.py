@@ -191,8 +191,10 @@ async def concluir_sessao(sessao_id: str, token_admin: str,
             )
     except Exception as _exc:
         logger.warning("Email notification failed (non-fatal): %s", _exc)
-    # Retorna dict com stats reais em vez do ORM sem os campos calculados
-    return sessao_repo.buscar_sessao_com_stats(db, sessao_id) or concluido
+    stats = sessao_repo.buscar_sessao_com_stats(db, sessao_id)
+    if stats is None:
+        raise HTTPException(status_code=500, detail="Erro interno ao buscar sessão concluída.")
+    return stats
 
 
 @router.patch("/{sessao_id}/cancelar", response_model=SessaoResponse)
@@ -214,7 +216,10 @@ async def cancelar_sessao(sessao_id: str, token_admin: str,
         "tipo": "sessao_status_alterado", "status": "cancelada",
         "mensagem": "O inventário foi cancelado pelo administrador.",
     })
-    return sessao_repo.buscar_sessao_com_stats(db, sessao_id) or cancelado
+    stats = sessao_repo.buscar_sessao_com_stats(db, sessao_id)
+    if stats is None:
+        raise HTTPException(status_code=500, detail="Erro interno ao buscar sessão cancelada.")
+    return stats
 
 
 @router.delete("/{sessao_id}", status_code=204)
@@ -500,7 +505,9 @@ def aprovar_segunda_vez(
     if ok_val == 2:
         raise HTTPException(status_code=409, detail="Esta sessão foi rejeitada. Não pode ser aprovada.")
 
-    token_esperado = getattr(sessao, "token_segunda_aprovacao", None) or ""
+    token_esperado = getattr(sessao, "token_segunda_aprovacao", None)
+    if not token_esperado:
+        raise HTTPException(status_code=409, detail="Sessão sem token de segunda aprovação configurado.")
     if not hmac.compare_digest(token_esperado, token_segunda_aprovacao or ""):
         raise HTTPException(status_code=403, detail="Token de segunda aprovação inválido.")
 
@@ -544,7 +551,9 @@ def rejeitar_segunda_vez(
     if ok_val == 2:
         raise HTTPException(status_code=409, detail="Esta sessão já foi rejeitada.")
 
-    token_esperado = getattr(sessao, "token_segunda_aprovacao", None) or ""
+    token_esperado = getattr(sessao, "token_segunda_aprovacao", None)
+    if not token_esperado:
+        raise HTTPException(status_code=409, detail="Sessão sem token de segunda aprovação configurado.")
     if not hmac.compare_digest(token_esperado, token_segunda_aprovacao or ""):
         raise HTTPException(status_code=403, detail="Token de segunda aprovação inválido.")
 

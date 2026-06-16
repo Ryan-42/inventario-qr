@@ -433,7 +433,7 @@ async function carregarTendencias() {
 async function carregarSessoesRecentes() {
   const d = await api('/dashboard/sessoes-recentes?limite=6');
   const el = document.getElementById('sessoes-recentes-list');
-  if (!d.sessoes.length) {
+  if (!d?.sessoes?.length) {
     el.innerHTML = '<p class="text-center text-on-surface-variant text-sm py-8">Nenhuma sessão criada.</p>';
     return;
   }

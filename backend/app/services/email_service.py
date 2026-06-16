@@ -37,6 +37,18 @@ _NOTIF_EMAIL  = [e.strip() for e in os.getenv("NOTIF_EMAIL", "").split(",") if e
 _DIV_THRESH   = float(os.getenv("NOTIF_DIVERGENCIA_THRESHOLD", "10"))
 
 
+def _he(s: object) -> str:
+    """Escapa caracteres HTML em strings controladas pelo usuário."""
+    return (
+        str(s)
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace('"', "&quot;")
+        .replace("'", "&#x27;")
+    )
+
+
 def configurado() -> bool:
     return bool(_SMTP_HOST and _SMTP_USER and _SMTP_PASS and _NOTIF_EMAIL)
 
@@ -156,14 +168,14 @@ def notificar_sessao_concluida(
     )
 
     ops_html = (
-        "<p>Operadores: <strong>" + ", ".join(operadores) + "</strong></p>"
+        "<p>Operadores: <strong>" + ", ".join(_he(o) for o in operadores) + "</strong></p>"
         if operadores else ""
     )
 
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
 
     conteudo = f"""
-    <p>O inventário <strong>{sessao_nome}</strong> (<code>{sessao_codigo}</code>) foi concluído.</p>
+    <p>O inventário <strong>{_he(sessao_nome)}</strong> (<code>{_he(sessao_codigo)}</code>) foi concluído.</p>
     <div class="stat"><div class="label">Taxa de Acerto</div><div class="value">{taxa_acerto:.1f}% {badge_taxa}</div></div>
     <table>
       <tr><th>Itens na base</th><th>Divergências</th><th>Conformes</th></tr>
@@ -176,7 +188,7 @@ def notificar_sessao_concluida(
     {ops_html}
     <a class="btn" href="{base_url}/sessao/{sessao_id}">Ver Relatório Completo</a>
     """
-    html = _base_html(f"Inventário Concluído — {sessao_nome}", conteudo)
+    html = _base_html(f"Inventário Concluído — {_he(sessao_nome)}", conteudo)
     _enviar_async(f"[INVIQ] Inventário concluído: {sessao_nome}", html, dests)
 
 
@@ -197,16 +209,16 @@ def notificar_alta_divergencia(
 
     top_itens = itens_divergentes[:5]
     linhas_html = "".join(
-        f"<tr><td><code>{it.get('codigo','')}</code></td>"
-        f"<td>{it.get('produto','')}</td>"
-        f"<td>{it.get('quantidade_base','')}</td>"
-        f"<td><strong style='color:#991b1b'>{it.get('quantidade_encontrada','')}</strong></td></tr>"
+        f"<tr><td><code>{_he(it.get('codigo',''))}</code></td>"
+        f"<td>{_he(it.get('produto',''))}</td>"
+        f"<td>{_he(it.get('quantidade_base',''))}</td>"
+        f"<td><strong style='color:#991b1b'>{_he(it.get('quantidade_encontrada',''))}</strong></td></tr>"
         for it in top_itens
     )
 
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
     conteudo = f"""
-    <p>O inventário <strong>{sessao_nome}</strong> (<code>{sessao_codigo}</code>)
+    <p>O inventário <strong>{_he(sessao_nome)}</strong> (<code>{_he(sessao_codigo)}</code>)
     atingiu uma taxa de divergência de <strong style="color:#991b1b">{taxa_divergencia:.1f}%</strong>,
     acima do limite configurado de {_DIV_THRESH:.0f}%.</p>
     <div class="stat" style="border-color:#ef4444;background:#fef2f2">
@@ -220,7 +232,7 @@ def notificar_alta_divergencia(
     </table>
     <a class="btn" style="background:#991b1b" href="{base_url}/sessao/{sessao_id}">Revisar Inventário</a>
     """
-    html = _base_html(f"Alerta de Divergência — {sessao_nome}", conteudo)
+    html = _base_html(f"Alerta de Divergência — {_he(sessao_nome)}", conteudo)
     _enviar_async(
         f"[INVIQ] ALERTA: Divergência alta em {sessao_nome} ({taxa_divergencia:.1f}%)",
         html, dests,
@@ -238,15 +250,15 @@ def notificar_agendamento_falhou(
         return
 
     conteudo = f"""
-    <p>O agendamento <strong>{agendamento_nome}</strong> falhou durante a execução automática.</p>
+    <p>O agendamento <strong>{_he(agendamento_nome)}</strong> falhou durante a execução automática.</p>
     <div class="stat" style="border-color:#ef4444;background:#fef2f2">
       <div class="label">Erro</div>
-      <div class="value" style="font-size:14px;color:#991b1b">{erro}</div>
+      <div class="value" style="font-size:14px;color:#991b1b">{_he(erro)}</div>
     </div>
     <p>Verifique os logs do servidor e, se necessário, execute o agendamento manualmente
     pela interface de administração.</p>
     """
-    html = _base_html(f"Falha no Agendamento — {agendamento_nome}", conteudo)
+    html = _base_html(f"Falha no Agendamento — {_he(agendamento_nome)}", conteudo)
     _enviar_async(f"[INVIQ] Falha no agendamento: {agendamento_nome}", html, dests)
 
 
@@ -263,12 +275,12 @@ def notificar_segunda_aprovacao_pendente(
 
     base_url = os.getenv("APP_BASE_URL", "http://localhost:8000")
     conteudo = f"""
-    <p>O inventário <strong>{sessao_nome}</strong> foi concluído por <strong>{aprovador_primario}</strong>
+    <p>O inventário <strong>{_he(sessao_nome)}</strong> foi concluído por <strong>{_he(aprovador_primario)}</strong>
     e aguarda a <strong>segunda aprovação</strong> antes do envio ao ERP.</p>
     <p>Acesse o painel de supervisão para revisar os dados e confirmar o ajuste de estoque.</p>
     <a class="btn" href="{base_url}/sessao/{sessao_id}">Revisar e Aprovar</a>
     """
-    html = _base_html(f"Segunda Aprovação Pendente — {sessao_nome}", conteudo)
+    html = _base_html(f"Segunda Aprovação Pendente — {_he(sessao_nome)}", conteudo)
     _enviar_async(f"[INVIQ] Aprovação pendente: {sessao_nome}", html, dests)
 
 

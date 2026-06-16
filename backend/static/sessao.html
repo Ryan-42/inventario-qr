@@ -615,7 +615,7 @@ import {
 import { SessionWS } from '/static/js/ws.js'
 
 // ── State
-const sessaoId = location.pathname.split('/').pop()
+const sessaoId = location.pathname.split('/').filter(Boolean).pop() ?? ''
 let sessao = null, stats = null, itens = [], contagens = []
 let liveEvents = []
 let ws = null
@@ -991,7 +991,7 @@ function handleWsEvent(ev) {
         btnQr.style.display = ''
         btnQr.onclick = async () => {
           openModal('modal-qr')
-          await carregarQR(2)
+          await carregarQR(rodada + 1)
         }
       } else {
         // Recontagem finalizada sem divergências restantes
@@ -1304,6 +1304,7 @@ async function _fetchItens() {
     </div>`
   }
 }
+window._fetchItens = _fetchItens
 
 function setupLazyItens() {
   const sentinel=document.getElementById('itens-sentinel'), loadingText=document.getElementById('itens-loading-text')
@@ -1356,7 +1357,7 @@ function renderValorEstoque() {
   const sinal = diferenca >= 0 ? '+' : ''
   varEl.textContent = `${sinal}${fmt(diferenca)}`
   varEl.style.color = diferenca < 0 ? '#ffb4ab' : diferenca > 0 ? '#10eb8a' : '#bcc8d1'
-  varPct.textContent = `${sinal}${percentual_variacao.toFixed(2)}% do estoque`
+  varPct.textContent = `${sinal}${(percentual_variacao ?? 0).toFixed(2)}% do estoque`
 
   // badge
   const badge = document.getElementById('fin-status-badge')
@@ -1434,7 +1435,7 @@ async function carregarQR(rodada) {
     document.getElementById('qr-token-display').textContent = token
     document.getElementById('qr-rodada-badge').textContent = `${rod}ª Rodada`
 
-    const fullUrl = `${window.location.origin}${data.mobile_url}`
+    const fullUrl = data.mobile_url ? `${window.location.origin}${data.mobile_url}` : ''
     document.getElementById('qr-link-text').textContent = fullUrl
 
     // Gera QR code como PNG pelo backend com URL absoluta (inclui domínio/IP)
