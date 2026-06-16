@@ -17,9 +17,8 @@ def _make_xlsx(rows: list[list]) -> bytes:
 
 
 def _upload(client, sessao, xlsx, filename="itens.xlsx"):
-    tok = sessao["token_admin"]
     return client.post(
-        f"/api/sessoes/{sessao['id']}/upload?token_admin={tok}",
+        f"/api/sessoes/{sessao['id']}/upload",
         files={"file": (filename, xlsx,
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
     )
@@ -35,16 +34,15 @@ def test_upload_planilha_sucesso(client, sessao):
 def test_upload_planilha_sessao_inexistente(client):
     xlsx = _make_xlsx([["P001", "X", 1]])
     r = client.post(
-        "/api/sessoes/nao-existe/upload?token_admin=X",
+        "/api/sessoes/nao-existe/upload",
         files={"file": ("itens.xlsx", xlsx, "application/vnd.ms-excel")},
     )
     assert r.status_code == 404
 
 
 def test_upload_extensao_invalida(client, sessao):
-    tok = sessao["token_admin"]
     r = client.post(
-        f"/api/sessoes/{sessao['id']}/upload?token_admin={tok}",
+        f"/api/sessoes/{sessao['id']}/upload",
         files={"file": ("itens.txt", b"dados", "text/plain")},
     )
     assert r.status_code == 400
@@ -71,13 +69,14 @@ def test_upload_colunas_faltando(client, sessao):
     assert r.status_code in (201, 422)
 
 
-def test_upload_token_invalido_retorna_403(client, sessao):
+def test_upload_sem_jwt_retorna_401(client, sessao):
     xlsx = _make_xlsx([["P001", "Produto", 10]])
     r = client.post(
-        f"/api/sessoes/{sessao['id']}/upload?token_admin=ERRADO",
+        f"/api/sessoes/{sessao['id']}/upload",
         files={"file": ("itens.xlsx", xlsx, "application/vnd.ms-excel")},
+        headers={"Authorization": "Bearer invalido"},
     )
-    assert r.status_code == 403
+    assert r.status_code == 401
 
 
 def test_buscar_item_existente(client, sessao_com_itens):
@@ -134,13 +133,12 @@ def test_upload_bloqueado_sessao_concluida(client, sessao_com_itens):
     for codigo, qtd in [("ABC-001", 10), ("ABC-002", 5), ("ABC-003", 20)]:
         client.post(f"/api/sessoes/{sid}/contagens",
                     json={"codigo": codigo, "quantidade_encontrada": qtd})
-    tok = sessao_com_itens["token_admin"]
-    r_concluir = client.patch(f"/api/sessoes/{sid}/concluir?token_admin={tok}")
+    r_concluir = client.patch(f"/api/sessoes/{sid}/concluir")
     assert r_concluir.status_code == 200, f"Falha ao concluir: {r_concluir.text}"
 
     xlsx = _make_xlsx([["P001", "Produto", 10]])
     r = client.post(
-        f"/api/sessoes/{sid}/upload?token_admin={tok}",
+        f"/api/sessoes/{sid}/upload",
         files={"file": ("itens.xlsx", xlsx, "application/vnd.ms-excel")},
     )
     assert r.status_code == 409
@@ -149,12 +147,11 @@ def test_upload_bloqueado_sessao_concluida(client, sessao_com_itens):
 
 def test_upload_bloqueado_apos_contagens(client, sessao_com_itens):
     sid = sessao_com_itens["id"]
-    tok = sessao_com_itens["token_admin"]
     client.post(f"/api/sessoes/{sid}/contagens",
                 json={"codigo": "ABC-001", "quantidade_encontrada": 10})
     xlsx = _make_xlsx([["P001", "Novo Produto", 10]])
     r = client.post(
-        f"/api/sessoes/{sid}/upload?token_admin={tok}",
+        f"/api/sessoes/{sid}/upload",
         files={"file": ("itens.xlsx", xlsx, "application/vnd.ms-excel")},
     )
     assert r.status_code == 409

@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from sqlalchemy.orm import Session
 
-from app.auth import verificar_token_admin
+from app.auth import verificar_token_admin, get_admin_logado
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo, grupo_repo
@@ -101,14 +101,13 @@ async def validar_planilha(
 async def upload_planilha(
     request: Request,
     sessao_id: str,
-    token_admin: str,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    _admin=Depends(get_admin_logado),
 ):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
 
     if sessao.status != StatusSessao.ativa:
         raise HTTPException(

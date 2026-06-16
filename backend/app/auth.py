@@ -1,17 +1,90 @@
-"""Utilitários de autenticação com proteção contra brute-force."""
+"""Utilitários de autenticação: JWT admin + token_admin por sessão + brute-force."""
 from __future__ import annotations
 
 import hmac
 import logging
+import os
 import threading
 import time
+import uuid
 from collections import defaultdict
+from datetime import datetime, timedelta
 
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
+from app.database import get_db
 from app.models.sessao import Sessao
 
 logger = logging.getLogger(__name__)
+
+# ── JWT ───────────────────────────────────────────────────────────────────────
+
+_SECRET_KEY = os.getenv("SECRET_KEY", "inviq-local-dev-inseguro")
+_ALGORITHM  = "HS256"
+_TOKEN_HORAS = int(os.getenv("TOKEN_EXPIRE_HORAS", "8"))
+
+_pwd_ctx = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
+_oauth2  = OAuth2PasswordBearer(tokenUrl="/auth/token", auto_error=False)
+
+
+def hash_senha(senha: str) -> str:
+    return _pwd_ctx.hash(senha)
+
+
+def verificar_senha(senha: str, hash_: str) -> bool:
+    return _pwd_ctx.verify(senha, hash_)
+
+
+def criar_token(dados: dict, horas: int = _TOKEN_HORAS) -> str:
+    payload = dados.copy()
+    payload.update({
+        "exp": datetime.utcnow() + timedelta(hours=horas),
+        "jti": str(uuid.uuid4()),
+    })
+    return jwt.encode(payload, _SECRET_KEY, algorithm=_ALGORITHM)
+
+
+def get_admin_logado(
+    request: Request,
+    token: str | None = Depends(_oauth2),
+    db: Session = Depends(get_db),
+):
+    """Dependência FastAPI — retorna o Admin autenticado ou levanta 401."""
+    from app.models.admin import Admin
+    from app.services.token_blacklist import is_revoked
+
+    credentials_exc = HTTPException(
+        status_code=401,
+        detail="Não autenticado. Faça login em /login.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    # Aceita token via header Authorization OU cookie "token"
+    if not token:
+        token = request.cookies.get("token")
+    if not token:
+        raise credentials_exc
+
+    try:
+        payload = jwt.decode(token, _SECRET_KEY, algorithms=[_ALGORITHM])
+        jti: str | None = payload.get("jti")
+        sub: str | None = payload.get("sub")
+        if not sub or not jti:
+            raise credentials_exc
+    except JWTError:
+        raise credentials_exc
+
+    if is_revoked(jti):
+        raise credentials_exc
+
+    admin = db.query(Admin).filter(Admin.email == sub).first()
+    if not admin:
+        raise credentials_exc
+    return admin
 
 # ── Brute-force protection ────────────────────────────────────────────────────
 # Rastreia tentativas falhas por IP em memória (TTL de 15 minutos).

@@ -97,10 +97,11 @@ def test_auditoria_filtro_por_operador(client):
     assert data["registros"][0]["operador"] == "Alice"
 
 
-def test_auditoria_token_invalido_retorna_403(client):
+def test_auditoria_sem_jwt_retorna_401(client):
     sid, tok = _sessao_cheia(client)
-    r = client.get(f"/api/sessoes/{sid}/auditoria?token_admin=ERRADO")
-    assert r.status_code == 403
+    r = client.get(f"/api/sessoes/{sid}/auditoria",
+                   headers={"Authorization": "Bearer invalido"})
+    assert r.status_code == 401
 
 
 def test_auditoria_sessao_inexistente(client):
@@ -159,10 +160,11 @@ def test_relatorio_operadores_calcula_taxa_divergencia(client):
     assert alice["taxa_divergencia_pct"] > 0
 
 
-def test_relatorio_operadores_token_invalido(client):
+def test_relatorio_operadores_sem_jwt_retorna_401(client):
     sid, tok = _sessao_cheia(client)
-    r = client.get(f"/api/sessoes/{sid}/relatorio-operadores?token_admin=ERRADO")
-    assert r.status_code == 403
+    r = client.get(f"/api/sessoes/{sid}/relatorio-operadores",
+                   headers={"Authorization": "Bearer invalido"})
+    assert r.status_code == 401
 
 
 def test_relatorio_operadores_sessao_inexistente(client):
@@ -225,8 +227,9 @@ def test_comparar_sessoes_ref_nao_encontrada(client):
     assert r.status_code == 404
 
 
-def test_comparar_sessoes_token_invalido(client):
+def test_comparar_sessoes_sem_jwt_retorna_401(client):
     sid1, tok1 = _sessao_cheia(client)
     sid2, tok2 = _sessao_cheia(client)
-    r = client.get(f"/api/sessoes/{sid1}/comparar/{sid2}?token_admin=ERRADO")
-    assert r.status_code == 403
+    r = client.get(f"/api/sessoes/{sid1}/comparar/{sid2}",
+                   headers={"Authorization": "Bearer invalido"})
+    assert r.status_code == 401

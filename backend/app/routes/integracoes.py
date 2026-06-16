@@ -9,13 +9,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import verificar_token_admin
+from app.auth import get_admin_logado
 from app.database import get_db
 from app.repositories import sessao_repo
 from app.services.sessao_service import montar_divergencias, montar_inventario_completo
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/integracoes", tags=["Integrações ERP"])
+router = APIRouter(prefix="/integracoes", tags=["Integrações ERP"],
+                   dependencies=[Depends(get_admin_logado)])
 
 
 # ── TOTVS ─────────────────────────────────────────────────────────────────────
@@ -41,7 +42,6 @@ def status_totvs() -> dict:
 @router.post("/totvs/sessao/{sessao_id}/enviar-ajuste")
 def enviar_ajuste_totvs(
     sessao_id: str,
-    token_admin: str = Query(...),
     apenas_divergentes: bool = Query(default=True, description="true = envia só os divergentes; false = envia todos os itens"),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -60,7 +60,6 @@ def enviar_ajuste_totvs(
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
 
     status_str = str(sessao.status.value if hasattr(sessao.status, "value") else sessao.status)
     if status_str not in ("concluida", "ativa"):
@@ -122,7 +121,6 @@ def enviar_ajuste_totvs(
 @router.get("/totvs/ajuste/{protocolo}/status")
 def consultar_ajuste_totvs(
     protocolo: str,
-    token_admin: str = Query(...),
     sessao_id: str = Query(...),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -130,7 +128,6 @@ def consultar_ajuste_totvs(
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
 
     from app.integrations.totvs import consultar_status_ajuste
     return consultar_status_ajuste(protocolo)
@@ -139,7 +136,6 @@ def consultar_ajuste_totvs(
 @router.get("/totvs/sessao/{sessao_id}/preview-payload")
 def preview_payload_totvs(
     sessao_id: str,
-    token_admin: str = Query(...),
     apenas_divergentes: bool = Query(default=True),
     db: Session = Depends(get_db),
 ) -> dict:
@@ -150,7 +146,6 @@ def preview_payload_totvs(
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
 
     itens = montar_divergencias(db, sessao_id) if apenas_divergentes else [
         i for i in montar_inventario_completo(db, sessao_id)

@@ -74,21 +74,19 @@ def test_criar_grupo_sessao_inativa_bloqueado(client, sessao):
 
 # ── Novo token admin ──────────────────────────────────────────────────────────
 
-def test_novo_token_admin_com_token_correto(client, sessao):
+def test_novo_token_admin_com_jwt_funciona(client, sessao):
     sid = sessao["id"]
-    tok = sessao["token_admin"]
-    r = client.post(f"/api/sessoes/{sid}/novo-token-admin",
-                    json={"token_atual": tok})
+    tok_antigo = sessao["token_admin"]
+    r = client.post(f"/api/sessoes/{sid}/novo-token-admin")
     assert r.status_code == 200
     novo = r.json()["token_admin"]
-    assert novo != tok
+    assert novo != tok_antigo
     assert len(novo) == 16
 
-
-def test_novo_token_admin_com_token_errado(client, sessao):
+def test_novo_token_admin_sem_jwt_retorna_401(client, sessao):
     r = client.post(f"/api/sessoes/{sessao['id']}/novo-token-admin",
-                    json={"token_atual": "ERRADO"})
-    assert r.status_code == 403
+                    headers={"Authorization": "Bearer invalido"})
+    assert r.status_code == 401
 
 
 # ── lista_operador ────────────────────────────────────────────────────────────
@@ -235,13 +233,13 @@ def test_retomar_sessao_nao_pausada_bloqueado(client, sessao):
     assert r.status_code == 409
 
 
-def test_pausar_token_invalido_retorna_403(client, sessao):
-    r = client.patch(f"/api/sessoes/{sessao['id']}/pausar?token_admin=ERRADO")
-    assert r.status_code == 403
+def test_pausar_sem_jwt_retorna_401(client, sessao):
+    r = client.patch(f"/api/sessoes/{sessao['id']}/pausar",
+                     headers={"Authorization": "Bearer token_invalido"})
+    assert r.status_code == 401
 
-
-def test_retomar_token_invalido_retorna_403(client, sessao):
-    tok = sessao["token_admin"]
-    client.patch(f"/api/sessoes/{sessao['id']}/pausar?token_admin={tok}")
-    r = client.patch(f"/api/sessoes/{sessao['id']}/retomar?token_admin=ERRADO")
-    assert r.status_code == 403
+def test_retomar_sem_jwt_retorna_401(client, sessao):
+    client.patch(f"/api/sessoes/{sessao['id']}/pausar")
+    r = client.patch(f"/api/sessoes/{sessao['id']}/retomar",
+                     headers={"Authorization": "Bearer token_invalido"})
+    assert r.status_code == 401

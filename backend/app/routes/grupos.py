@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.auth import verificar_token_admin
+from app.auth import verificar_token_admin, get_admin_logado
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo, grupo_repo
@@ -69,13 +69,12 @@ def listar_grupos(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{sessao_id}/grupos", status_code=201)
-def criar_grupo(sessao_id: str, payload: GrupoCreate, token_admin: str,
-                db: Session = Depends(get_db)):
+def criar_grupo(sessao_id: str, payload: GrupoCreate,
+                db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """Cria um novo grupo de operadores com token de acesso próprio."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
     if sessao.status != StatusSessao.ativa:
         raise HTTPException(status_code=409, detail="Sessão não está ativa")
 
@@ -93,12 +92,11 @@ def criar_grupo(sessao_id: str, payload: GrupoCreate, token_admin: str,
 
 
 @router.put("/{sessao_id}/grupos/{grupo_id}")
-def atualizar_grupo(sessao_id: str, grupo_id: str, payload: GrupoUpdate, token_admin: str,
-                    db: Session = Depends(get_db)):
+def atualizar_grupo(sessao_id: str, grupo_id: str, payload: GrupoUpdate,
+                   db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
     grupo = grupo_repo.buscar_grupo(db, sessao_id, grupo_id)
     if not grupo:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
@@ -107,13 +105,12 @@ def atualizar_grupo(sessao_id: str, grupo_id: str, payload: GrupoUpdate, token_a
 
 
 @router.post("/{sessao_id}/grupos/{grupo_id}/regenerar-token")
-def regenerar_token_grupo(sessao_id: str, grupo_id: str, token_admin: str,
-                          db: Session = Depends(get_db)):
+def regenerar_token_grupo(sessao_id: str, grupo_id: str,
+                          db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """Gera novo token para o grupo (invalida o anterior)."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
     grupo = grupo_repo.buscar_grupo(db, sessao_id, grupo_id)
     if not grupo:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
@@ -149,30 +146,23 @@ def qrcode_grupo(sessao_id: str, grupo_id: str, base_url: str = "",
 
 
 @router.delete("/{sessao_id}/grupos/{grupo_id}", status_code=204)
-def deletar_grupo(sessao_id: str, grupo_id: str, token_admin: str,
-                  db: Session = Depends(get_db)):
+def deletar_grupo(sessao_id: str, grupo_id: str,
+                  db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
     grupo = grupo_repo.buscar_grupo(db, sessao_id, grupo_id)
     if not grupo:
         raise HTTPException(status_code=404, detail="Grupo não encontrado")
     grupo_repo.deletar_grupo(db, grupo)
 
 
-class RegenerarAdminBody(BaseModel):
-    token_atual: str
-
-
 @router.post("/{sessao_id}/novo-token-admin")
-def novo_token_admin(sessao_id: str, body: RegenerarAdminBody, db: Session = Depends(get_db)):
-    """Regenera o token_admin. Requer o token atual no body para provar propriedade."""
+def novo_token_admin(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
+    """Regenera o token_admin. Requer JWT admin."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    if not hmac.compare_digest(sessao.token_admin or "", body.token_atual):
-        raise HTTPException(status_code=403, detail="Token admin atual inválido")
     sessao.token_admin = secrets.token_hex(8).upper()
     db.commit()
     return {"token_admin": sessao.token_admin}
@@ -267,12 +257,11 @@ def lista_operador(sessao_id: str, token: str = "", rodada: int = 1,
 # ── Supervisor ────────────────────────────────────────────────────────────────
 
 @router.get("/{sessao_id}/token-supervisor")
-def get_token_supervisor(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+def get_token_supervisor(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """Retorna o token do supervisor (cria se não existir). Requer token_admin."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
     if not sessao.token_supervisor:
         sessao.token_supervisor = secrets.token_hex(8).upper()
         db.commit()
@@ -284,12 +273,11 @@ def get_token_supervisor(sessao_id: str, token_admin: str, db: Session = Depends
 
 
 @router.post("/{sessao_id}/gerar-token-supervisor")
-def gerar_token_supervisor(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+def gerar_token_supervisor(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """Regenera o token do supervisor (invalida o anterior). Requer token_admin."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
     sessao.token_supervisor = secrets.token_hex(8).upper()
     db.commit()
     db.refresh(sessao)
@@ -374,14 +362,14 @@ def itens_supervisor(sessao_id: str, token: str, db: Session = Depends(get_db)):
 # ── Pausa e retomada ──────────────────────────────────────────────────────────
 
 @router.patch("/{sessao_id}/pausar")
-async def pausar_sessao(sessao_id: str, token_admin: str, background_tasks: BackgroundTasks,
-                        previsao_retomada: Optional[str] = None, db: Session = Depends(get_db)):
+async def pausar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
+                        previsao_retomada: Optional[str] = None, db: Session = Depends(get_db),
+                        _admin=Depends(get_admin_logado)):
     """Pausa a sessão. Operadores veem tela 'Sessão Pausada' via WS."""
     from datetime import datetime, timezone
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
     if sessao.status != StatusSessao.ativa:
         raise HTTPException(status_code=409, detail="Sessão não está ativa")
     sessao.status = StatusSessao.pausada
@@ -398,13 +386,12 @@ async def pausar_sessao(sessao_id: str, token_admin: str, background_tasks: Back
 
 
 @router.patch("/{sessao_id}/retomar")
-async def retomar_sessao(sessao_id: str, token_admin: str, background_tasks: BackgroundTasks,
-                         db: Session = Depends(get_db)):
+async def retomar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
+                         db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """Retoma a sessão pausada. Gera novo token de acesso e avisa operadores via WS."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
     if sessao.status != StatusSessao.pausada:
         raise HTTPException(status_code=409, detail="Sessão não está pausada")
     sessao.status = StatusSessao.ativa

@@ -17,6 +17,7 @@ from app.agents.antifraude import AntiFraudeAgent
 from app.agents.sync_erp import SyncERPAgent
 from app.agents.sop_coach import SopCoachAgent
 from app.agents.plano_acao import PlanoAcaoAgent
+from app.auth import get_admin_logado
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
@@ -24,7 +25,7 @@ from app.services.sessao_service import montar_divergencias, montar_inventario_c
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/agentes", tags=["Agentes IA"])
+router = APIRouter(prefix="/agentes", tags=["Agentes IA"], dependencies=[Depends(get_admin_logado)])
 
 _validation_agent = ValidationAgent()
 _analise_agent = AnaliseAgent()

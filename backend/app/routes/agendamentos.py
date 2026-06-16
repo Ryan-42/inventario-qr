@@ -2,6 +2,7 @@
 CRUD de agendamentos — criação automática de sessões de inventário.
 """
 from __future__ import annotations
+from app.auth import get_admin_logado
 
 import hmac
 import logging
@@ -16,7 +17,7 @@ from app.database import get_db
 from app.models.agendamento import AgendamentoSessao
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/agendamentos", tags=["Agendamentos"])
+router = APIRouter(prefix="/agendamentos", tags=["Agendamentos"], dependencies=[Depends(get_admin_logado)])
 
 FrequenciaType = Literal["unico", "diario", "semanal", "mensal"]
 DIAS_SEMANA = {"segunda": 0, "terca": 1, "quarta": 2, "quinta": 3, "sexta": 4, "sabado": 5, "domingo": 6}

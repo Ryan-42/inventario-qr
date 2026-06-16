@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from app.auth import verificar_token_admin as _verificar_token_admin
+from app.auth import verificar_token_admin as _verificar_token_admin, get_admin_logado
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo
@@ -59,13 +59,13 @@ def _disparar_webhook(webhook_url: str, payload: dict) -> None:
 
 @router.get("/", response_model=list[SessaoResponse])
 @limiter.limit("60/minute")
-async def listar_sessoes(request: Request, db: Session = Depends(get_db)):
+async def listar_sessoes(request: Request, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     return sessao_repo.listar_sessoes_com_stats(db)
 
 
 @router.post("/", response_model=SessaoCreateResponse, status_code=201)
 @limiter.limit("20/hour")
-async def criar_sessao(request: Request, payload: SessaoCreate, db: Session = Depends(get_db)):
+async def criar_sessao(request: Request, payload: SessaoCreate, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     # Valida filial se informada
     if getattr(payload, "filial_id", None):
         from app.models.filial import Filial
@@ -119,12 +119,11 @@ def stats_sessao(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{sessao_id}/concluir", response_model=SessaoResponse)
-async def concluir_sessao(sessao_id: str, token_admin: str,
-                          background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def concluir_sessao(sessao_id: str, background_tasks: BackgroundTasks,
+                          db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    _verificar_token_admin(sessao, token_admin)
 
     if sessao.status != StatusSessao.ativa:
         raise HTTPException(
@@ -198,12 +197,11 @@ async def concluir_sessao(sessao_id: str, token_admin: str,
 
 
 @router.patch("/{sessao_id}/cancelar", response_model=SessaoResponse)
-async def cancelar_sessao(sessao_id: str, token_admin: str,
-                          background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+async def cancelar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
+                          db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     sessao_atual = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao_atual:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    _verificar_token_admin(sessao_atual, token_admin)
     if sessao_atual.status == StatusSessao.concluida:
         raise HTTPException(status_code=409, detail="Sessão já concluída não pode ser cancelada.")
     if sessao_atual.status == StatusSessao.cancelada:
@@ -223,12 +221,11 @@ async def cancelar_sessao(sessao_id: str, token_admin: str,
 
 
 @router.delete("/{sessao_id}", status_code=204)
-async def deletar_sessao(sessao_id: str, token_admin: str, db: Session = Depends(get_db)):
+async def deletar_sessao(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """Remove permanentemente a sessão e todos os dados associados (itens, contagens, grupos)."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    _verificar_token_admin(sessao, token_admin)
     if sessao.status == StatusSessao.concluida:
         raise HTTPException(
             status_code=409,
@@ -272,7 +269,7 @@ def metricas_sessao(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{sessao_id}/token-acesso")
-def get_token_acesso(sessao_id: str, db: Session = Depends(get_db)):
+def get_token_acesso(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """Retorna o token e QR code de acesso mobile da sessão."""
     from sqlalchemy import update as sa_update
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
@@ -296,12 +293,11 @@ def get_token_acesso(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{sessao_id}/gerar-token")
-def gerar_novo_token(sessao_id: str, token_admin: str, rodada: int = 1, db: Session = Depends(get_db)):
-    """Gera um novo token de acesso (invalida o anterior). Requer token_admin."""
+def gerar_novo_token(sessao_id: str, rodada: int = 1, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
+    """Gera um novo token de acesso (invalida o anterior). Requer JWT admin."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    _verificar_token_admin(sessao, token_admin)
     if sessao.status.value != "ativa":
         raise HTTPException(status_code=409, detail="Sessão não está ativa")
     token = secrets.token_hex(8).upper()

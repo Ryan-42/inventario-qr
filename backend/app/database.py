@@ -49,7 +49,7 @@ def get_db():
 
 
 def create_tables():
-    from app.models import sessao, item_base, contagem, grupo_operador, agendamento, filial  # noqa — registra todos os modelos
+    from app.models import sessao, item_base, contagem, grupo_operador, agendamento, filial, admin  # noqa — registra todos os modelos
     Base.metadata.create_all(bind=engine)
     _migrate_sqlite()
 

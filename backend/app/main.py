@@ -19,7 +19,7 @@ load_dotenv()
 
 from app.database import create_tables
 from app.limiter import limiter
-from app.routes import sessoes, itens, contagens, exports, ws, agentes, grupos, auditoria, integracoes, agendamentos, dashboard, filiais
+from app.routes import sessoes, itens, contagens, exports, ws, agentes, grupos, auditoria, integracoes, agendamentos, dashboard, filiais, auth as auth_routes
 from app.websockets.manager import manager  # noqa: F401 — singleton inicializado aqui
 
 logging.basicConfig(
@@ -150,6 +150,7 @@ app.add_middleware(
 )
 
 # Registra routers HTTP
+app.include_router(auth_routes.router)          # /auth/login, /auth/logout, /auth/me
 app.include_router(sessoes.router, prefix="/api")
 app.include_router(itens.router, prefix="/api")
 app.include_router(contagens.router, prefix="/api")
@@ -196,6 +197,10 @@ async def health():
 _STATIC = pathlib.Path(__file__).parent.parent / "static"
 if _STATIC.exists():
     app.mount("/static", StaticFiles(directory=str(_STATIC)), name="static")
+
+    @app.get("/login")
+    def login_page():
+        return FileResponse(str(_STATIC / "login.html"))
 
     @app.get("/")
     def index():

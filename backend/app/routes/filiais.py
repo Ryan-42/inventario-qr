@@ -2,6 +2,7 @@
 CRUD de filiais — suporte multi-filial para uso em redes de lojas ou múltiplas unidades.
 """
 from __future__ import annotations
+from app.auth import get_admin_logado
 
 import logging
 from typing import Literal
@@ -15,7 +16,7 @@ from app.database import get_db
 from app.models.filial import Filial
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/filiais", tags=["Filiais"])
+router = APIRouter(prefix="/filiais", tags=["Filiais"], dependencies=[Depends(get_admin_logado)])
 
 
 class FilialCreate(BaseModel):

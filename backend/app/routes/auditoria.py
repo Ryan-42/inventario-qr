@@ -2,6 +2,7 @@
 Endpoints empresariais: trilha de auditoria, comparação entre sessões e estatísticas consolidadas.
 """
 from __future__ import annotations
+from app.auth import get_admin_logado
 
 import logging
 from datetime import datetime, timezone
@@ -9,12 +10,11 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from app.auth import verificar_token_admin
 from app.database import get_db
 from app.repositories import sessao_repo, item_repo
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/sessoes", tags=["Auditoria & Empresa"])
+router = APIRouter(prefix="/sessoes", tags=["Auditoria & Empresa"], dependencies=[Depends(get_admin_logado)])
 
 
 # ── Trilha de Auditoria ───────────────────────────────────────────────────────
@@ -22,7 +22,6 @@ router = APIRouter(prefix="/sessoes", tags=["Auditoria & Empresa"])
 @router.get("/{sessao_id}/auditoria")
 def trilha_auditoria(
     sessao_id: str,
-    token_admin: str = Query(...),
     limit: int = Query(default=200, ge=1, le=2000),
     offset: int = Query(default=0, ge=0),
     codigo: str | None = Query(default=None),
@@ -38,7 +37,6 @@ def trilha_auditoria(
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
 
     historico = item_repo.listar_historico(db, sessao_id, codigo=codigo, limit=limit + 1, offset=offset)
 
@@ -92,7 +90,6 @@ def _classificar_acao(h) -> str:
 def comparar_sessoes(
     sessao_id: str,
     sessao_ref_id: str,
-    token_admin: str = Query(...),
     db: Session = Depends(get_db),
 ) -> dict:
     """
@@ -108,7 +105,6 @@ def comparar_sessoes(
     if not sessao_ref:
         raise HTTPException(status_code=404, detail="Sessão de referência não encontrada")
 
-    verificar_token_admin(sessao_atual, token_admin)
 
     from app.services.sessao_service import montar_inventario_completo
     itens_atual = {i["codigo"]: i for i in montar_inventario_completo(db, sessao_id)}
@@ -185,7 +181,6 @@ def _resumo_item(atual: dict, ref: dict) -> dict:
 @router.get("/{sessao_id}/relatorio-operadores")
 def relatorio_operadores(
     sessao_id: str,
-    token_admin: str = Query(...),
     db: Session = Depends(get_db),
 ) -> dict:
     """
@@ -195,7 +190,6 @@ def relatorio_operadores(
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    verificar_token_admin(sessao, token_admin)
 
     historico = item_repo.listar_historico(db, sessao_id, limit=None)
     contagens = item_repo.listar_contagens(db, sessao_id)

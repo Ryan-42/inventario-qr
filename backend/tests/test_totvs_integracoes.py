@@ -55,10 +55,11 @@ def test_preview_payload_retorna_estrutura(client, sessao_com_itens):
     assert data["total_linhas"] >= 1
 
 
-def test_preview_payload_token_invalido(client, sessao_com_itens):
+def test_preview_payload_sem_jwt_retorna_401(client, sessao_com_itens):
     sid = sessao_com_itens["id"]
-    r = client.get(f"/api/integracoes/totvs/sessao/{sid}/preview-payload?token_admin=ERRADO")
-    assert r.status_code == 403
+    r = client.get(f"/api/integracoes/totvs/sessao/{sid}/preview-payload",
+                   headers={"Authorization": "Bearer invalido"})
+    assert r.status_code == 401
 
 
 def test_preview_payload_sessao_inexistente(client):
@@ -112,10 +113,11 @@ def test_enviar_ajuste_sem_divergencias_retorna_422(client, sessao_com_itens):
     assert r.status_code == 422
 
 
-def test_enviar_ajuste_token_invalido(client, sessao_com_itens):
+def test_enviar_ajuste_sem_jwt_retorna_401(client, sessao_com_itens):
     sid = sessao_com_itens["id"]
-    r = client.post(f"/api/integracoes/totvs/sessao/{sid}/enviar-ajuste?token_admin=ERRADO")
-    assert r.status_code == 403
+    r = client.post(f"/api/integracoes/totvs/sessao/{sid}/enviar-ajuste",
+                    headers={"Authorization": "Bearer invalido"})
+    assert r.status_code == 401
 
 
 def test_enviar_ajuste_sessao_inexistente(client):

@@ -391,13 +391,11 @@ class TestGruposOperadores:
         assert r.status_code == 200
         assert len(r.json()) == 2
 
-    def test_criar_grupo_token_invalido_retorna_403(self, client, sessao):
-        sid = sessao["id"]
-        r = client.post(
-            f"/api/sessoes/{sid}/grupos?token_admin=TOKEN-ERRADO",
-            json={"nome": "G", "filtro": "*", "tipo_filtro": "todos"},
-        )
-        assert r.status_code == 403
+    def test_criar_grupo_sem_jwt_retorna_401(self, client, sessao):
+        r = client.post(f"/api/sessoes/{sessao['id']}/grupos",
+                        json={"nome": "G", "filtro": "*", "tipo_filtro": "todos"},
+                        headers={"Authorization": "Bearer invalido"})
+        assert r.status_code == 401
 
     def test_deletar_grupo(self, client, sessao):
         sid = sessao["id"]
@@ -647,13 +645,11 @@ class TestConcluirSessaoSemItens:
         r = client.patch(f"/api/sessoes/{sid}/concluir?token_admin={tok}")
         assert r.status_code == 422
 
-    def test_concluir_com_token_admin_errado_retorna_403(self, client, sessao_com_itens):
+    def test_concluir_sem_jwt_retorna_401(self, client, sessao_com_itens):
         sid = sessao_com_itens["id"]
-        r = client.patch(f"/api/sessoes/{sid}/concluir?token_admin=TOKEN-ERRADO")
-        assert r.status_code == 403
-
-
-# ─── H) Delete de contagem ───────────────────────────────────────────────────
+        r = client.patch(f"/api/sessoes/{sid}/concluir",
+                         headers={"Authorization": ""})
+        assert r.status_code == 401
 
 class TestDeleteContagem:
     def test_deletar_contagem_libera_item(self, client, sessao_com_itens):

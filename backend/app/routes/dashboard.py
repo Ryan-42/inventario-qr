@@ -6,6 +6,7 @@ from __future__ import annotations
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
+from app.auth import get_admin_logado
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
@@ -15,7 +16,7 @@ from app.models.sessao import Sessao, StatusSessao
 from app.models.contagem import Contagem, HistoricoContagem
 from app.models.item_base import ItemBase
 
-router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+router = APIRouter(prefix="/dashboard", tags=["Dashboard"], dependencies=[Depends(get_admin_logado)])
 
 
 @router.get("/resumo")

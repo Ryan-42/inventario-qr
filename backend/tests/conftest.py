@@ -44,11 +44,32 @@ def reset_db():
     Base.metadata.drop_all(bind=engine_test)
 
 
+def _criar_admin_e_token(db_session) -> str:
+    """Cria um admin de teste e retorna o JWT Bearer token."""
+    import uuid
+    from app.models.admin import Admin
+    from app.auth import hash_senha, criar_token
+
+    admin = Admin(
+        id=str(uuid.uuid4()),
+        nome="Admin Teste",
+        email="teste@inviq.local",
+        senha_hash=hash_senha("senha_teste_123"),
+    )
+    db_session.add(admin)
+    db_session.commit()
+    return criar_token({"sub": admin.email})
+
+
 @pytest.fixture()
 def client(reset_db):
-    """TestClient com banco de teste. Depende de reset_db para garantir tabelas já existentes."""
+    """TestClient com banco de teste e JWT de admin pré-configurado."""
     app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
+    # Cria admin e obtém token antes de abrir o TestClient
+    db = TestingSession()
+    token = _criar_admin_e_token(db)
+    db.close()
+    with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as c:
         yield c
     app.dependency_overrides.clear()
 
