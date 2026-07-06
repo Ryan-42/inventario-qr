@@ -193,6 +193,18 @@ def verificar_token_admin_str(
     _registrar_sucesso(ip)
 
 
+def get_admin_logado_opcional(
+    request: Request,
+    token: str | None = Depends(_oauth2),
+    db: Session = Depends(get_db),
+):
+    """Igual a get_admin_logado, mas retorna None em vez de levantar 401."""
+    try:
+        return get_admin_logado(request=request, token=token, db=db)
+    except HTTPException:
+        return None
+
+
 def status_brute_force(ip: str) -> dict:
     """Retorna situação de brute-force para um IP (uso interno/diagnóstico)."""
     agora = time.monotonic()

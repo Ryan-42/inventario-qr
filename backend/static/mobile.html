@@ -1098,7 +1098,7 @@ function salvarOffline(payload) {
   try {
     const raw = localStorage.getItem('inventario_offline_queue')
     const queue = raw ? JSON.parse(raw) : []
-    queue.push({ sessaoId, payload, ts: Date.now() })
+    queue.push({ sessaoId, payload, token: tokenAtivo, ts: Date.now() })
     localStorage.setItem('inventario_offline_queue', JSON.stringify(queue))
     showHintNotif('Sem conexão — salvo para envio posterior', 4000)
     // Registra Background Sync se o SW suportar (progressive enhancement)
@@ -1118,7 +1118,7 @@ async function flushOfflineQueue() {
   if (!queue.length) return
   const pending = queue.filter(item => item.sessaoId === sessaoId); if (!pending.length) return
   let sent=0; const failed=[]
-  for (const item of pending) { try { await registrarContagem(item.sessaoId,item.payload); sent++ } catch { failed.push(item) } }
+  for (const item of pending) { try { await registrarContagem(item.sessaoId,item.payload,item.token||''); sent++ } catch { failed.push(item) } }
   const remaining = queue.filter(item=>item.sessaoId!==sessaoId).concat(failed)
   if (remaining.length>0) localStorage.setItem('inventario_offline_queue',JSON.stringify(remaining)); else localStorage.removeItem('inventario_offline_queue')
   if (sent>0) showHintNotif(`${sent} contagem(ns) sincronizada(s)`, 3000)
@@ -1144,7 +1144,7 @@ async function submitContagem(opName) {
   if (btn) { btn.disabled=true; btn.textContent='Registrando...' }
   const op = opName||operador||'Anônimo', obs=(document.getElementById('observacao-input')?.value||'').trim()||null
   try {
-    const result = await registrarContagem(sessaoId, { codigo:currentCodigo, quantidade_encontrada:currentQty, operador:op, observacao:obs })
+    const result = await registrarContagem(sessaoId, { codigo:currentCodigo, quantidade_encontrada:currentQty, operador:op, observacao:obs }, tokenAtivo)
     const base = currentItem?.quantidade_base ?? currentItem?.quantidade
     // Usa divergência calculada pelo servidor (source of truth), não threshold local de 20%
     const isDivg = result?.divergencia === true || (base != null && currentQty !== base)

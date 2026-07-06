@@ -40,8 +40,11 @@ export const rodadasSessao = (id) => apiFetch(`/sessoes/${id}/rodadas`)
 export const listarItens = (sessaoId) => apiFetch(`/sessoes/${sessaoId}/itens`)
 export const buscarItem = (sessaoId, codigo) => apiFetch(`/sessoes/${sessaoId}/buscar/${encodeURIComponent(codigo)}`)
 export const listarContagens = (sessaoId) => apiFetch(`/sessoes/${sessaoId}/contagens`)
-export const registrarContagem = (sessaoId, payload) =>
-  apiFetch(`/sessoes/${sessaoId}/contagens`, { method: 'POST', body: JSON.stringify(payload) })
+// token: operador token (token_acesso, supervisor ou grupo) — obrigatório para operadores mobile
+export const registrarContagem = (sessaoId, payload, token = '') => {
+  const qs = token ? `?token=${encodeURIComponent(token)}` : ''
+  return apiFetch(`/sessoes/${sessaoId}/contagens${qs}`, { method: 'POST', body: JSON.stringify(payload) })
+}
 
 // ── Upload ──────────────────────────────────────────────────────────
 export async function uploadPlanilha(sessaoId, file) {

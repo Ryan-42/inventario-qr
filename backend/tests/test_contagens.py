@@ -158,3 +158,79 @@ def test_historico_filtro_por_codigo(client, sessao_com_itens):
 def test_historico_sessao_inexistente(client):
     r = client.get("/api/sessoes/nao-existe/historico")
     assert r.status_code == 404
+
+
+# ── Testes de autenticação do operador ────────────────────────────────────────
+
+def _cliente_sem_jwt(app_ref):
+    """Retorna um TestClient sem headers de admin JWT (simula operador mobile)."""
+    from fastapi.testclient import TestClient
+    from app.database import get_db
+    from tests.conftest import override_get_db
+    app_ref.dependency_overrides[get_db] = override_get_db
+    return TestClient(app_ref, raise_server_exceptions=False)
+
+
+def test_contagem_sem_token_retorna_401(sessao_com_itens):
+    """Operador sem token não deve registrar contagem."""
+    from app.main import app as _app
+    c = _cliente_sem_jwt(_app)
+    r = c.post(
+        f"/api/sessoes/{sessao_com_itens['id']}/contagens",
+        json={"codigo": "ABC-001", "quantidade_encontrada": 10, "operador": "Invasor"},
+    )
+    assert r.status_code == 401, r.text
+
+
+def test_contagem_token_errado_retorna_401(sessao_com_itens):
+    """Operador com token incorreto não deve registrar contagem."""
+    from app.main import app as _app
+    c = _cliente_sem_jwt(_app)
+    r = c.post(
+        f"/api/sessoes/{sessao_com_itens['id']}/contagens?token=TOKENINVALIDO",
+        json={"codigo": "ABC-001", "quantidade_encontrada": 10, "operador": "Invasor"},
+    )
+    assert r.status_code == 401, r.text
+
+
+def test_contagem_token_acesso_valido_retorna_201(client, sessao_com_itens):
+    """Operador com token_acesso válido deve conseguir registrar contagem."""
+    sid = sessao_com_itens["id"]
+    r_tok = client.get(f"/api/sessoes/{sid}/token-acesso")
+    assert r_tok.status_code == 200
+    tok = r_tok.json()["token"]
+
+    from app.main import app as _app
+    from fastapi.testclient import TestClient
+    from app.database import get_db
+    from tests.conftest import override_get_db
+    _app.dependency_overrides[get_db] = override_get_db
+    c = TestClient(_app, raise_server_exceptions=False)
+    r = c.post(
+        f"/api/sessoes/{sid}/contagens?token={tok}",
+        json={"codigo": "ABC-001", "quantidade_encontrada": 10, "operador": "Operador1"},
+    )
+    assert r.status_code == 201, r.text
+
+
+def test_contagem_token_grupo_valido_retorna_201(client, sessao_com_itens):
+    """Operador com token de grupo deve conseguir registrar contagem."""
+    sid = sessao_com_itens["id"]
+    r_grupo = client.post(
+        f"/api/sessoes/{sid}/grupos",
+        json={"nome": "Grupo A", "filtro": "*", "tipo_filtro": "todos"},
+    )
+    assert r_grupo.status_code == 201
+    tok_grupo = r_grupo.json()["token"]
+
+    from app.main import app as _app
+    from fastapi.testclient import TestClient
+    from app.database import get_db
+    from tests.conftest import override_get_db
+    _app.dependency_overrides[get_db] = override_get_db
+    c = TestClient(_app, raise_server_exceptions=False)
+    r = c.post(
+        f"/api/sessoes/{sid}/contagens?token={tok_grupo}",
+        json={"codigo": "ABC-001", "quantidade_encontrada": 10, "operador": "OpGrupo"},
+    )
+    assert r.status_code == 201, r.text

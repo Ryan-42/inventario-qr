@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import hmac
 import logging
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from app.auth import get_admin_logado
+from app.auth import get_admin_logado, get_admin_logado_opcional, _ip_de, _verificar_bloqueio, _registrar_falha, _registrar_sucesso
 from app.database import get_db
 from app.limiter import limiter
-from app.repositories import sessao_repo, item_repo
+from app.repositories import sessao_repo, item_repo, grupo_repo
 from app.schemas import ContagemCreate, ContagemResponse, HistoricoContagemResponse
 from app.models.sessao import StatusSessao
 from app.websockets.manager import manager
@@ -33,17 +34,48 @@ def listar_contagens_sessao(
     return item_repo.listar_contagens(db, sessao_id, skip=skip, limit=limit_safe)
 
 
+def _validar_token_operador(sessao, token: str, request: Request, db: Session) -> None:
+    """Valida token de operador (geral, supervisor ou grupo). Usa proteção brute-force."""
+    ip = _ip_de(request)
+    _verificar_bloqueio(ip)
+
+    # Token vazio nunca é válido — rejeita antes de qualquer comparação
+    if not token:
+        _registrar_falha(ip, sessao.id)
+        raise HTTPException(status_code=401, detail="Token ausente. Acesse via QR Code ou insira o token fornecido pelo administrador.")
+
+    token_valido = hmac.compare_digest(sessao.token_acesso or "", token)
+    if not token_valido and sessao.token_supervisor:
+        token_valido = hmac.compare_digest(sessao.token_supervisor, token)
+    if not token_valido:
+        grupo = grupo_repo.buscar_grupo_por_token(db, sessao.id, token)
+        token_valido = grupo is not None
+
+    if not token_valido:
+        _registrar_falha(ip, sessao.id)
+        raise HTTPException(status_code=401, detail="Token inválido. Acesse via QR Code ou insira o token fornecido pelo administrador.")
+    _registrar_sucesso(ip)
+
+
 @router.post("/{sessao_id}/contagens", response_model=ContagemResponse, status_code=201)
 @limiter.limit("150/minute")
 async def registrar_contagem(request: Request,
     sessao_id: str,
     payload: ContagemCreate,
     background_tasks: BackgroundTasks,
+    token: str = "",
     db: Session = Depends(get_db),
+    admin=Depends(get_admin_logado_opcional),
 ):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    # Admins (JWT) podem registrar contagens sem token de operador.
+    # Operadores mobile precisam de token_acesso, token_supervisor ou token de grupo.
+    if not admin:
+        _validar_token_operador(sessao, token, request, db)
+
     if sessao.status != StatusSessao.ativa:
         raise HTTPException(
             status_code=409,
