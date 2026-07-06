@@ -32,6 +32,12 @@ class AIProvider:
         self._init()
 
     def _init(self) -> None:
+        # AI_ENABLED=false (padrão): modo local mesmo com chave configurada (LGPD)
+        ai_enabled = os.getenv("AI_ENABLED", "false").lower() in ("1", "true", "yes")
+        if not ai_enabled:
+            logger.info("AIProvider: AI_ENABLED=false — modo sem IA (nenhuma chave enviada a APIs externas)")
+            return
+
         groq_key = os.getenv("GROQ_API_KEY", "").strip()
         anthropic_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
 

@@ -187,6 +187,16 @@ frontend/
 
 ---
 
+## Débitos técnicos registrados
+
+| Item | Descrição | Prioridade |
+|------|-----------|------------|
+| Hardening CSP | Remover `'unsafe-inline'` de `script-src` movendo scripts inline dos HTMLs para arquivos `.js` com `src`. Enquanto isso, `main.py` documenta a intenção. | Média |
+| Operação offline CDN | Vendorizar Tailwind CSS standalone, ícones MDI e fontes Google para `static/vendor/` — almoxarifado pode não ter saída para internet. | Alta |
+| Brute-force Redis | Migrar contador de falhas de memória por processo para Redis quando `REDIS_URL` configurado — limite atual é multiplicado por nº de workers. | Média |
+
+---
+
 ## Decisões de arquitetura
 
 | Decisão | Escolha | Motivo |

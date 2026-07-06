@@ -31,6 +31,12 @@ MAX_LEN_NOME_SESSAO: int = 255
 MAX_LEN_CODIGO_ITEM: int = 100
 
 
+# ── IA / LGPD ─────────────────────────────────────────────────────────────────
+# AI_ENABLED=false (padrão) — agentes operam em modo local mesmo com chave configurada.
+# Defina true apenas após revisar a seção "Governança de dados e LGPD" no README.
+AI_ENABLED: bool = os.getenv("AI_ENABLED", "false").lower() in ("1", "true", "yes")
+
+
 def validar_config_producao() -> None:
     """Levanta RuntimeError se o ambiente for produção e houver config insegura."""
     if APP_ENV != "production":

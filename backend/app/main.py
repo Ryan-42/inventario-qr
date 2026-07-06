@@ -47,7 +47,10 @@ if _IS_PROD and not _DATABASE_URL.startswith("postgresql"):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    create_tables()
+    # Em produção, o schema é gerenciado exclusivamente pelo Alembic (entrypoint.sh).
+    # create_tables() só roda fora de produção (dev/test) para facilitar o setup local.
+    if not _IS_PROD:
+        create_tables()
     # Inicia scheduler de agendamentos em background
     import asyncio
     from app.services.scheduler import loop_agendamentos
@@ -77,7 +80,10 @@ class SecurityHeadersMiddleware:
     """
     def __init__(self, app: ASGIApp, is_prod: bool = False) -> None:
         self.app = app
-        # CSP: permite CDN do Tailwind/MDI/Google Fonts e WebSocket local; bloqueia inline scripts
+        # CSP: permite CDN do Tailwind/MDI/Google Fonts e WebSocket local
+        # DÉBITO TÉCNICO: 'unsafe-inline' em script-src é necessário enquanto o frontend usa scripts
+        # inline em HTML. Para remover, mover scripts inline para arquivos .js externos.
+        # Rastreado em ROADMAP.md (Sprint futura — Hardening CSP).
         _csp = (
             "default-src 'self'; "
             "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "

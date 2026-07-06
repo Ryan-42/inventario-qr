@@ -98,12 +98,21 @@ _bloqueados: dict[str, float] = {}
 _lock = threading.Lock()
 
 
+import os as _os
+
+# Só confia em X-Forwarded-For quando atrás de proxy reverso confiável.
+# Configure TRUST_PROXY=true apenas se um proxy reverso (nginx/caddy/cloudflare)
+# for o único ponto de entrada — caso contrário, qualquer cliente pode forjar o IP.
+_TRUST_PROXY = _os.getenv("TRUST_PROXY", "false").lower() in ("1", "true", "yes")
+
+
 def _ip_de(request: Request | None) -> str:
     if request is None:
         return "unknown"
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
+    if _TRUST_PROXY:
+        forwarded = request.headers.get("X-Forwarded-For")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
     if request.client:
         return request.client.host
     return "unknown"

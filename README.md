@@ -5,7 +5,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-produção-336791?style=flat-square&logo=postgresql&logoColor=white)]()
 [![Claude AI](https://img.shields.io/badge/Claude%20AI-Haiku-D97706?style=flat-square)](https://anthropic.com)
 [![WebSocket](https://img.shields.io/badge/WebSocket-Tempo%20Real-10eb8a?style=flat-square)]()
-[![Tests](https://img.shields.io/badge/Testes-159%20passando-4CAF50?style=flat-square)]()
+[![Tests](https://img.shields.io/badge/Testes-396%20passando-4CAF50?style=flat-square)]()
 [![Railway](https://img.shields.io/badge/Deploy-Railway-0B0D0E?style=flat-square&logo=railway&logoColor=white)]()
 
 > Sistema de contagem de inventário físico com scanner mobile, tempo real via WebSocket, análise por IA e relatórios financeiros automáticos.
@@ -138,7 +138,7 @@ inventario-qr/
 │   │   ├── mobile.html       # Scanner mobile
 │   │   ├── css/app.css       # Design system compartilhado
 │   │   └── js/               # api.js + ws.js
-│   ├── tests/                # 159 testes (pytest + SQLite in-memory)
+│   ├── tests/                # 396 testes (pytest + SQLite in-memory)
 │   ├── requirements.txt
 │   ├── .env.example
 │   ├── Dockerfile            # Multi-stage, usuário não-root
@@ -209,7 +209,7 @@ docker compose up --build
 ```bash
 cd backend
 pytest tests/ -q
-# 159 passed
+# 396 passed, 1 skipped
 ```
 
 ### 6. Fluxo de uso
@@ -357,6 +357,38 @@ O `render.yaml` na raiz do projeto configura tudo automaticamente: PostgreSQL + 
 | Sprint 6 | 🔭 | Autenticação JWT + Operadores ao Vivo + Service Worker |
 | Sprint 7 | 🔭 | Integração ERP + IA Avançada (predição, classificação) |
 | Sprint 8 | 🔭 | Multi-tenant + PWA instalável + OCR etiquetas |
+
+---
+
+## Governança de dados e LGPD
+
+O INVIQ pode opcionalmente enviar dados para APIs de IA externas (Anthropic/Groq) quando os agentes inteligentes estão habilitados. Esta seção documenta o que sai, para onde, quando e como desativar.
+
+### O que é enviado
+
+| Agente | Dados enviados | Destino |
+|--------|---------------|---------|
+| `AntiFraudeAgent` | Telemetria comportamental de contagem **anonimizada** (Operador 1, 2, …) | Anthropic ou Groq |
+| `SopCoachAgent` | Mensagem de texto do operador + contexto operacional | Anthropic ou Groq |
+| `PredictionAgent` | Estatísticas agregadas de contagem (sem dados pessoais) | Anthropic ou Groq |
+| `PlanoAcaoAgent` | Divergências de estoque (códigos, quantidades) | Anthropic ou Groq |
+| `SyncERPAgent` | Itens divergentes para ajuste (códigos, quantidades) | Anthropic ou Groq |
+| `ChatAgent` | Histórico de mensagens + status da sessão | Anthropic ou Groq |
+
+**Nomes de operadores nunca são enviados diretamente à IA** — o `AntiFraudeAgent` anonimiza para "Operador 1, 2, …" antes de montar o prompt.
+
+### Quando acontece
+
+Apenas quando `AI_ENABLED=true` **E** uma chave de API está configurada (`ANTHROPIC_API_KEY` ou `GROQ_API_KEY`). Por padrão, `AI_ENABLED=false` — nenhuma chamada a APIs externas é feita.
+
+### Como desativar
+
+```bash
+# .env
+AI_ENABLED=false   # padrão — garante modo local mesmo com chave configurada
+```
+
+Com `AI_ENABLED=false`, todos os agentes operam em modo determinístico local sem enviar nenhum dado a APIs externas.
 
 ---
 

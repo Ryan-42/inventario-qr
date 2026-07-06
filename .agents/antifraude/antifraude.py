@@ -136,14 +136,23 @@ class AntiFraudeAgent:
         if not anomalias:
             return resultado_basico
 
+        # Anonimiza nomes de operadores antes de enviar à IA (LGPD)
+        op_map = {op: f"Operador {i+1}" for i, op in enumerate(resumo_operadores)}
+        resumo_anonimizado = {op_map[k]: v for k, v in resumo_operadores.items()}
+        anomalias_anonimizadas = [
+            {**a, "operador": op_map.get(a.get("operador", ""), a.get("operador", ""))}
+            for a in anomalias
+        ]
+
         prompt = f"""Você é um auditor interno de prevenção de perdas de uma grande empresa de logística.
 Analise a telemetria comportamental de contagem dos operadores abaixo e escreva um parecer detalhado sobre possíveis fraudes ou comportamentos inadequados.
+Os nomes de operadores foram anonimizados (Operador 1, Operador 2, etc.) por privacidade.
 
 DADOS DE TELEMETRIA POR OPERADOR:
-{json.dumps(resumo_operadores, ensure_ascii=False, indent=2)}
+{json.dumps(resumo_anonimizado, ensure_ascii=False, indent=2)}
 
 ANOMALIAS DETECTADAS PELO SISTEMA:
-{json.dumps(anomalias, ensure_ascii=False, indent=2)}
+{json.dumps(anomalias_anonimizadas, ensure_ascii=False, indent=2)}
 
 Responda EXCLUSIVAMENTE em JSON válido com a seguinte estrutura:
 {{
