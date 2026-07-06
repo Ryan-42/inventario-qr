@@ -37,6 +37,16 @@ except Exception as exc:
 done
 echo "[entrypoint] Banco disponível."
 
+# Adota schema pré-existente (ex.: banco criado por create_all() antes do Alembic).
+# Sem isto, 'alembic upgrade head' tentaria recriar tabelas existentes e falharia.
+if python scripts/detect_schema_state.py; then
+  echo "[entrypoint] Schema pré-existente detectado — adotando com 'alembic stamp head'..."
+  if ! alembic stamp head; then
+    echo "[entrypoint] ERRO FATAL: 'alembic stamp head' falhou."
+    exit 1
+  fi
+fi
+
 echo "[entrypoint] Aplicando migrations Alembic..."
 if ! alembic upgrade head; then
   echo "[entrypoint] ERRO FATAL: 'alembic upgrade head' falhou (veja o traceback acima)."
