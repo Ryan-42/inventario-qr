@@ -1,0 +1,23 @@
+# Normalização de fim de linha — projeto dev em Windows, deploy em Linux (Docker).
+# Sem isto, scripts commitados com CRLF quebram no container ("bad interpreter"),
+# derrubando o boot com 502.
+
+# Padrão: normaliza texto para LF no repositório
+* text=auto eol=lf
+
+# Scripts e arquivos que DEVEM ser LF no Linux (executados no container)
+*.sh            text eol=lf
+entrypoint.sh   text eol=lf
+Dockerfile      text eol=lf
+*.py            text eol=lf
+*.yaml          text eol=lf
+*.yml           text eol=lf
+*.toml          text eol=lf
+
+# Binários — nunca normalizar
+*.png    binary
+*.jpg    binary
+*.ico    binary
+*.pdf    binary
+*.xlsx   binary
+*.db     binary
