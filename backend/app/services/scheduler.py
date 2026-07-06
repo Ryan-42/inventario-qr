@@ -2,6 +2,14 @@
 Scheduler de agendamentos — verifica sessões pendentes e cria automaticamente.
 Roda como background task assíncrona no startup do FastAPI.
 Intervalo: a cada 60 segundos (< 1 minuto de atraso máximo).
+
+MULTI-WORKER (Gunicorn): com N workers, N schedulers sobem simultaneamente.
+Para evitar execução duplicada, usamos pg_try_advisory_lock em PostgreSQL —
+apenas o worker que adquire o lock processa o ciclo; os demais ignoram.
+Em SQLite (dev/teste), assumimos worker único e pulamos o lock.
+
+NOTA: os testes rodam em SQLite e NÃO validam concorrência real de PostgreSQL.
+A lógica do advisory lock só pode ser verificada em ambiente PostgreSQL real.
 """
 from __future__ import annotations
 
@@ -12,6 +20,40 @@ from datetime import datetime, timezone, timedelta
 logger = logging.getLogger(__name__)
 
 _INTERVALO_SEGUNDOS = 60
+
+# Advisory lock key (valor arbitrário estável — identifica o scheduler desta app)
+_ADVISORY_LOCK_KEY = 1_234_567_890
+
+
+def _tentar_adquirir_lock_pg(db) -> bool:
+    """
+    Tenta adquirir um PostgreSQL advisory lock transacional.
+    Retorna True se adquirido (este worker processa), False se outro worker já tem o lock.
+    Em SQLite, retorna sempre True (lock não necessário com worker único).
+    """
+    from sqlalchemy import text
+    dialect = db.bind.dialect.name if db.bind else "sqlite"
+    if dialect != "postgresql":
+        return True
+    try:
+        result = db.execute(text("SELECT pg_try_advisory_lock(:key)"), {"key": _ADVISORY_LOCK_KEY})
+        acquired = result.scalar()
+        return bool(acquired)
+    except Exception as exc:
+        logger.warning("scheduler: falha ao tentar advisory lock — %s (processando sem lock)", exc)
+        return True
+
+
+def _liberar_lock_pg(db) -> None:
+    """Libera o advisory lock PostgreSQL. Em SQLite, no-op."""
+    from sqlalchemy import text
+    dialect = db.bind.dialect.name if db.bind else "sqlite"
+    if dialect != "postgresql":
+        return
+    try:
+        db.execute(text("SELECT pg_advisory_unlock(:key)"), {"key": _ADVISORY_LOCK_KEY})
+    except Exception as exc:
+        logger.warning("scheduler: falha ao liberar advisory lock — %s", exc)
 
 
 async def loop_agendamentos():
@@ -30,34 +72,41 @@ async def _processar_agendamentos_pendentes():
     agora = datetime.now(timezone.utc)
 
     with SessionLocal() as db:
-        from app.models.agendamento import AgendamentoSessao
-        from sqlalchemy import and_
+        # Advisory lock: garante que só um worker por vez processa agendamentos
+        if not _tentar_adquirir_lock_pg(db):
+            logger.debug("scheduler: outro worker está processando — pulando ciclo")
+            return
 
-        pendentes = (
-            db.query(AgendamentoSessao)
-            .filter(
-                AgendamentoSessao.ativo == True,  # noqa: E712
-                AgendamentoSessao.proxima_execucao <= agora,
-            )
-            .all()
-        )
+        try:
+            from app.models.agendamento import AgendamentoSessao
 
-        for agendamento in pendentes:
-            try:
-                # Passa apenas o ID para evitar compartilhar a Session entre threads
-                agendamento_id = agendamento.id
-                sessao_id = await asyncio.to_thread(_executar_agendamento_por_id, agendamento_id, agora)
-                logger.info(
-                    "Agendamento executado id=%s sessao_criada=%s",
-                    agendamento_id, sessao_id,
+            pendentes = (
+                db.query(AgendamentoSessao)
+                .filter(
+                    AgendamentoSessao.ativo == True,  # noqa: E712
+                    AgendamentoSessao.proxima_execucao <= agora,
                 )
-            except Exception as exc:
-                logger.error("Agendamento %s falhou: %s", agendamento.id, exc, exc_info=True)
+                .all()
+            )
+
+            for agendamento in pendentes:
                 try:
-                    from app.services.email_service import notificar_agendamento_falhou
-                    notificar_agendamento_falhou(agendamento.nome_template, str(exc))
-                except Exception:
-                    pass
+                    # Passa apenas o ID para evitar compartilhar a Session entre threads
+                    agendamento_id = agendamento.id
+                    sessao_id = await asyncio.to_thread(_executar_agendamento_por_id, agendamento_id, agora)
+                    logger.info(
+                        "Agendamento executado id=%s sessao_criada=%s",
+                        agendamento_id, sessao_id,
+                    )
+                except Exception as exc:
+                    logger.error("Agendamento %s falhou: %s", agendamento.id, exc, exc_info=True)
+                    try:
+                        from app.services.email_service import notificar_agendamento_falhou
+                        notificar_agendamento_falhou(agendamento.nome_template, str(exc))
+                    except Exception:
+                        pass
+        finally:
+            _liberar_lock_pg(db)
 
 
 def _executar_agendamento_com_db(db, agendamento, agora: datetime) -> str | None:
