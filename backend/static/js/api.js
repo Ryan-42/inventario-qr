@@ -86,8 +86,6 @@ export async function validarPlanilha(sessaoId, file) {
 
 // ── Agents ──────────────────────────────────────────────────────────
 export const analisarSessao = (sessaoId) => apiFetch(`/agentes/analisar-sessao/${sessaoId}`, { method: 'POST' })
-export const chatSessao = (sessaoId, mensagem, historico = []) =>
-  apiFetch(`/agentes/chat/${sessaoId}`, { method: 'POST', body: JSON.stringify({ mensagem, historico }) })
 export const alertaSessao = (sessaoId, payload) =>
   apiFetch(`/agentes/alerta/${sessaoId}`, { method: 'POST', body: JSON.stringify(payload) })
 
