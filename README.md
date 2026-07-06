@@ -57,11 +57,12 @@ Divergências são detectadas e recontadas automaticamente em até 3 rodadas. Ao
 - **Supervisor Mobile** — acesso somente-leitura pós-R1 com itens divergentes + localização
 - **Lista do Operador** — itens pendentes filtrados por grupo no mobile
 
-### Análise por IA (Claude Haiku)
+### Análise por IA (Claude Haiku / Groq)
 - **Análise de sessão** — padrões, itens críticos, recomendações, relatório executivo
-- **Chat IA** — perguntas em linguagem natural sobre a sessão
 - **Validação de planilha** — detecta problemas antes de importar (prévia de 5 linhas)
 - **Alerta em tempo real** — anomalias por regras após cada leitura
+- **Anti-fraude** — detecta anomalias comportamentais entre operadores
+- **SOP Coach** — orientação contextual durante a contagem
 - Funciona sem API Key com análise local básica como fallback
 
 ### Exportações
@@ -127,7 +128,7 @@ inventario-qr/
 │   │   ├── repositories/     # sessao_repo, item_repo
 │   │   ├── routes/           # sessoes, contagens, exports, agentes, ws
 │   │   ├── services/         # pdf_service, excel_service, relatorio_final_service
-│   │   ├── agents/           # AnaliseAgent, ChatAgent, ValidationAgent, AlertaAgent
+│   │   ├── agents/           # AnaliseAgent, ValidationAgent, AlertaAgent, AntiFraudeAgent
 │   │   ├── websockets/       # ConnectionManager (broadcast por sessão)
 │   │   ├── database.py       # Engine + SQLite → PostgreSQL automático
 │   │   └── main.py           # FastAPI app + CORS + health check
@@ -228,9 +229,13 @@ pytest tests/ -q
 | Variável | Obrigatória | Padrão | Descrição |
 |----------|-------------|--------|-----------|
 | `DATABASE_URL` | Não | SQLite local | URL do banco (`postgresql://...` em produção) |
-| `ANTHROPIC_API_KEY` | Não | — | Chave Claude AI (sem ela, análise local) |
+| `SECRET_KEY` | **Sim** em prod | gerado | Chave de assinatura JWT — gere com `openssl rand -hex 32` |
+| `ANTHROPIC_API_KEY` | Não | — | Chave Claude AI (Anthropic) |
+| `GROQ_API_KEY` | Não | — | Chave Groq (alternativa gratuita ao Anthropic) |
+| `AI_ENABLED` | Não | `false` | Habilita chamadas a APIs de IA externas (LGPD) |
 | `ALLOWED_ORIGINS` | Não | localhost | Origens CORS permitidas (separadas por vírgula) |
-| `SECRET_KEY` | Não | gerado | Chave de assinatura de tokens |
+| `APP_ENV` | Não | — | Defina `production` para desabilitar `create_tables()` |
+| `TRUST_PROXY` | Não | `false` | `true` apenas atrás de proxy confiável (Railway, Render) |
 | `GUNICORN_WORKERS` | Não | 2 | Workers em produção (recomendado: 2×núcleos+1) |
 
 ---
@@ -354,7 +359,7 @@ O `render.yaml` na raiz do projeto configura tudo automaticamente: PostgreSQL + 
 | Sprint 3 | ✅ | Token de Rodada + Para Ajuste + Relatórios Finais |
 | Sprint 4 | ✅ | Grupos de Operadores + Supervisor + Token Admin + QA (70+ bugs) |
 | Sprint 5 | ✅ | Deploy + Barcode Scanner + Webhook + Rate Limit + UI Polimento |
-| Sprint 6 | 🔭 | Autenticação JWT + Operadores ao Vivo + Service Worker |
+| Sprint 6 | ✅ | Auth JWT, PWA offline, grupos de operadores, agentes IA, auditoria de segurança |
 | Sprint 7 | 🔭 | Integração ERP + IA Avançada (predição, classificação) |
 | Sprint 8 | 🔭 | Multi-tenant + PWA instalável + OCR etiquetas |
 
@@ -373,7 +378,6 @@ O INVIQ pode opcionalmente enviar dados para APIs de IA externas (Anthropic/Groq
 | `PredictionAgent` | Estatísticas agregadas de contagem (sem dados pessoais) | Anthropic ou Groq |
 | `PlanoAcaoAgent` | Divergências de estoque (códigos, quantidades) | Anthropic ou Groq |
 | `SyncERPAgent` | Itens divergentes para ajuste (códigos, quantidades) | Anthropic ou Groq |
-| `ChatAgent` | Histórico de mensagens + status da sessão | Anthropic ou Groq |
 
 **Nomes de operadores nunca são enviados diretamente à IA** — o `AntiFraudeAgent` anonimiza para "Operador 1, 2, …" antes de montar o prompt.
 
