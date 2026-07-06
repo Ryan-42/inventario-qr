@@ -236,6 +236,41 @@ class TestWebSocketLimite:
 
 
 # ---------------------------------------------------------------------------
+# WebSocket — autenticação obrigatória (P0 auditoria 2026-07)
+# ---------------------------------------------------------------------------
+
+class TestWebSocketAuth:
+    def test_ws_sem_token_fecha_4401(self, client, sessao_com_itens):
+        """WS sem token deve ser fechado com code 4401 antes de aceitar."""
+        from starlette.websockets import WebSocketDisconnect
+        sid = sessao_com_itens["id"]
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            with client.websocket_connect(f"/api/ws/sessao/{sid}"):
+                pass
+        assert exc_info.value.code == 4401
+
+    def test_ws_token_invalido_fecha_4401(self, client, sessao_com_itens):
+        """WS com token inválido deve ser fechado com code 4401."""
+        from starlette.websockets import WebSocketDisconnect
+        sid = sessao_com_itens["id"]
+        with pytest.raises(WebSocketDisconnect) as exc_info:
+            with client.websocket_connect(f"/api/ws/sessao/{sid}?token=INVALIDO"):
+                pass
+        assert exc_info.value.code == 4401
+
+    def test_ws_token_acesso_valido_conecta(self, client, sessao_com_itens):
+        """WS com token_acesso válido deve conectar e responder a ping."""
+        sid = sessao_com_itens["id"]
+        r = client.get(f"/api/sessoes/{sid}/token-acesso")
+        assert r.status_code == 200
+        tok = r.json()["token"]
+        with client.websocket_connect(f"/api/ws/sessao/{sid}?token={tok}") as ws:
+            ws.send_json({"tipo": "ping"})
+            resp = ws.receive_json()
+            assert resp.get("tipo") == "pong"
+
+
+# ---------------------------------------------------------------------------
 # FIX-LOW-1: Delete de sessao concluida deve ser bloqueado
 # ---------------------------------------------------------------------------
 

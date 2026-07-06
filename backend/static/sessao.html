@@ -1504,7 +1504,8 @@ async function init() {
     listarContagens(sessaoId).then(conts=>{contagens=conts||[];renderChart(contagens);renderOperators(contagens)}).catch(()=>{})
     loadRodadas()
     loadValorEstoque()
-    ws=new SessionWS(sessaoId,handleWsEvent); ws.connect()
+    const jwtToken = sessionStorage.getItem('inviq_token') || ''
+    ws=new SessionWS(sessaoId,handleWsEvent,jwtToken); ws.connect()
   } catch(e) { document.getElementById('sessao-nome').textContent='Sessão não encontrada'; toast(e.message||'Erro ao carregar sessão.','error') }
 }
 

@@ -1321,7 +1321,7 @@ function connectWS() {
       const idx = itensLista.findIndex(i => i.codigo === code)
       if (idx !== -1) { itensLista[idx] = { ...itensLista[idx], ja_contado: true }; if (!document.getElementById('state-lista')?.classList.contains('hidden')) renderLista() }
     }
-  })
+  }, tokenAtivo)
   ws.connect()
 }
 

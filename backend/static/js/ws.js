@@ -1,8 +1,10 @@
 // WebSocket client for real-time session updates
 export class SessionWS {
-  constructor(sessaoId, onEvent) {
+  // token: token_acesso, supervisor, grupo ou JWT admin — obrigatório (close 4401 se ausente)
+  constructor(sessaoId, onEvent, token = '') {
     this._sessaoId = sessaoId
     this._onEvent = onEvent
+    this._token = token
     this._ws = null
     this._reconnectTimer = null
     this._heartbeatTimer = null
@@ -38,7 +40,8 @@ export class SessionWS {
 
   _open() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws'
-    const url = `${proto}://${location.host}/api/ws/sessao/${this._sessaoId}`
+    const tokenQs = this._token ? `?token=${encodeURIComponent(this._token)}` : ''
+    const url = `${proto}://${location.host}/api/ws/sessao/${this._sessaoId}${tokenQs}`
     try { this._ws = new WebSocket(url) } catch { this._scheduleReconnect(); return }
 
     this._ws.onopen = () => {

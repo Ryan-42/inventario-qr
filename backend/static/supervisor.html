@@ -370,7 +370,7 @@ function conectarWS() {
     if (ev.tipo === 'sessao_status_alterado') {
       carregarItens()
     }
-  })
+  }, tokenSupervisor)
   ws.connect()
 }
 
