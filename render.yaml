@@ -1,3 +1,11 @@
+# Blueprint do Render — web service Docker.
+# Banco: PostgreSQL EXTERNO (Neon) — NÃO usamos mais o Postgres free do Render,
+# que é deletado após ~90 dias (causa do 502 anterior). O Neon free é perpétuo.
+#
+# Após criar o serviço, defina no painel (Environment):
+#   DATABASE_URL   -> connection string DIRETA do Neon (não a "pooled";
+#                     o scheduler usa pg_try_advisory_lock, incompatível com o pooler)
+#   ALLOWED_ORIGINS-> https://inventario-qr-api.onrender.com
 services:
   - type: web
     name: inventario-qr-api
@@ -8,17 +16,10 @@ services:
     region: ohio
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: inventario-qr-db
-          property: connectionString
+        sync: false          # Neon — definido manualmente no painel (secreto)
       - key: ALLOWED_ORIGINS
         sync: false
       - key: SECRET_KEY
         generateValue: true
       - key: ANTHROPIC_API_KEY
         sync: false
-
-databases:
-  - name: inventario-qr-db
-    plan: free
-    region: ohio
