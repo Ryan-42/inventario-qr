@@ -6,7 +6,10 @@ import importlib.util
 import pathlib
 import sys
 
-_AGENTS_ROOT = pathlib.Path(__file__).parents[3] / '.agents'
+# .agents/ fica DENTRO de backend/ para entrar no build context do Docker
+# (dockerContext: ./backend). __file__ = backend/app/agents/__init__.py →
+# parents[2] = backend/ → backend/.agents. No container: /app/.agents.
+_AGENTS_ROOT = pathlib.Path(__file__).parents[2] / '.agents'
 _SKIP = {'skills'}
 
 
