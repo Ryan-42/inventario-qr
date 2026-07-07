@@ -6,20 +6,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* ── Backgrounds — the void ─── */
-  --bg-base:      #000000;
-  --bg-surface:   #0a0a0a;
-  --bg-surface-2: #111111;
-  --bg-surface-3: #1a1a1a;
+  /* ── Backgrounds — deep blue-black void ─── */
+  --bg-base:      #050a17;
+  --bg-surface:   #0a1122;
+  --bg-surface-2: #0f1a30;
+  --bg-surface-3: #16223d;
 
   /* ── Text ─── */
-  --text-primary:   #ffffff;
-  --text-secondary: #9a9a9a;
-  --text-tertiary:  #bdbdbd;
+  --text-primary:   #eef2ff;
+  --text-secondary: #9aa8c4;
+  --text-tertiary:  #b8c2da;
 
-  /* ── Borders — hairline, near-invisible ─── */
-  --border-subtle:  rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.12);
+  /* ── Borders — hairline, faint blue tint ─── */
+  --border-subtle:  rgba(150, 170, 255, 0.07);
+  --border-default: rgba(150, 170, 255, 0.14);
   --border-focus:   rgba(128, 82, 255, 0.55);
 
   /* ── Brand ─── */
@@ -69,13 +69,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 input, textarea, select { font-family: inherit; }
 img { max-width: 100%; }
 
-/* ── Background — pure void, no grid texture ─────────────────────────── */
+/* ── Background — deep blue void with soft violet aurora ─────────────── */
 .bg-mesh {
   position: fixed; inset: 0; pointer-events: none; z-index: 0;
   background-image:
-    radial-gradient(ellipse 70% 50% at 15% -10%, rgba(128,82,255,0.10) 0%, transparent 60%),
-    radial-gradient(ellipse 50% 40% at 88% 105%, rgba(255,184,41,0.05) 0%, transparent 55%);
-  background-size: 100% 100%, 100% 100%;
+    radial-gradient(ellipse 70% 50% at 12% -12%, rgba(128,82,255,0.16) 0%, transparent 60%),
+    radial-gradient(ellipse 55% 45% at 90% 8%, rgba(74,123,255,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 85% 108%, rgba(255,184,41,0.05) 0%, transparent 55%);
+  background-size: 100% 100%, 100% 100%, 100% 100%;
 }
 
 /* ── Typography ───────────────────────────────────────────────────────── */
