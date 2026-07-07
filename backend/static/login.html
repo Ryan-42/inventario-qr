@@ -13,14 +13,14 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        "surface":              "#050a17",
-        "surface-container":    "#0a1122",
-        "surface-container-high":"#0f1a30",
-        "surface-variant":      "#16223d",
+        "surface":              "#0a1730",
+        "surface-container":    "#0f2040",
+        "surface-container-high":"#152a52",
+        "surface-variant":      "#1d3866",
         "on-surface":           "#ffffff",
         "on-surface-variant":   "#bdbdbd",
         "outline":              "#9a9a9a",
-        "outline-variant":      "#24314f",
+        "outline-variant":      "#2c4a80",
         "primary":              "#8052ff",
         "on-primary":           "#ffffff",
         "primary-container":    "#6a3ce8",
@@ -35,18 +35,18 @@ tailwind.config = {
 </script>
 <link rel="stylesheet" href="/static/css/app.css"/>
 <style>
-  #neural-canvas {
+  #hive-canvas {
     position: fixed; inset: 0; width: 100vw; height: 100vh;
     z-index: 0; pointer-events: none;
-    /* fade the brain toward the edges so the form stays legible */
-    -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 45%, #000 55%, transparent 100%);
-            mask-image: radial-gradient(ellipse 80% 80% at 50% 45%, #000 55%, transparent 100%);
+    /* fade toward edges so the form stays legible */
+    -webkit-mask-image: radial-gradient(ellipse 95% 95% at 50% 45%, #000 60%, transparent 100%);
+            mask-image: radial-gradient(ellipse 95% 95% at 50% 45%, #000 60%, transparent 100%);
   }
   .login-shell { position: relative; z-index: 10; }
   /* darken directly behind the form for contrast */
   .login-shell::before {
     content: ''; position: absolute; inset: -30px -40px; z-index: -1;
-    background: radial-gradient(ellipse 90% 75% at 50% 50%, rgba(5,10,23,0.82) 40%, transparent 100%);
+    background: radial-gradient(ellipse 90% 75% at 50% 50%, rgba(10,23,48,0.78) 40%, transparent 100%);
     pointer-events: none;
   }
 </style>
@@ -54,7 +54,7 @@ tailwind.config = {
 <body class="bg-surface text-on-surface min-h-screen flex items-center justify-center p-4">
 
 <div class="bg-mesh"></div>
-<canvas id="neural-canvas" data-count="150" data-ambient="50"></canvas>
+<canvas id="hive-canvas" data-size="46" data-pull="34" data-reach="200"></canvas>
 
 <div class="login-shell w-full max-w-sm">
   <!-- Logo / branding -->
@@ -172,6 +172,6 @@ form.addEventListener('submit', async (e) => {
   }
 })
 </script>
-<script src="/static/js/neural.js"></script>
+<script src="/static/js/hive.js"></script>
 </body>
 </html>
