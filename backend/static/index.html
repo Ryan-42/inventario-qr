@@ -7,7 +7,7 @@
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
 tailwind.config = {
@@ -15,47 +15,47 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        "surface-tint": "#7ad0ff",
-        "on-secondary": "#3f008e",
-        "secondary": "#d2bbff",
-        "outline-variant": "#3d4850",
-        "error-container": "#93000a",
-        "surface": "#071325",
-        "surface-container": "#142032",
-        "tertiary": "#10eb8a",
-        "primary-fixed-dim": "#7ad0ff",
-        "surface-variant": "#2a3548",
-        "on-error": "#690005",
-        "on-primary-container": "#004a65",
-        "inverse-primary": "#00668a",
-        "secondary-fixed-dim": "#d2bbff",
-        "error": "#ffb4ab",
-        "surface-bright": "#2e394d",
-        "inverse-surface": "#d7e3fc",
-        "on-surface": "#d7e3fc",
-        "on-error-container": "#ffdad6",
-        "primary": "#8fd6ff",
-        "surface-container-high": "#1f2a3d",
-        "background": "#071325",
-        "primary-container": "#00bfff",
-        "primary-fixed": "#c3e8ff",
-        "surface-container-low": "#101c2e",
-        "surface-container-highest": "#2a3548",
-        "on-secondary-container": "#c9aeff",
-        "secondary-container": "#6001d1",
-        "on-tertiary-container": "#00502b",
-        "on-primary": "#003549",
-        "tertiary-fixed-dim": "#00e384",
-        "tertiary-fixed": "#5affa2",
-        "on-tertiary": "#00391d",
-        "on-background": "#d7e3fc",
-        "inverse-on-surface": "#253144",
-        "on-primary-fixed": "#001e2c",
-        "secondary-fixed": "#eaddff",
-        "outline": "#87929b",
-        "surface-container-lowest": "#030e20",
-        "on-surface-variant": "#bcc8d1",
-        "tertiary-container": "#00cc76"
+        "surface-tint": "#8052ff",
+        "on-secondary": "#ffffff",
+        "secondary": "#5fc9b4",
+        "outline-variant": "#262626",
+        "error-container": "#3a0d16",
+        "surface": "#000000",
+        "surface-container": "#0a0a0a",
+        "tertiary": "#ffb829",
+        "primary-fixed-dim": "#8052ff",
+        "surface-variant": "#1a1a1a",
+        "on-error": "#3a0d16",
+        "on-primary-container": "#ffffff",
+        "inverse-primary": "#b49cff",
+        "secondary-fixed-dim": "#5fc9b4",
+        "error": "#ff7a92",
+        "surface-bright": "#1e1e1e",
+        "inverse-surface": "#ffffff",
+        "on-surface": "#ffffff",
+        "on-error-container": "#ffd9df",
+        "primary": "#8052ff",
+        "surface-container-high": "#141414",
+        "background": "#000000",
+        "primary-container": "#6a3ce8",
+        "primary-fixed": "#d9c9ff",
+        "surface-container-low": "#060606",
+        "surface-container-highest": "#1a1a1a",
+        "on-secondary-container": "#b6ece1",
+        "secondary-container": "#0e5c4d",
+        "on-tertiary-container": "#ffe1a3",
+        "on-primary": "#ffffff",
+        "tertiary-fixed-dim": "#ffb829",
+        "tertiary-fixed": "#ffd580",
+        "on-tertiary": "#3a2600",
+        "on-background": "#ffffff",
+        "inverse-on-surface": "#1a1a1a",
+        "on-primary-fixed": "#1a0f3d",
+        "secondary-fixed": "#c9f2e8",
+        "outline": "#9a9a9a",
+        "surface-container-lowest": "#000000",
+        "on-surface-variant": "#bdbdbd",
+        "tertiary-container": "#7a5200"
       },
       borderRadius: {
         DEFAULT: "0.125rem",
@@ -105,21 +105,21 @@ tailwind.config = {
 <style>
   body { font-family: 'Inter', sans-serif; }
   .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-  .glass-panel { background: rgba(10,22,40,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+  .glass-panel { background: rgba(5,5,5,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
   .pulse-dot { animation: pulse-ring 2s infinite; }
   @keyframes pulse-ring {
-    0%   { box-shadow: 0 0 0 0 rgba(16,235,138,0.7); }
-    70%  { box-shadow: 0 0 0 6px rgba(16,235,138,0); }
-    100% { box-shadow: 0 0 0 0 rgba(16,235,138,0); }
+    0%   { box-shadow: 0 0 0 0 rgba(255,184,41,0.7); }
+    70%  { box-shadow: 0 0 0 6px rgba(255,184,41,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,184,41,0); }
   }
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #2a3548; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: #3d4850; }
+  ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #262626; }
 
   /* Session cards */
   .session-card-stitch { cursor: pointer; }
-  .session-card-stitch:hover .card-arrow { color: #8fd6ff; }
+  .session-card-stitch:hover .card-arrow { color: #8052ff; }
 
   /* Modals */
   .modal-backdrop {
@@ -130,7 +130,7 @@ tailwind.config = {
   }
   .modal-backdrop.open { opacity: 1; pointer-events: all; }
   .modal {
-    background: #0b1629; border: 1px solid rgba(255,255,255,0.08);
+    background: #050505; border: 1px solid rgba(255,255,255,0.08);
     border-radius: 14px; padding: 1.5rem;
     width: 100%; max-width: 480px;
     transform: translateY(10px) scale(0.97); transition: transform 0.22s;
@@ -138,39 +138,39 @@ tailwind.config = {
   }
   .modal-backdrop.open .modal { transform: translateY(0) scale(1); }
   .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
-  .modal-title { font-size: 1rem; font-weight: 600; color: #d7e3fc; }
-  .modal-close { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #bcc8d1; cursor: pointer; transition: all 0.15s; background: none; border: none; }
-  .modal-close:hover { background: rgba(255,255,255,0.07); color: #d7e3fc; }
+  .modal-title { font-size: 1rem; font-weight: 600; color: #ffffff; }
+  .modal-close { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #bdbdbd; cursor: pointer; transition: all 0.15s; background: none; border: none; }
+  .modal-close:hover { background: rgba(255,255,255,0.07); color: #ffffff; }
   .modal-footer { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.25rem; }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.18s ease; border: 1px solid transparent; white-space: nowrap; user-select: none; font-family: inherit; }
   .btn:disabled { opacity: 0.45; cursor: not-allowed; pointer-events: none; }
-  .btn-primary { background: linear-gradient(135deg,#005f8f,#0080b3,#005f8f); background-size: 200% 100%; color: #4dd9ff; border-color: rgba(143,214,255,0.35); }
-  .btn-primary:hover:not(:disabled) { background-position: right center; box-shadow: 0 0 20px rgba(143,214,255,0.22); border-color: rgba(143,214,255,0.6); color: #fff; transform: translateY(-1px); }
-  .btn-secondary { background: rgba(255,255,255,0.04); color: #bcc8d1; border-color: rgba(255,255,255,0.1); }
-  .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.08); color: #d7e3fc; }
+  .btn-primary { background: linear-gradient(135deg,#5e3ad1,#8052ff,#5e3ad1); background-size: 200% 100%; color: #a68aff; border-color: rgba(128,82,255,0.35); }
+  .btn-primary:hover:not(:disabled) { background-position: right center; box-shadow: 0 0 20px rgba(128,82,255,0.22); border-color: rgba(128,82,255,0.6); color: #fff; transform: translateY(-1px); }
+  .btn-secondary { background: rgba(255,255,255,0.04); color: #bdbdbd; border-color: rgba(255,255,255,0.1); }
+  .btn-secondary:hover:not(:disabled) { background: rgba(255,255,255,0.08); color: #ffffff; }
   .btn-sm { padding: 0.35rem 0.7rem; font-size: 0.8125rem; }
   .input { width: 100%; padding: 0.75rem 1rem; background: #fff; border: 1px solid rgba(0,0,0,0.2); border-radius: 8px; color: #111; font-size: 1rem; transition: border-color 0.15s, box-shadow 0.15s; outline: none; font-family: inherit; }
-  .input::placeholder { color: #9ca3af; }
-  .input:focus { border-color: #8fd6ff; box-shadow: 0 0 0 3px rgba(143,214,255,0.15); }
+  .input::placeholder { color: #8a8a8a; }
+  .input:focus { border-color: #8052ff; box-shadow: 0 0 0 3px rgba(128,82,255,0.15); }
   .input:-webkit-autofill,.input:-webkit-autofill:hover,.input:-webkit-autofill:focus { -webkit-text-fill-color:#111!important; -webkit-box-shadow:0 0 0 1000px #fff inset!important; }
-  .spinner { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(143,214,255,0.12); border-top-color: #8fd6ff; animation: spin 0.75s linear infinite; }
-  .spinner-sm { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(143,214,255,0.12); border-top-color: #8fd6ff; animation: spin 0.75s linear infinite; display: inline-block; }
+  .spinner { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(128,82,255,0.12); border-top-color: #8052ff; animation: spin 0.75s linear infinite; }
+  .spinner-sm { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(128,82,255,0.12); border-top-color: #8052ff; animation: spin 0.75s linear infinite; display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .hidden { display: none !important; }
 
   /* Toast */
   #toast-container { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; max-width: 360px; }
-  .toast { background: #0b1629; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.875rem 1rem; font-size: 0.875rem; color: #d7e3fc; display: flex; align-items: center; gap: 0.625rem; box-shadow: 0 8px 48px rgba(0,0,0,0.9); animation: toast-in 0.25s ease; }
-  .toast-success { border-color: rgba(16,235,138,0.3); }
-  .toast-success .toast-icon { color: #10eb8a; }
-  .toast-error { border-color: rgba(255,180,171,0.3); }
-  .toast-error .toast-icon { color: #ffb4ab; }
-  .toast-info .toast-icon { color: #8fd6ff; }
-  .toast-warning .toast-icon { color: #ffcc44; }
+  .toast { background: #050505; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.875rem 1rem; font-size: 0.875rem; color: #ffffff; display: flex; align-items: center; gap: 0.625rem; box-shadow: 0 8px 48px rgba(0,0,0,0.9); animation: toast-in 0.25s ease; }
+  .toast-success { border-color: rgba(255,184,41,0.3); }
+  .toast-success .toast-icon { color: #ffb829; }
+  .toast-error { border-color: rgba(255,122,146,0.3); }
+  .toast-error .toast-icon { color: #ff7a92; }
+  .toast-info .toast-icon { color: #8052ff; }
+  .toast-warning .toast-icon { color: #ffcb5c; }
   @keyframes toast-in { from { opacity: 0; transform: translateX(1rem); } to { opacity: 1; transform: translateX(0); } }
   .animate-enter { animation: enter 0.3s ease; }
   @keyframes enter { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-  #search-input::placeholder { color: #87929b; }
+  #search-input::placeholder { color: #9a9a9a; }
   @media (max-width: 640px) {
     .modal { margin: 0; border-radius: 14px 14px 0 0; max-height: 88vh; position: fixed; bottom: 0; left: 0; right: 0; max-width: 100%; }
     .modal-backdrop { align-items: flex-end; padding: 0; }
@@ -242,7 +242,7 @@ tailwind.config = {
         <button class="hover:text-primary transition-colors p-xs rounded-full hover:bg-white/5"><span class="material-symbols-outlined">notifications</span></button>
         <button class="hover:text-primary transition-colors p-xs rounded-full hover:bg-white/5"><span class="material-symbols-outlined">settings</span></button>
       </div>
-      <button id="btn-nova-sessao" class="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md uppercase px-lg py-sm rounded-lg flex items-center gap-xs shadow-[0_0_20px_rgba(143,214,255,0.35)] hover:shadow-[0_0_28px_rgba(143,214,255,0.5)] transition-all hover:scale-[0.98] active:scale-95 text-[#003549]">
+      <button id="btn-nova-sessao" class="bg-primary hover:bg-primary/90 text-on-primary font-label-md text-label-md uppercase px-lg py-sm rounded-lg flex items-center gap-xs shadow-[0_0_20px_rgba(128,82,255,0.35)] hover:shadow-[0_0_28px_rgba(128,82,255,0.5)] transition-all hover:scale-[0.98] active:scale-95 text-[#ffffff]">
         <span class="material-symbols-outlined text-[18px]" style="font-variation-settings:'FILL' 1">add_circle</span>
         <span class="hidden sm:inline">Nova Sessão</span>
         <span class="sm:hidden">Nova</span>
@@ -255,7 +255,7 @@ tailwind.config = {
 
     <!-- Hero -->
     <section class="flex flex-col gap-sm">
-      <div class="flex items-center gap-xs w-fit px-sm py-xs rounded-full mb-xs" style="background:rgba(143,214,255,0.08);border:1px solid rgba(143,214,255,0.18)">
+      <div class="flex items-center gap-xs w-fit px-sm py-xs rounded-full mb-xs" style="background:rgba(128,82,255,0.08);border:1px solid rgba(128,82,255,0.18)">
         <span class="material-symbols-outlined text-primary text-[13px]" style="font-variation-settings:'FILL' 1">qr_code_scanner</span>
         <span class="text-[10px] font-semibold text-primary uppercase tracking-widest">Inventário Operacional</span>
       </div>
@@ -275,7 +275,7 @@ tailwind.config = {
           <span class="text-label-md font-label-md uppercase text-on-surface-variant">Total de Sessões</span>
           <span class="material-symbols-outlined text-on-surface-variant">analytics</span>
         </div>
-        <div id="stat-total" class="text-headline-xl font-headline-xl text-primary relative z-10" style="text-shadow: 0 0 20px rgba(143,214,255,0.4)">—</div>
+        <div id="stat-total" class="text-headline-xl font-headline-xl text-primary relative z-10" style="text-shadow: 0 0 20px rgba(128,82,255,0.4)">—</div>
       </div>
       <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm border-t-2 border-t-tertiary relative overflow-hidden hover:border-tertiary/30 transition-all">
         <div class="absolute -top-10 -right-10 w-24 h-24 bg-tertiary/10 rounded-full blur-xl pointer-events-none"></div>
@@ -286,7 +286,7 @@ tailwind.config = {
           </span>
           <span class="material-symbols-outlined text-tertiary">radar</span>
         </div>
-        <div id="stat-ativas" class="text-headline-xl font-headline-xl text-tertiary relative z-10" style="text-shadow: 0 0 20px rgba(16,235,138,0.3)">—</div>
+        <div id="stat-ativas" class="text-headline-xl font-headline-xl text-tertiary relative z-10" style="text-shadow: 0 0 20px rgba(255,184,41,0.3)">—</div>
       </div>
       <div class="glass-panel p-lg rounded-xl flex flex-col gap-sm hover:border-secondary/20 transition-all border-t-2 border-t-secondary relative overflow-hidden">
         <div class="absolute -top-10 -right-10 w-20 h-20 bg-secondary/8 rounded-full blur-xl pointer-events-none"></div>
@@ -308,7 +308,7 @@ tailwind.config = {
       </div>
       <div class="relative w-full md:w-64">
         <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
-        <input id="search-input" class="w-full rounded-lg pl-xl pr-sm py-xs text-body-sm font-body-sm focus:outline-none transition-all" style="background:rgba(42,53,72,0.6);color:#d7e3fc;border:1px solid rgba(255,255,255,0.1);color-scheme:dark" placeholder="Buscar sessão, código..." type="search"/>
+        <input id="search-input" class="w-full rounded-lg pl-xl pr-sm py-xs text-body-sm font-body-sm focus:outline-none transition-all" style="background:rgba(26,26,26,0.6);color:#ffffff;border:1px solid rgba(255,255,255,0.1);color-scheme:dark" placeholder="Buscar sessão, código..." type="search"/>
       </div>
     </section>
 
@@ -318,7 +318,7 @@ tailwind.config = {
       <div id="sessions-loading" class="flex flex-col items-center justify-center py-24 gap-4">
         <div class="relative w-12 h-12 flex items-center justify-center">
           <div class="absolute w-full h-full border-4 border-surface-container-high rounded-full"></div>
-          <div class="absolute w-full h-full border-4 border-primary rounded-full border-t-transparent animate-spin shadow-[0_0_15px_rgba(143,214,255,0.5)]"></div>
+          <div class="absolute w-full h-full border-4 border-primary rounded-full border-t-transparent animate-spin shadow-[0_0_15px_rgba(128,82,255,0.5)]"></div>
         </div>
         <p class="text-on-surface-variant text-code-sm font-code-sm uppercase tracking-widest">Carregando sessões…</p>
       </div>
@@ -330,7 +330,7 @@ tailwind.config = {
         </div>
         <h3 class="text-headline-md font-headline-md text-on-surface">Nenhuma sessão encontrada</h3>
         <p class="empty-state-text text-on-surface-variant text-body-sm font-body-sm max-w-xs">Crie uma nova sessão para começar o inventário</p>
-        <button id="btn-nova-sessao-empty" class="mt-4 bg-primary text-on-primary font-label-md text-label-md uppercase px-lg py-sm rounded-lg flex items-center gap-xs shadow-[0_0_15px_rgba(143,214,255,0.3)] transition-all hover:scale-[0.98] text-[#003549]">
+        <button id="btn-nova-sessao-empty" class="mt-4 bg-primary text-on-primary font-label-md text-label-md uppercase px-lg py-sm rounded-lg flex items-center gap-xs shadow-[0_0_15px_rgba(128,82,255,0.3)] transition-all hover:scale-[0.98] text-[#ffffff]">
           <span class="material-symbols-outlined text-[18px]">add</span>
           Nova Sessão
         </button>
@@ -363,7 +363,7 @@ tailwind.config = {
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
       <span class="modal-title" style="display:flex;align-items:center;gap:.5rem">
-        <span class="material-symbols-outlined text-[18px]" style="color:#ffb4ab">delete_forever</span>
+        <span class="material-symbols-outlined text-[18px]" style="color:#ff7a92">delete_forever</span>
         Deletar Sessão
       </span>
       <button class="modal-close" id="modal-deletar-close">
@@ -371,12 +371,12 @@ tailwind.config = {
       </button>
     </div>
     <div style="display:flex;flex-direction:column;gap:.75rem">
-      <p style="font-size:.875rem;color:#bcc8d1;line-height:1.5">
-        Tem certeza que deseja deletar a sessão <strong id="deletar-sessao-nome" style="color:#d7e3fc"></strong>?
+      <p style="font-size:.875rem;color:#bdbdbd;line-height:1.5">
+        Tem certeza que deseja deletar a sessão <strong id="deletar-sessao-nome" style="color:#ffffff"></strong>?
       </p>
-      <div style="background:rgba(255,180,171,0.08);border:1px solid rgba(255,180,171,0.3);border-radius:8px;padding:.75rem;display:flex;gap:.5rem;align-items:flex-start">
-        <span class="material-symbols-outlined text-[16px]" style="color:#ffb4ab;flex-shrink:0;margin-top:1px">warning</span>
-        <p style="font-size:.8125rem;color:#ffb4ab;line-height:1.4;margin:0">
+      <div style="background:rgba(255,122,146,0.08);border:1px solid rgba(255,122,146,0.3);border-radius:8px;padding:.75rem;display:flex;gap:.5rem;align-items:flex-start">
+        <span class="material-symbols-outlined text-[16px]" style="color:#ff7a92;flex-shrink:0;margin-top:1px">warning</span>
+        <p style="font-size:.8125rem;color:#ff7a92;line-height:1.4;margin:0">
           Esta ação é <strong>irreversível</strong>. Todos os itens, contagens e grupos desta sessão serão apagados permanentemente.
         </p>
       </div>
@@ -384,7 +384,7 @@ tailwind.config = {
     <div class="modal-footer">
       <button class="btn btn-secondary" id="modal-deletar-cancel">Cancelar</button>
       <button class="btn" id="modal-deletar-confirm"
-              style="background:rgba(255,180,171,0.15);color:#ffb4ab;border-color:rgba(255,180,171,0.4)">
+              style="background:rgba(255,122,146,0.15);color:#ff7a92;border-color:rgba(255,122,146,0.4)">
         <span id="deletar-confirm-label">Sim, deletar</span>
         <span id="deletar-confirm-spinner" class="spinner-sm hidden"></span>
       </button>
@@ -403,15 +403,15 @@ tailwind.config = {
     </div>
     <div class="flex flex-col gap-md">
       <div>
-        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#87929b;display:block;margin-bottom:0.5rem" for="input-nome-sessao">Nome da Sessão</label>
+        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#9a9a9a;display:block;margin-bottom:0.5rem" for="input-nome-sessao">Nome da Sessão</label>
         <input id="input-nome-sessao" type="text" class="input" placeholder="Ex: Inventário Geral — Janeiro 2025" maxlength="120" autocomplete="off"/>
       </div>
       <div>
-        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#87929b;display:block;margin-bottom:0.5rem" for="input-webhook-url">
-          Webhook URL <span style="color:#87929b;font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span>
+        <label style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#9a9a9a;display:block;margin-bottom:0.5rem" for="input-webhook-url">
+          Webhook URL <span style="color:#9a9a9a;font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span>
         </label>
         <input id="input-webhook-url" type="url" class="input" placeholder="https://seu-sistema.com/webhook" maxlength="500" autocomplete="off"/>
-        <p style="font-size:.6875rem;color:#87929b;margin-top:.375rem">Receba um POST automático quando o inventário for concluído.</p>
+        <p style="font-size:.6875rem;color:#9a9a9a;margin-top:.375rem">Receba um POST automático quando o inventário for concluído.</p>
       </div>
     </div>
     <div class="modal-footer">
@@ -429,24 +429,24 @@ tailwind.config = {
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title" style="display:flex;align-items:center;gap:.5rem">
-        <span class="material-symbols-outlined text-[18px]" style="color:#8fd6ff">key</span>
+        <span class="material-symbols-outlined text-[18px]" style="color:#8052ff">key</span>
         Token de Administrador
       </span>
     </div>
     <div style="display:flex;flex-direction:column;gap:.75rem">
-      <p style="font-size:.875rem;color:#bcc8d1;line-height:1.5">
+      <p style="font-size:.875rem;color:#bdbdbd;line-height:1.5">
         Guarde este token — ele é a sua chave de acesso como administrador deste inventário. Você precisará dele para acessar o painel de controle.
       </p>
-      <div style="background:#0b1629;border:1px solid rgba(143,214,255,0.3);border-radius:10px;padding:1rem;text-align:center">
-        <p style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#87929b;margin-bottom:.5rem">Seu Token Admin</p>
-        <p id="token-admin-display" style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;letter-spacing:.2em;color:#8fd6ff"></p>
+      <div style="background:#050505;border:1px solid rgba(128,82,255,0.3);border-radius:10px;padding:1rem;text-align:center">
+        <p style="font-size:0.625rem;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#9a9a9a;margin-bottom:.5rem">Seu Token Admin</p>
+        <p id="token-admin-display" style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;letter-spacing:.2em;color:#8052ff"></p>
       </div>
       <button id="btn-copiar-token" class="btn btn-secondary" style="width:100%;justify-content:center;gap:.5rem">
         <span class="material-symbols-outlined text-[16px]">content_copy</span>
         Copiar Token
       </button>
-      <p style="font-size:.75rem;color:#ffb4ab;display:flex;align-items:flex-start;gap:.375rem">
-        <span class="material-symbols-outlined text-[14px]" style="color:#ffb4ab;flex-shrink:0;margin-top:1px">warning</span>
+      <p style="font-size:.75rem;color:#ff7a92;display:flex;align-items:flex-start;gap:.375rem">
+        <span class="material-symbols-outlined text-[14px]" style="color:#ff7a92;flex-shrink:0;margin-top:1px">warning</span>
         Este token não é exibido novamente. Anote-o agora.
       </p>
     </div>
@@ -575,7 +575,7 @@ function renderCard(s) {
         </div>
       </div>
       <div class="w-full h-1.5 bg-surface-variant/60 rounded-full overflow-hidden">
-        <div class="h-full rounded-full transition-all ${isAtiva ? 'bg-tertiary shadow-[0_0_8px_rgba(16,235,138,0.5)]' : isConcluida ? 'bg-outline' : 'bg-error/50'}" style="width:${progressPct}%"></div>
+        <div class="h-full rounded-full transition-all ${isAtiva ? 'bg-tertiary shadow-[0_0_8px_rgba(255,184,41,0.5)]' : isConcluida ? 'bg-outline' : 'bg-error/50'}" style="width:${progressPct}%"></div>
       </div>
     </div>` : `<div class="flex items-center gap-xs py-xs"><span class="material-symbols-outlined text-[13px] text-on-surface-variant/40">table_chart</span><span class="text-[11px] text-on-surface-variant/40">Sem planilha base</span></div>`
 
@@ -606,7 +606,7 @@ function renderCard(s) {
           </button>
         </div>
       </div>
-      <div class="p-md flex flex-col gap-sm" style="background:rgba(7,19,37,0.25)">
+      <div class="p-md flex flex-col gap-sm" style="background:rgba(0,0,0,0.25)">
         ${progressBar}
         <div class="flex items-center justify-between gap-xs pt-xs border-t border-white/[0.04]">
           <div class="flex items-center gap-xs text-on-surface-variant/60">

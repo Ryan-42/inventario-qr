@@ -8,7 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <script id="tailwind-config">
 tailwind.config = {
@@ -16,18 +16,18 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        "surface-tint": "#7ad0ff","on-secondary": "#3f008e","secondary": "#d2bbff","outline-variant": "#3d4850",
-        "error-container": "#93000a","surface": "#071325","surface-container": "#142032","tertiary": "#10eb8a",
-        "primary-fixed-dim": "#7ad0ff","surface-variant": "#2a3548","on-error": "#690005","on-primary-container": "#004a65",
-        "inverse-primary": "#00668a","secondary-fixed-dim": "#d2bbff","error": "#ffb4ab","surface-bright": "#2e394d",
-        "inverse-surface": "#d7e3fc","on-surface": "#d7e3fc","on-error-container": "#ffdad6","primary": "#8fd6ff",
-        "surface-container-high": "#1f2a3d","background": "#071325","primary-container": "#00bfff",
-        "primary-fixed": "#c3e8ff","surface-container-low": "#101c2e","surface-container-highest": "#2a3548",
-        "on-secondary-container": "#c9aeff","secondary-container": "#6001d1","on-tertiary-container": "#00502b",
-        "on-primary": "#003549","tertiary-fixed-dim": "#00e384","tertiary-fixed": "#5affa2","on-tertiary": "#00391d",
-        "on-background": "#d7e3fc","inverse-on-surface": "#253144","on-primary-fixed": "#001e2c",
-        "secondary-fixed": "#eaddff","outline": "#87929b","surface-container-lowest": "#030e20",
-        "on-surface-variant": "#bcc8d1","tertiary-container": "#00cc76"
+        "surface-tint": "#8052ff","on-secondary": "#ffffff","secondary": "#5fc9b4","outline-variant": "#262626",
+        "error-container": "#3a0d16","surface": "#000000","surface-container": "#0a0a0a","tertiary": "#ffb829",
+        "primary-fixed-dim": "#8052ff","surface-variant": "#1a1a1a","on-error": "#3a0d16","on-primary-container": "#ffffff",
+        "inverse-primary": "#b49cff","secondary-fixed-dim": "#5fc9b4","error": "#ff7a92","surface-bright": "#1e1e1e",
+        "inverse-surface": "#ffffff","on-surface": "#ffffff","on-error-container": "#ffd9df","primary": "#8052ff",
+        "surface-container-high": "#141414","background": "#000000","primary-container": "#6a3ce8",
+        "primary-fixed": "#d9c9ff","surface-container-low": "#060606","surface-container-highest": "#1a1a1a",
+        "on-secondary-container": "#b6ece1","secondary-container": "#0e5c4d","on-tertiary-container": "#ffe1a3",
+        "on-primary": "#ffffff","tertiary-fixed-dim": "#ffb829","tertiary-fixed": "#ffd580","on-tertiary": "#3a2600",
+        "on-background": "#ffffff","inverse-on-surface": "#1a1a1a","on-primary-fixed": "#1a0f3d",
+        "secondary-fixed": "#c9f2e8","outline": "#9a9a9a","surface-container-lowest": "#000000",
+        "on-surface-variant": "#bdbdbd","tertiary-container": "#7a5200"
       },
       borderRadius: { DEFAULT: "0.125rem", lg: "0.25rem", xl: "0.5rem", full: "0.75rem" },
       spacing: { gutter: "24px", base: "4px", sm: "8px", md: "16px", "margin-desktop": "48px", xs: "4px", lg: "24px", xl: "40px", "margin-mobile": "16px" },
@@ -50,35 +50,35 @@ tailwind.config = {
 <style>
   body { font-family: 'Inter', sans-serif; }
   .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
-  .glass-panel { background: rgba(10,22,40,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
+  .glass-panel { background: rgba(5,5,5,0.8); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #2a3548; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: #3d4850; }
+  ::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #262626; }
   .hidden { display: none !important; }
-  .spinner { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(143,214,255,0.12); border-top-color: #8fd6ff; animation: spin 0.75s linear infinite; }
+  .spinner { width: 32px; height: 32px; border-radius: 50%; border: 2px solid rgba(128,82,255,0.12); border-top-color: #8052ff; animation: spin 0.75s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .kpi-card { transition: transform 0.18s, box-shadow 0.18s; }
   .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
   .badge { display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
-  .badge-ok  { background: rgba(16,235,138,0.12); color: #10eb8a; }
-  .badge-warn { background: rgba(255,204,68,0.12); color: #ffcc44; }
-  .badge-err  { background: rgba(255,180,171,0.12); color: #ffb4ab; }
-  .badge-info { background: rgba(143,214,255,0.12); color: #8fd6ff; }
-  .nav-link { display: flex; align-items: center; gap: 16px; padding: 8px 16px; border-radius: 8px; color: #bcc8d1; opacity: 0.7; transition: all 0.15s; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; }
-  .nav-link:hover { background: rgba(255,255,255,0.05); color: #8fd6ff; opacity: 1; }
-  .nav-link.active { background: rgba(143,214,255,0.1); color: #8fd6ff; opacity: 1; border-right: 3px solid #8fd6ff; }
-  .section-card { background: #0f1d30; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.25rem; }
-  .tbl th { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #87929b; text-transform: uppercase; padding: 0.5rem 0.75rem; }
-  .tbl td { font-size: 13px; padding: 0.625rem 0.75rem; border-top: 1px solid rgba(255,255,255,0.04); color: #d7e3fc; }
+  .badge-ok  { background: rgba(255,184,41,0.12); color: #ffb829; }
+  .badge-warn { background: rgba(255,203,92,0.12); color: #ffcb5c; }
+  .badge-err  { background: rgba(255,122,146,0.12); color: #ff7a92; }
+  .badge-info { background: rgba(128,82,255,0.12); color: #8052ff; }
+  .nav-link { display: flex; align-items: center; gap: 16px; padding: 8px 16px; border-radius: 8px; color: #bdbdbd; opacity: 0.7; transition: all 0.15s; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; }
+  .nav-link:hover { background: rgba(255,255,255,0.05); color: #8052ff; opacity: 1; }
+  .nav-link.active { background: rgba(128,82,255,0.1); color: #8052ff; opacity: 1; border-right: 3px solid #8052ff; }
+  .section-card { background: #0d0d0d; border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 1.25rem; }
+  .tbl th { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: #9a9a9a; text-transform: uppercase; padding: 0.5rem 0.75rem; }
+  .tbl td { font-size: 13px; padding: 0.625rem 0.75rem; border-top: 1px solid rgba(255,255,255,0.04); color: #ffffff; }
   .tbl tr:hover td { background: rgba(255,255,255,0.03); }
   .progress-bar { height: 5px; border-radius: 9999px; background: rgba(255,255,255,0.07); overflow: hidden; }
   .progress-fill { height: 100%; border-radius: 9999px; transition: width 0.6s ease; }
   .animate-in { animation: fadeUp 0.35s ease both; }
   @keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
   #toast-container { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
-  .toast { background: #0b1629; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.875rem; color: #d7e3fc; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 8px 48px rgba(0,0,0,0.9); animation: toast-in 0.25s ease; }
-  .toast-error { border-color: rgba(255,180,171,0.3); }
+  .toast { background: #050505; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.75rem 1rem; font-size: 0.875rem; color: #ffffff; display: flex; align-items: center; gap: 0.5rem; box-shadow: 0 8px 48px rgba(0,0,0,0.9); animation: toast-in 0.25s ease; }
+  .toast-error { border-color: rgba(255,122,146,0.3); }
   @keyframes toast-in { from { opacity:0; transform:translateX(1rem); } to { opacity:1; transform:translateX(0); } }
 </style>
 </head>
@@ -182,7 +182,7 @@ tailwind.config = {
           <span class="material-symbols-outlined text-tertiary text-xl">target</span>
         </div>
         <div>
-          <p class="text-3xl font-black" id="kpi-taxa" style="color:#10eb8a">—%</p>
+          <p class="text-3xl font-black" id="kpi-taxa" style="color:#ffb829">—%</p>
           <p class="text-xs text-on-surface-variant mt-1">geral (todos os inventários)</p>
         </div>
         <div class="progress-bar">
@@ -331,9 +331,9 @@ function statusBadge(status) {
 }
 
 function taxaColor(taxa) {
-  if (taxa >= 90) return '#10eb8a';
-  if (taxa >= 70) return '#ffcc44';
-  return '#ffb4ab';
+  if (taxa >= 90) return '#ffb829';
+  if (taxa >= 70) return '#ffcb5c';
+  return '#ff7a92';
 }
 
 function escapeHtml(s) {
@@ -392,11 +392,11 @@ async function carregarTendencias() {
         {
           label: 'Taxa de Acerto (%)',
           data: taxas,
-          borderColor: '#10eb8a',
-          backgroundColor: 'rgba(16,235,138,0.08)',
+          borderColor: '#ffb829',
+          backgroundColor: 'rgba(255,184,41,0.08)',
           fill: true,
           tension: 0.4,
-          pointBackgroundColor: '#10eb8a',
+          pointBackgroundColor: '#ffb829',
           pointRadius: 4,
           pointHoverRadius: 6,
           yAxisID: 'y',
@@ -404,12 +404,12 @@ async function carregarTendencias() {
         {
           label: 'Divergências',
           data: divs,
-          borderColor: '#ffb4ab',
-          backgroundColor: 'rgba(255,180,171,0)',
+          borderColor: '#ff7a92',
+          backgroundColor: 'rgba(255,122,146,0)',
           borderDash: [4, 4],
           fill: false,
           tension: 0.4,
-          pointBackgroundColor: '#ffb4ab',
+          pointBackgroundColor: '#ff7a92',
           pointRadius: 3,
           pointHoverRadius: 5,
           yAxisID: 'y1',
@@ -420,13 +420,13 @@ async function carregarTendencias() {
       responsive: true,
       interaction: { mode: 'index', intersect: false },
       plugins: {
-        legend: { labels: { color: '#bcc8d1', font: { size: 11 } } },
-        tooltip: { backgroundColor: '#0b1629', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#d7e3fc', bodyColor: '#bcc8d1' },
+        legend: { labels: { color: '#bdbdbd', font: { size: 11 } } },
+        tooltip: { backgroundColor: '#050505', borderColor: 'rgba(255,255,255,0.1)', borderWidth: 1, titleColor: '#ffffff', bodyColor: '#bdbdbd' },
       },
       scales: {
-        x:  { ticks: { color: '#87929b', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
-        y:  { min: 0, max: 100, ticks: { color: '#87929b', font: { size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' }, position: 'left' },
-        y1: { min: 0, ticks: { color: '#ffb4ab', font: { size: 10 } }, grid: { display: false }, position: 'right' },
+        x:  { ticks: { color: '#9a9a9a', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y:  { min: 0, max: 100, ticks: { color: '#9a9a9a', font: { size: 10 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' }, position: 'left' },
+        y1: { min: 0, ticks: { color: '#ff7a92', font: { size: 10 } }, grid: { display: false }, position: 'right' },
       },
     },
   });
@@ -458,7 +458,7 @@ async function carregarSessoesRecentes() {
       </div>
       <div class="flex justify-between mt-1">
         <span class="text-[10px] text-on-surface-variant">${s.itens_contados}/${s.total_itens} itens</span>
-        <span class="text-[10px]" style="color:${s.divergencias > 0 ? '#ffb4ab' : '#10eb8a'}">${s.divergencias} diverg.</span>
+        <span class="text-[10px]" style="color:${s.divergencias > 0 ? '#ff7a92' : '#ffb829'}">${s.divergencias} diverg.</span>
       </div>
     </a>`;
   }).join('');

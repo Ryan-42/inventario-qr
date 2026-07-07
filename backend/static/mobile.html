@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" name="viewport"/>
-<meta name="theme-color" content="#071325"/>
+<meta name="theme-color" content="#000000"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -13,7 +13,7 @@
 <title>Scanner — INVIQ</title>
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <link href="/static/css/app.css" rel="stylesheet"/>
 <script id="tailwind-config">
@@ -22,19 +22,19 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        "surface-tint":"#7ad0ff","on-secondary":"#3f008e","secondary":"#d2bbff",
-        "outline-variant":"#3d4850","error-container":"#93000a","surface":"#071325",
-        "surface-container":"#142032","tertiary":"#10eb8a","primary-fixed-dim":"#7ad0ff",
-        "surface-variant":"#2a3548","error":"#ffb4ab","surface-bright":"#2e394d",
-        "inverse-surface":"#d7e3fc","on-surface":"#d7e3fc","primary":"#8fd6ff",
-        "surface-container-high":"#1f2a3d","background":"#071325","primary-container":"#00bfff",
-        "primary-fixed":"#c3e8ff","surface-container-low":"#101c2e","surface-container-highest":"#2a3548",
-        "on-secondary-container":"#c9aeff","secondary-container":"#6001d1",
-        "on-tertiary-container":"#00502b","on-primary":"#003549","tertiary-fixed-dim":"#00e384",
-        "tertiary-fixed":"#5affa2","on-tertiary":"#00391d","on-background":"#d7e3fc",
-        "inverse-on-surface":"#253144","on-primary-fixed":"#001e2c","secondary-fixed":"#eaddff",
-        "outline":"#87929b","surface-container-lowest":"#030e20","on-surface-variant":"#bcc8d1",
-        "tertiary-container":"#00cc76"
+        "surface-tint":"#8052ff","on-secondary":"#ffffff","secondary":"#5fc9b4",
+        "outline-variant":"#262626","error-container":"#3a0d16","surface":"#000000",
+        "surface-container":"#0a0a0a","tertiary":"#ffb829","primary-fixed-dim":"#8052ff",
+        "surface-variant":"#1a1a1a","error":"#ff7a92","surface-bright":"#1e1e1e",
+        "inverse-surface":"#ffffff","on-surface":"#ffffff","primary":"#8052ff",
+        "surface-container-high":"#141414","background":"#000000","primary-container":"#6a3ce8",
+        "primary-fixed":"#d9c9ff","surface-container-low":"#060606","surface-container-highest":"#1a1a1a",
+        "on-secondary-container":"#b6ece1","secondary-container":"#0e5c4d",
+        "on-tertiary-container":"#ffe1a3","on-primary":"#ffffff","tertiary-fixed-dim":"#ffb829",
+        "tertiary-fixed":"#ffd580","on-tertiary":"#3a2600","on-background":"#ffffff",
+        "inverse-on-surface":"#1a1a1a","on-primary-fixed":"#1a0f3d","secondary-fixed":"#c9f2e8",
+        "outline":"#9a9a9a","surface-container-lowest":"#000000","on-surface-variant":"#bdbdbd",
+        "tertiary-container":"#7a5200"
       },
       spacing: { gutter:"24px",base:"4px",sm:"8px",md:"16px","margin-desktop":"48px",xs:"4px",lg:"24px",xl:"40px","margin-mobile":"16px" },
       fontSize: {
@@ -51,44 +51,44 @@ tailwind.config = {
 </script>
 <style>
   html, body { height: 100%; height: 100dvh; }
-  body { font-family:'Inter',sans-serif; background:#071325; color:#d7e3fc; scrollbar-width:none; overflow:hidden; }
+  body { font-family:'Inter',sans-serif; background:#000000; color:#ffffff; scrollbar-width:none; overflow:hidden; }
   body::-webkit-scrollbar { display:none; }
   .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; font-family:'Material Symbols Outlined'; display:inline-block; vertical-align:middle; }
   /* HUD scan line */
   @keyframes scan-drop { 0%{top:0;opacity:0}10%{opacity:1}90%{opacity:1}100%{top:100%;opacity:0} }
   .animate-scan-line { animation: scan-drop 2s linear infinite; }
   /* WS pulse ring */
-  @keyframes pulse-ring { 0%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(16,235,138,0.7)}70%{transform:scale(1);box-shadow:0 0 0 6px rgba(16,235,138,0)}100%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(16,235,138,0)} }
+  @keyframes pulse-ring { 0%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(255,184,41,0.7)}70%{transform:scale(1);box-shadow:0 0 0 6px rgba(255,184,41,0)}100%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(255,184,41,0)} }
   .animate-pulse-ring { animation: pulse-ring 2s cubic-bezier(0.215,0.61,0.355,1) infinite; }
   /* Scan area mask */
-  .scan-mask { box-shadow: 0 0 0 4000px rgba(7,19,37,0.85); }
+  .scan-mask { box-shadow: 0 0 0 4000px rgba(0,0,0,0.85); }
   /* Modal operator */
   #modal-operador { position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.75);display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s; }
   #modal-operador.open { opacity:1;pointer-events:all; }
   #modal-operador .modal { border-radius:14px 14px 0 0;width:100%;max-width:480px;transform:translateY(100%);transition:transform .25s; }
   #modal-operador.open .modal { transform:translateY(0); }
   /* Scan flash */
-  .scan-flash { position:fixed;inset:0;background:rgba(143,214,255,.2);z-index:100;pointer-events:none;animation:flash .35s ease forwards; }
+  .scan-flash { position:fixed;inset:0;background:rgba(128,82,255,.2);z-index:100;pointer-events:none;animation:flash .35s ease forwards; }
   @keyframes flash { 0%{opacity:1}100%{opacity:0} }
   /* Qty edit input */
-  #qty-edit-input { font-size:64px;font-weight:700;text-align:center;background:transparent;border:none;border-bottom:2px solid #8fd6ff;outline:none;color:#d7e3fc;width:180px;min-width:0;padding:.5rem;line-height:1;font-family:'JetBrains Mono',monospace; }
+  #qty-edit-input { font-size:64px;font-weight:700;text-align:center;background:transparent;border:none;border-bottom:2px solid #8052ff;outline:none;color:#ffffff;width:180px;min-width:0;padding:.5rem;line-height:1;font-family:'JetBrains Mono',monospace; }
   /* Hint notif */
-  #scan-hint-notif { position:absolute;bottom:0;left:0;right:0;background:rgba(143,214,255,.85);color:#003549;font-size:.8125rem;text-align:center;padding:.5rem 1rem;transform:translateY(100%);transition:transform .2s;font-weight:600; }
+  #scan-hint-notif { position:absolute;bottom:0;left:0;right:0;background:rgba(128,82,255,.85);color:#ffffff;font-size:.8125rem;text-align:center;padding:.5rem 1rem;transform:translateY(100%);transition:transform .2s;font-weight:600; }
   #scan-hint-notif.show { transform:translateY(0); }
   /* WS dot overrides */
   .ws-dot { width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0; }
-  .ws-connected { background:#10eb8a; }
-  .ws-disconnected { background:#3d4850; }
+  .ws-connected { background:#ffb829; }
+  .ws-disconnected { background:#262626; }
   /* App.css modal overrides for operator modal */
-  #modal-operador .modal { background:#0b1629;border:1px solid rgba(255,255,255,0.08);padding:1.5rem; }
+  #modal-operador .modal { background:#050505;border:1px solid rgba(255,255,255,0.08);padding:1.5rem; }
   @keyframes spin { to { transform: rotate(360deg); } }
   /* Lista operador */
-  .lista-filtro-chip { background:transparent; border-color:rgba(255,255,255,0.15); color:#87929b; cursor:pointer; }
-  .lista-filtro-chip.active { background:rgba(143,214,255,0.1); border-color:rgba(143,214,255,0.4); color:#8fd6ff; }
+  .lista-filtro-chip { background:transparent; border-color:rgba(255,255,255,0.15); color:#9a9a9a; cursor:pointer; }
+  .lista-filtro-chip.active { background:rgba(128,82,255,0.1); border-color:rgba(128,82,255,0.4); color:#8052ff; }
   .lista-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; transition:background .15s; border-radius:8px; padding-left:8px; padding-right:8px; }
-  .lista-item:active { background:rgba(143,214,255,0.06); }
+  .lista-item:active { background:rgba(128,82,255,0.06); }
   .lista-item-contado { opacity:0.55; }
-  .lista-local-tag { font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:99px; border:1px solid rgba(255,255,255,0.12); color:#87929b; background:rgba(255,255,255,0.04); white-space:nowrap; flex-shrink:0; }
+  .lista-local-tag { font-size:10px; font-weight:600; letter-spacing:.06em; text-transform:uppercase; padding:2px 8px; border-radius:99px; border:1px solid rgba(255,255,255,0.12); color:#9a9a9a; background:rgba(255,255,255,0.04); white-space:nowrap; flex-shrink:0; }
 </style>
 </head>
 <body class="bg-background text-on-background h-screen w-screen relative select-none">
@@ -113,11 +113,11 @@ tailwind.config = {
         maxlength="16"
         placeholder="Ex: 3A7F2B1C"
         class="w-full rounded-2xl py-4 px-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all text-center font-bold tracking-widest uppercase"
-        style="background:#fff;color:#111;border:2px solid rgba(143,214,255,0.4);font-family:'JetBrains Mono',monospace;font-size:1.5rem;letter-spacing:.2em"/>
-      <p id="token-erro" class="hidden text-center text-body-sm font-body-sm" style="color:#ffb4ab">Token inválido. Verifique com o administrador.</p>
+        style="background:#fff;color:#111;border:2px solid rgba(128,82,255,0.4);font-family:'JetBrains Mono',monospace;font-size:1.5rem;letter-spacing:.2em"/>
+      <p id="token-erro" class="hidden text-center text-body-sm font-body-sm" style="color:#ff7a92">Token inválido. Verifique com o administrador.</p>
     </div>
     <button id="btn-validar-token"
-      class="w-full py-4 bg-primary text-on-primary rounded-2xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(143,214,255,0.2)] active:scale-[0.98] transition-all text-[#003549]">
+      class="w-full py-4 bg-primary text-on-primary rounded-2xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(128,82,255,0.2)] active:scale-[0.98] transition-all text-[#ffffff]">
       <span class="material-symbols-outlined text-[20px] align-middle mr-1">arrow_forward</span>
       Entrar
     </button>
@@ -128,7 +128,7 @@ tailwind.config = {
 <div id="state-loading" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background">
   <div class="relative w-16 h-16 flex items-center justify-center mb-6">
     <div class="absolute w-full h-full border-4 border-surface-container-high rounded-full"></div>
-    <div class="absolute w-full h-full border-4 border-primary rounded-full border-t-transparent animate-spin shadow-[0_0_15px_rgba(143,214,255,0.5)]"></div>
+    <div class="absolute w-full h-full border-4 border-primary rounded-full border-t-transparent animate-spin shadow-[0_0_15px_rgba(128,82,255,0.5)]"></div>
     <span class="material-symbols-outlined text-primary text-[24px]">sync</span>
   </div>
   <h2 class="font-headline-md text-on-background tracking-tight">Carregando sessão</h2>
@@ -187,12 +187,12 @@ tailwind.config = {
       <div class="absolute inset-0 rounded-lg scan-mask pointer-events-auto"></div>
       <div class="absolute inset-0 border border-white/10 rounded-lg"></div>
       <!-- HUD Corners -->
-      <div class="absolute top-[-2px] left-[-2px] w-6 h-6 border-t-[3px] border-l-[3px] border-primary rounded-tl-lg shadow-[-2px_-2px_8px_rgba(143,214,255,0.4)]"></div>
-      <div class="absolute top-[-2px] right-[-2px] w-6 h-6 border-t-[3px] border-r-[3px] border-primary rounded-tr-lg shadow-[2px_-2px_8px_rgba(143,214,255,0.4)]"></div>
-      <div class="absolute bottom-[-2px] left-[-2px] w-6 h-6 border-b-[3px] border-l-[3px] border-primary rounded-bl-lg shadow-[-2px_2px_8px_rgba(143,214,255,0.4)]"></div>
-      <div class="absolute bottom-[-2px] right-[-2px] w-6 h-6 border-b-[3px] border-r-[3px] border-primary rounded-br-lg shadow-[2px_2px_8px_rgba(143,214,255,0.4)]"></div>
+      <div class="absolute top-[-2px] left-[-2px] w-6 h-6 border-t-[3px] border-l-[3px] border-primary rounded-tl-lg shadow-[-2px_-2px_8px_rgba(128,82,255,0.4)]"></div>
+      <div class="absolute top-[-2px] right-[-2px] w-6 h-6 border-t-[3px] border-r-[3px] border-primary rounded-tr-lg shadow-[2px_-2px_8px_rgba(128,82,255,0.4)]"></div>
+      <div class="absolute bottom-[-2px] left-[-2px] w-6 h-6 border-b-[3px] border-l-[3px] border-primary rounded-bl-lg shadow-[-2px_2px_8px_rgba(128,82,255,0.4)]"></div>
+      <div class="absolute bottom-[-2px] right-[-2px] w-6 h-6 border-b-[3px] border-r-[3px] border-primary rounded-br-lg shadow-[2px_2px_8px_rgba(128,82,255,0.4)]"></div>
       <!-- Animated Scan Line -->
-      <div class="absolute left-0 right-0 h-[2px] bg-primary animate-scan-line shadow-[0_0_12px_4px_rgba(143,214,255,0.6)] z-20"></div>
+      <div class="absolute left-0 right-0 h-[2px] bg-primary animate-scan-line shadow-[0_0_12px_4px_rgba(128,82,255,0.6)] z-20"></div>
       <!-- Target crosshair -->
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center opacity-30">
         <span class="material-symbols-outlined text-[32px] text-primary" style="font-variation-settings:'wght' 200">target</span>
@@ -212,7 +212,7 @@ tailwind.config = {
         <span id="progresso-faltando" class="text-code-sm font-code-sm text-primary">Carregando...</span>
       </div>
       <div class="w-full h-1.5 bg-surface-variant rounded-full overflow-hidden">
-        <div id="progresso-fill" class="h-full bg-primary rounded-full transition-all duration-500 shadow-[0_0_6px_rgba(143,214,255,0.5)]" style="width:0%"></div>
+        <div id="progresso-fill" class="h-full bg-primary rounded-full transition-all duration-500 shadow-[0_0_6px_rgba(128,82,255,0.5)]" style="width:0%"></div>
       </div>
     </div>
 
@@ -235,7 +235,7 @@ tailwind.config = {
         <input id="manual-input" type="text" inputmode="text" placeholder="Código manual..."
           class="w-full rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all shadow-inner" style="background:#fff;color:#111;border:1px solid rgba(0,0,0,0.2);"/>
       </div>
-      <button id="btn-manual" class="w-12 h-12 flex items-center justify-center bg-primary text-on-primary rounded-xl shadow-[0_0_15px_rgba(143,214,255,0.3)] hover:shadow-[0_0_20px_rgba(143,214,255,0.6)] transition-all active:scale-95 text-[#003549]">
+      <button id="btn-manual" class="w-12 h-12 flex items-center justify-center bg-primary text-on-primary rounded-xl shadow-[0_0_15px_rgba(128,82,255,0.3)] hover:shadow-[0_0_20px_rgba(128,82,255,0.6)] transition-all active:scale-95 text-[#ffffff]">
         <span class="material-symbols-outlined text-[24px]">arrow_forward</span>
       </button>
     </div>
@@ -246,7 +246,7 @@ tailwind.config = {
 <div id="state-rodada-completa" class="hidden absolute inset-0 flex flex-col" style="z-index:45">
   <div class="absolute inset-0 bg-background/95 backdrop-blur-xl"></div>
   <div class="relative z-10 flex flex-col h-full px-margin-mobile pt-12 pb-8 items-center justify-center gap-lg text-center">
-    <div id="rodada-completa-icon" class="w-24 h-24 rounded-full bg-tertiary/20 flex items-center justify-center shadow-[0_0_40px_rgba(16,235,138,0.3)]">
+    <div id="rodada-completa-icon" class="w-24 h-24 rounded-full bg-tertiary/20 flex items-center justify-center shadow-[0_0_40px_rgba(255,184,41,0.3)]">
       <span class="material-symbols-outlined text-[52px] text-tertiary" style="font-variation-settings:'FILL' 1">check_circle</span>
     </div>
     <div class="flex flex-col gap-sm max-w-[300px]">
@@ -256,7 +256,7 @@ tailwind.config = {
     <div id="rodada-completa-stats" class="w-full max-w-[320px] bg-surface-container border border-white/10 rounded-2xl p-md flex flex-col gap-sm"></div>
     <div class="flex flex-col gap-sm w-full max-w-[320px]">
       <button id="btn-proxima-rodada"
-        class="hidden w-full py-4 bg-primary text-on-primary rounded-2xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(143,214,255,0.2)] active:scale-[0.98] transition-all text-[#003549]">
+        class="hidden w-full py-4 bg-primary text-on-primary rounded-2xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(128,82,255,0.2)] active:scale-[0.98] transition-all text-[#ffffff]">
         <span class="material-symbols-outlined text-[20px] align-middle mr-1">skip_next</span>
         Iniciar próxima rodada
       </button>
@@ -310,7 +310,7 @@ tailwind.config = {
           spellcheck="false"
           placeholder="Ex: DIESEL-1000L, ARLA-200L..."
           class="flex-1 rounded-2xl py-4 px-4 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all font-semibold tracking-wide shadow-inner"
-          style="background:#fff;color:#111;border:2px solid rgba(143,214,255,0.4);font-family:'JetBrains Mono',monospace;font-size:20px;letter-spacing:0.05em"/>
+          style="background:#fff;color:#111;border:2px solid rgba(128,82,255,0.4);font-family:'JetBrains Mono',monospace;font-size:20px;letter-spacing:0.05em"/>
       </div>
       <p class="text-code-sm font-code-sm text-on-surface-variant">Digite o código ou parte do nome — sugestões aparecem abaixo.</p>
     </div>
@@ -328,7 +328,7 @@ tailwind.config = {
   <!-- Footer -->
   <div class="px-margin-mobile pt-4 border-t border-white/5" style="padding-bottom:max(2rem,env(safe-area-inset-bottom))">
     <button id="btn-submit-manual"
-      class="w-full py-4 bg-primary text-on-primary rounded-2xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(143,214,255,0.2)] hover:shadow-[0_0_30px_rgba(143,214,255,0.4)] active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none text-[#003549]"
+      class="w-full py-4 bg-primary text-on-primary rounded-2xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(128,82,255,0.2)] hover:shadow-[0_0_30px_rgba(128,82,255,0.4)] active:scale-[0.98] transition-all disabled:opacity-40 disabled:pointer-events-none text-[#ffffff]"
       disabled>
       <span class="material-symbols-outlined text-[20px] align-middle mr-1">search</span>
       Buscar Produto
@@ -388,20 +388,20 @@ tailwind.config = {
     <div>
       <label class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider block mb-2">Operador</label>
       <input id="operador-input" type="text" inputmode="text" placeholder="Nome ou iniciais..." autocomplete="name"
-        class="w-full rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" style="background:#142032;color:#d7e3fc;border:1px solid rgba(255,255,255,0.1);"/>
+        class="w-full rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" style="background:#0a0a0a;color:#ffffff;border:1px solid rgba(255,255,255,0.1);"/>
     </div>
 
     <!-- Observation -->
     <div>
       <label class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider block mb-2">Observação (opcional)</label>
       <input id="observacao-input" type="text" inputmode="text" placeholder="Ex: caixa danificada..." maxlength="500"
-        class="w-full rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" style="background:#142032;color:#d7e3fc;border:1px solid rgba(255,255,255,0.1);"/>
+        class="w-full rounded-xl py-3 px-4 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all" style="background:#0a0a0a;color:#ffffff;border:1px solid rgba(255,255,255,0.1);"/>
     </div>
   </div>
 
   <!-- Footer -->
   <div class="px-margin-mobile pt-4 border-t border-white/5" style="padding-bottom:max(2rem,env(safe-area-inset-bottom))">
-    <button id="btn-registrar" class="w-full py-4 bg-primary text-on-primary rounded-xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(143,214,255,0.2)] hover:shadow-[0_0_30px_rgba(143,214,255,0.4)] active:scale-[0.98] transition-all text-[#003549]">
+    <button id="btn-registrar" class="w-full py-4 bg-primary text-on-primary rounded-xl text-label-md font-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(128,82,255,0.2)] hover:shadow-[0_0_30px_rgba(128,82,255,0.4)] active:scale-[0.98] transition-all text-[#ffffff]">
       Registrar contagem
     </button>
     <p id="registrar-hint" class="text-center mt-2 text-code-sm font-code-sm text-on-surface-variant"></p>
@@ -430,10 +430,10 @@ tailwind.config = {
 <!-- ═══ STATE: SUCESSO ═══ -->
 <div id="state-sucesso" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center">
   <div class="absolute inset-0 bg-tertiary/10 backdrop-blur-[2px]"></div>
-  <div class="bg-surface-container/90 backdrop-blur-md border border-tertiary/30 rounded-2xl p-lg flex flex-col items-center shadow-[0_0_40px_rgba(16,235,138,0.2)] transform scale-105 relative z-10">
+  <div class="bg-surface-container/90 backdrop-blur-md border border-tertiary/30 rounded-2xl p-lg flex flex-col items-center shadow-[0_0_40px_rgba(255,184,41,0.2)] transform scale-105 relative z-10">
     <div class="w-16 h-16 rounded-full bg-tertiary/20 flex items-center justify-center mb-4">
-      <div id="sucesso-icon" style="color:#10eb8a">
-        <span class="material-symbols-outlined text-[40px]" style="font-variation-settings:'FILL' 1;color:#10eb8a">check_circle</span>
+      <div id="sucesso-icon" style="color:#ffb829">
+        <span class="material-symbols-outlined text-[40px]" style="font-variation-settings:'FILL' 1;color:#ffb829">check_circle</span>
       </div>
     </div>
     <h3 id="sucesso-titulo" class="font-headline-md text-tertiary">Registrado</h3>
@@ -449,7 +449,7 @@ tailwind.config = {
 <!-- ═══ STATE: ERRO ═══ -->
 <div id="state-erro" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none">
   <div class="absolute inset-0 bg-error/10 backdrop-blur-[2px]"></div>
-  <div class="bg-surface-container/90 backdrop-blur-md border border-error/30 rounded-2xl p-lg flex flex-col items-center shadow-[0_0_40px_rgba(255,180,171,0.2)] transform scale-105 relative z-10 pointer-events-auto text-center">
+  <div class="bg-surface-container/90 backdrop-blur-md border border-error/30 rounded-2xl p-lg flex flex-col items-center shadow-[0_0_40px_rgba(255,122,146,0.2)] transform scale-105 relative z-10 pointer-events-auto text-center">
     <div class="w-16 h-16 rounded-full bg-error/20 flex items-center justify-center mb-4">
       <span class="material-symbols-outlined text-[40px] text-error" style="font-variation-settings:'FILL' 1">error</span>
     </div>
@@ -477,14 +477,14 @@ tailwind.config = {
   </div>
 
   <!-- Busca e filtros -->
-  <div class="px-margin-mobile pt-3 pb-2 border-b border-white/5" style="background:rgba(20,32,50,0.6)">
+  <div class="px-margin-mobile pt-3 pb-2 border-b border-white/5" style="background:rgba(10,10,10,0.6)">
     <div class="relative">
       <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
         <span class="material-symbols-outlined text-on-surface-variant text-[18px]">search</span>
       </div>
       <input id="lista-search" type="text" inputmode="search" placeholder="Buscar código, descrição ou local..."
         class="w-full rounded-xl py-2.5 pl-9 pr-9 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all text-body-sm"
-        style="background:#142032;color:#d7e3fc;border:1px solid rgba(255,255,255,0.1);"/>
+        style="background:#0a0a0a;color:#ffffff;border:1px solid rgba(255,255,255,0.1);"/>
       <button id="lista-search-clear" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-on-surface-variant active:text-primary">
         <span class="material-symbols-outlined text-[18px]">close</span>
       </button>
@@ -520,7 +520,7 @@ tailwind.config = {
       </span>
       <button class="modal-close" id="btn-close-op-modal">✕</button>
     </div>
-    <p style="font-size:.875rem;color:#bcc8d1;margin-bottom:1rem;line-height:1.5">
+    <p style="font-size:.875rem;color:#bdbdbd;margin-bottom:1rem;line-height:1.5">
       Identifique-se para que suas leituras sejam rastreadas:
     </p>
     <input id="modal-operador-input" type="text" inputmode="text" placeholder="Nome ou iniciais..." autocomplete="name" enterkeyhint="done"
@@ -581,7 +581,7 @@ function atualizarBarraProgresso(prog) {
   if (faltando) {
     if (prog.faltando === 0) {
       faltando.textContent = 'Concluida!'
-      faltando.style.color = '#10eb8a'
+      faltando.style.color = '#ffb829'
     } else {
       faltando.textContent = `Faltam ${prog.faltando} iten${prog.faltando !== 1 ? 's' : ''}`
       faltando.style.color = ''
@@ -621,7 +621,7 @@ function mostrarRodadaCompleta(ev) {
   if (tudoOk) {
     titulo.textContent = 'Inventário Concluído!'
     sub.textContent = 'Todos os itens foram conferidos. Aguarde a validação do administrador.'
-    icon.className = 'w-24 h-24 rounded-full bg-tertiary/20 flex items-center justify-center shadow-[0_0_40px_rgba(16,235,138,0.3)]'
+    icon.className = 'w-24 h-24 rounded-full bg-tertiary/20 flex items-center justify-center shadow-[0_0_40px_rgba(255,184,41,0.3)]'
     icon.innerHTML = '<span class="material-symbols-outlined text-[52px] text-tertiary" style="font-variation-settings:\'FILL\' 1">inventory_2</span>'
     stats.innerHTML = `
       <div class="flex items-center gap-sm text-tertiary">
@@ -633,7 +633,7 @@ function mostrarRodadaCompleta(ev) {
   } else if (proxima) {
     titulo.textContent = `Rodada ${rodada} Concluída!`
     sub.textContent = `${divs} iten${divs !== 1 ? 's' : ''} com divergência precisam de recontagem na rodada ${rodada + 1}.`
-    icon.className = 'w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center shadow-[0_0_40px_rgba(143,214,255,0.3)]'
+    icon.className = 'w-24 h-24 rounded-full bg-primary/20 flex items-center justify-center shadow-[0_0_40px_rgba(128,82,255,0.3)]'
     icon.innerHTML = '<span class="material-symbols-outlined text-[52px] text-primary" style="font-variation-settings:\'FILL\' 1">refresh</span>'
     stats.innerHTML = `
       <div class="flex justify-between items-center">
@@ -649,7 +649,7 @@ function mostrarRodadaCompleta(ev) {
   } else {
     titulo.textContent = `Rodada ${rodada} Concluída!`
     sub.textContent = 'Todas as recontagens foram realizadas. Ajustes serão aplicados pelo sistema.'
-    icon.className = 'w-24 h-24 rounded-full bg-secondary/20 flex items-center justify-center shadow-[0_0_40px_rgba(210,187,255,0.3)]'
+    icon.className = 'w-24 h-24 rounded-full bg-secondary/20 flex items-center justify-center shadow-[0_0_40px_rgba(95,201,180,0.3)]'
     icon.innerHTML = '<span class="material-symbols-outlined text-[52px] text-secondary" style="font-variation-settings:\'FILL\' 1">task_alt</span>'
     stats.innerHTML = divs > 0
       ? `<div class="flex justify-between items-center"><span class="text-label-md font-label-md text-on-surface-variant uppercase">Ainda divergente</span><span class="text-code-md font-code-md text-on-surface-variant">${divs} iten${divs !== 1 ? 's' : ''} (ajuste)</span></div>`
@@ -879,10 +879,10 @@ async function startCamera() {
     stream = null
     scanActive = false
     if (hintEl) {
-      const retryBtn = `<button onclick="stream=null;startCamera()" style="display:block;margin-top:6px;background:rgba(143,214,255,0.15);border:1px solid rgba(143,214,255,0.3);border-radius:6px;padding:3px 10px;font-size:10px;color:#8fd6ff;text-transform:uppercase;letter-spacing:.05em;cursor:pointer">Tentar novamente</button>`
+      const retryBtn = `<button onclick="stream=null;startCamera()" style="display:block;margin-top:6px;background:rgba(128,82,255,0.15);border:1px solid rgba(128,82,255,0.3);border-radius:6px;padding:3px 10px;font-size:10px;color:#8052ff;text-transform:uppercase;letter-spacing:.05em;cursor:pointer">Tentar novamente</button>`
       let msg
       if (e.name === 'NotAllowedError') {
-        msg = `<span style="color:#ffb4ab;font-size:11px;line-height:1.5">
+        msg = `<span style="color:#ff7a92;font-size:11px;line-height:1.5">
           <b>Câmera bloqueada.</b> Para liberar:<br>
           1. Clique no cadeado 🔒 na barra de endereço<br>
           2. Mude <b>Câmera</b> de "Permitido" para <b>"Perguntar"</b><br>
@@ -895,7 +895,7 @@ async function startCamera() {
           OverconstrainedError: 'Câmera incompatível com este browser',
           NotSupportedError: 'Browser não suporta acesso à câmera — use Chrome ou Edge',
         }
-        msg = `<span style="color:#ffb4ab"><span class="material-symbols-outlined text-[14px]">videocam_off</span> ${msgs[e.name] || `Erro: ${e.name || e.message}`}</span>${retryBtn}`
+        msg = `<span style="color:#ff7a92"><span class="material-symbols-outlined text-[14px]">videocam_off</span> ${msgs[e.name] || `Erro: ${e.name || e.message}`}</span>${retryBtn}`
       }
       hintEl.innerHTML = msg
     }
@@ -1028,7 +1028,7 @@ function renderItem() {
   if (rodadaBadge) {
     const label = rodadaLabels[proximaRodada] || `${proximaRodada}ª contagem`
     const isRecontagem = proximaRodada >= 2
-    rodadaBadge.innerHTML = `<span class="badge ${isRecontagem?'badge-cancelada':''}" style="${!isRecontagem?'background:rgba(255,255,255,.06);color:#87929b;border:1px solid rgba(255,255,255,0.05)':''}">${label}</span>`
+    rodadaBadge.innerHTML = `<span class="badge ${isRecontagem?'badge-cancelada':''}" style="${!isRecontagem?'background:rgba(255,255,255,.06);color:#9a9a9a;border:1px solid rgba(255,255,255,0.05)':''}">${label}</span>`
   }
   const badge = document.getElementById('item-status-badge')
   if (badge) badge.innerHTML = ''
@@ -1554,7 +1554,7 @@ function renderLista() {
       }
     }
     const statusIcon = it.ja_contado
-      ? `<span class="material-symbols-outlined text-[20px]" style="color:#10eb8a;font-variation-settings:'FILL' 1">check_circle</span>`
+      ? `<span class="material-symbols-outlined text-[20px]" style="color:#ffb829;font-variation-settings:'FILL' 1">check_circle</span>`
       : `<span class="material-symbols-outlined text-[20px] text-on-surface-variant opacity-30">radio_button_unchecked</span>`
 
     html += `<div class="lista-item${it.ja_contado ? ' lista-item-contado' : ''}" data-code="${_esc(it.codigo)}">

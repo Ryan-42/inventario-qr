@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
-<meta name="theme-color" content="#071325"/>
+<meta name="theme-color" content="#000000"/>
 <title>Supervisor — INVIQ</title>
 <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet"/>
 <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 <link href="/static/css/app.css" rel="stylesheet"/>
 <script id="tailwind-config">
@@ -15,19 +15,19 @@ tailwind.config = {
   theme: {
     extend: {
       colors: {
-        "surface-tint":"#7ad0ff","on-secondary":"#3f008e","secondary":"#d2bbff",
-        "outline-variant":"#3d4850","error-container":"#93000a","surface":"#071325",
-        "surface-container":"#142032","tertiary":"#10eb8a","primary-fixed-dim":"#7ad0ff",
-        "surface-variant":"#2a3548","error":"#ffb4ab","surface-bright":"#2e394d",
-        "inverse-surface":"#d7e3fc","on-surface":"#d7e3fc","primary":"#8fd6ff",
-        "surface-container-high":"#1f2a3d","background":"#071325","primary-container":"#00bfff",
-        "primary-fixed":"#c3e8ff","surface-container-low":"#101c2e","surface-container-highest":"#2a3548",
-        "on-secondary-container":"#c9aeff","secondary-container":"#6001d1",
-        "on-tertiary-container":"#00502b","on-primary":"#003549","tertiary-fixed-dim":"#00e384",
-        "tertiary-fixed":"#5affa2","on-tertiary":"#00391d","on-background":"#d7e3fc",
-        "inverse-on-surface":"#253144","on-primary-fixed":"#001e2c","secondary-fixed":"#eaddff",
-        "outline":"#87929b","surface-container-lowest":"#030e20","on-surface-variant":"#bcc8d1",
-        "tertiary-container":"#00cc76"
+        "surface-tint":"#8052ff","on-secondary":"#ffffff","secondary":"#5fc9b4",
+        "outline-variant":"#262626","error-container":"#3a0d16","surface":"#000000",
+        "surface-container":"#0a0a0a","tertiary":"#ffb829","primary-fixed-dim":"#8052ff",
+        "surface-variant":"#1a1a1a","error":"#ff7a92","surface-bright":"#1e1e1e",
+        "inverse-surface":"#ffffff","on-surface":"#ffffff","primary":"#8052ff",
+        "surface-container-high":"#141414","background":"#000000","primary-container":"#6a3ce8",
+        "primary-fixed":"#d9c9ff","surface-container-low":"#060606","surface-container-highest":"#1a1a1a",
+        "on-secondary-container":"#b6ece1","secondary-container":"#0e5c4d",
+        "on-tertiary-container":"#ffe1a3","on-primary":"#ffffff","tertiary-fixed-dim":"#ffb829",
+        "tertiary-fixed":"#ffd580","on-tertiary":"#3a2600","on-background":"#ffffff",
+        "inverse-on-surface":"#1a1a1a","on-primary-fixed":"#1a0f3d","secondary-fixed":"#c9f2e8",
+        "outline":"#9a9a9a","surface-container-lowest":"#000000","on-surface-variant":"#bdbdbd",
+        "tertiary-container":"#7a5200"
       },
       spacing: { gutter:"24px",base:"4px",sm:"8px",md:"16px","margin-desktop":"48px",xs:"4px",lg:"24px",xl:"40px","margin-mobile":"16px" },
       fontSize: {
@@ -43,19 +43,19 @@ tailwind.config = {
 }
 </script>
 <style>
-  body { font-family:'Inter',sans-serif; background:#071325; color:#d7e3fc; scrollbar-width:thin; }
+  body { font-family:'Inter',sans-serif; background:#000000; color:#ffffff; scrollbar-width:thin; }
   .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; font-family:'Material Symbols Outlined'; display:inline-block; vertical-align:middle; }
-  @keyframes pulse-ring { 0%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(16,235,138,0.7)}70%{transform:scale(1);box-shadow:0 0 0 6px rgba(16,235,138,0)}100%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(16,235,138,0)} }
+  @keyframes pulse-ring { 0%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(255,184,41,0.7)}70%{transform:scale(1);box-shadow:0 0 0 6px rgba(255,184,41,0)}100%{transform:scale(0.8);box-shadow:0 0 0 0 rgba(255,184,41,0)} }
   .animate-pulse-ring { animation: pulse-ring 2s cubic-bezier(0.215,0.61,0.355,1) infinite; }
   .ws-dot { width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0; }
-  .ws-connected { background:#10eb8a; }
-  .ws-disconnected { background:#3d4850; }
-  #state-token { position:fixed;inset:0;z-index:50;background:#071325;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem; }
-  #state-aguardando { position:fixed;inset:0;z-index:50;background:#071325;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center; }
+  .ws-connected { background:#ffb829; }
+  .ws-disconnected { background:#262626; }
+  #state-token { position:fixed;inset:0;z-index:50;background:#000000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem; }
+  #state-aguardando { position:fixed;inset:0;z-index:50;background:#000000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:1.5rem;text-align:center; }
   .hidden { display:none !important; }
   ::-webkit-scrollbar { width:4px; }
   ::-webkit-scrollbar-track { background:transparent; }
-  ::-webkit-scrollbar-thumb { background:#2a3548;border-radius:4px; }
+  ::-webkit-scrollbar-thumb { background:#1a1a1a;border-radius:4px; }
 </style>
 </head>
 <body class="bg-background text-on-background min-h-screen">
@@ -75,11 +75,11 @@ tailwind.config = {
       <input id="token-input" type="text" inputmode="text" autocapitalize="characters" autocomplete="off"
         maxlength="8" placeholder="Ex: A3B9C2D1"
         class="w-full rounded-2xl py-4 px-4 focus:outline-none focus:ring-2 focus:ring-secondary/50 transition-all text-center font-bold tracking-widest uppercase"
-        style="background:#fff;color:#111;border:2px solid rgba(210,187,255,0.4);font-family:'JetBrains Mono',monospace;font-size:1.5rem;letter-spacing:.2em"/>
-      <p id="token-erro" class="hidden text-center text-body-sm" style="color:#ffb4ab">Token inválido. Solicite ao administrador.</p>
+        style="background:#fff;color:#111;border:2px solid rgba(95,201,180,0.4);font-family:'JetBrains Mono',monospace;font-size:1.5rem;letter-spacing:.2em"/>
+      <p id="token-erro" class="hidden text-center text-body-sm" style="color:#ff7a92">Token inválido. Solicite ao administrador.</p>
     </div>
     <button id="btn-validar-token"
-      class="w-full py-4 bg-secondary text-on-secondary rounded-2xl text-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(210,187,255,0.2)] active:scale-[0.98] transition-all">
+      class="w-full py-4 bg-secondary text-on-secondary rounded-2xl text-label-md uppercase tracking-widest font-bold shadow-[0_0_20px_rgba(95,201,180,0.2)] active:scale-[0.98] transition-all">
       <span class="material-symbols-outlined text-[20px] align-middle mr-1">arrow_forward</span>
       Entrar como Supervisor
     </button>
