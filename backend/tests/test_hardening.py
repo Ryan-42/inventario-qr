@@ -310,3 +310,60 @@ def test_token_grupo_regenerado_mantem_16_chars(client, sessao):
     assert r.status_code == 200, r.text
     novo = r.json()["token"]
     assert len(novo) == 16 and novo != grupo["token"]
+
+
+# ── Rodada 4: parser de planilhas (CSV PT-BR, encoding, códigos numéricos) ────
+
+def test_csv_com_ponto_e_virgula_importa():
+    """Excel PT-BR exporta CSV com ';' — o parser deve detectar o separador."""
+    from app.services.excel_service import importar_planilha
+    csv = "codigo;produto;quantidade\nEST-001;Parafuso;10\n".encode("utf-8")
+    itens = importar_planilha(csv, filename="estoque.csv")
+    assert itens[0]["codigo"] == "EST-001"
+    assert itens[0]["quantidade_base"] == 10
+
+
+def test_csv_latin1_importa():
+    """CSV legado do Windows (latin-1) não pode quebrar com UnicodeDecodeError."""
+    from app.services.excel_service import importar_planilha
+    csv = "codigo,produto,quantidade\nEST-1,Parafuso ç ã,10\n".encode("latin-1")
+    itens = importar_planilha(csv, filename="estoque.csv")
+    assert itens[0]["produto"] == "Parafuso ç ã"
+
+
+def test_csv_utf8_bom_importa():
+    """Excel adiciona BOM ao salvar CSV UTF-8 — não pode poluir o nome da 1ª coluna."""
+    from app.services.excel_service import importar_planilha
+    csv = "﻿codigo,produto,quantidade\nEST-1,Parafuso,10\n".encode("utf-8")
+    itens = importar_planilha(csv, filename="estoque.csv")
+    assert itens[0]["codigo"] == "EST-1"
+
+
+def test_excel_codigo_numerico_nao_vira_float():
+    """Coluna de código com célula vazia vira float no pandas — o código 1001
+    era importado como '1001.0' e o scanner (que lê '1001') nunca achava o item."""
+    import io as _io
+    import openpyxl
+    from app.services.excel_service import importar_planilha
+    wb = openpyxl.Workbook(); ws = wb.active
+    ws.append(["codigo", "produto", "quantidade"])
+    ws.append([1001, "Parafuso", 10])
+    ws.append([None, "Linha sem código", 5])
+    ws.append([1002, "Porca", 20])
+    buf = _io.BytesIO(); wb.save(buf)
+    itens = importar_planilha(buf.getvalue(), filename="estoque.xlsx")
+    assert [i["codigo"] for i in itens] == ["1001", "1002"]
+
+
+# ── Rodada 4: brute-force na segunda aprovação ────────────────────────────────
+
+def test_segunda_aprovacao_token_errado_bloqueia_por_brute_force(client, sessao_com_itens):
+    sid = _concluir_sessao(client, sessao_com_itens)
+    c = _cliente_sem_jwt()
+    ultima = None
+    for _ in range(12):
+        ultima = c.post(f"/api/sessoes/{sid}/segunda-aprovacao/aprovar",
+                        params={"token_segunda_aprovacao": "ERRADO"})
+        if ultima.status_code == 429:
+            break
+    assert ultima.status_code == 429, f"esperava 429 após várias tentativas, veio {ultima.status_code}"

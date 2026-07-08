@@ -484,6 +484,21 @@ def rodadas_sessao(sessao_id: str, db: Session = Depends(get_db), _admin=Depends
 
 # ── Aprovação 4 olhos ─────────────────────────────────────────────────────────
 
+def _validar_token_segunda_aprovacao(sessao, token_recebido: str, request: Request) -> None:
+    """Compare timing-safe com proteção brute-force — endpoint é público
+    (o segundo aprovador não tem login) e o token não pode ser adivinhável."""
+    from app.auth import _ip_de, _verificar_bloqueio, _registrar_falha, _registrar_sucesso
+    ip = _ip_de(request)
+    _verificar_bloqueio(ip)
+    token_esperado = getattr(sessao, "token_segunda_aprovacao", None)
+    if not token_esperado:
+        raise HTTPException(status_code=409, detail="Sessão sem token de segunda aprovação configurado.")
+    if not token_recebido or not hmac.compare_digest(token_esperado, token_recebido):
+        _registrar_falha(ip, sessao.id)
+        raise HTTPException(status_code=403, detail="Token de segunda aprovação inválido.")
+    _registrar_sucesso(ip)
+
+
 @router.get("/{sessao_id}/segunda-aprovacao")
 def status_segunda_aprovacao(sessao_id: str, db: Session = Depends(get_db),
                              _admin=Depends(get_admin_logado)) -> dict:
@@ -514,7 +529,9 @@ def status_segunda_aprovacao(sessao_id: str, db: Session = Depends(get_db),
 
 
 @router.post("/{sessao_id}/segunda-aprovacao/aprovar")
+@limiter.limit("10/minute")
 def aprovar_segunda_vez(
+    request: Request,
     sessao_id: str,
     token_segunda_aprovacao: str,
     aprovador: str = "Segundo Aprovador",
@@ -547,11 +564,7 @@ def aprovar_segunda_vez(
     if ok_val == 2:
         raise HTTPException(status_code=409, detail="Esta sessão foi rejeitada. Não pode ser aprovada.")
 
-    token_esperado = getattr(sessao, "token_segunda_aprovacao", None)
-    if not token_esperado:
-        raise HTTPException(status_code=409, detail="Sessão sem token de segunda aprovação configurado.")
-    if not hmac.compare_digest(token_esperado, token_segunda_aprovacao or ""):
-        raise HTTPException(status_code=403, detail="Token de segunda aprovação inválido.")
+    _validar_token_segunda_aprovacao(sessao, token_segunda_aprovacao, request)
 
     sessao.segunda_aprovacao_ok = 1
     sessao.segunda_aprovacao_por = aprovador
@@ -567,7 +580,9 @@ def aprovar_segunda_vez(
 
 
 @router.post("/{sessao_id}/segunda-aprovacao/rejeitar")
+@limiter.limit("10/minute")
 def rejeitar_segunda_vez(
+    request: Request,
     sessao_id: str,
     token_segunda_aprovacao: str,
     motivo: str = "Divergências não justificadas",
@@ -593,11 +608,7 @@ def rejeitar_segunda_vez(
     if ok_val == 2:
         raise HTTPException(status_code=409, detail="Esta sessão já foi rejeitada.")
 
-    token_esperado = getattr(sessao, "token_segunda_aprovacao", None)
-    if not token_esperado:
-        raise HTTPException(status_code=409, detail="Sessão sem token de segunda aprovação configurado.")
-    if not hmac.compare_digest(token_esperado, token_segunda_aprovacao or ""):
-        raise HTTPException(status_code=403, detail="Token de segunda aprovação inválido.")
+    _validar_token_segunda_aprovacao(sessao, token_segunda_aprovacao, request)
 
     sessao.segunda_aprovacao_ok = 2
     sessao.segunda_aprovacao_por = aprovador

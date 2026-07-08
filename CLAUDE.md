@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uvicorn app.main:app --reload --port 8000
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000   # expose to phones on same Wi-Fi
 
-# Tests (from backend/) — SQLite in-memory, 431 passed / 1 pre-existing skip
+# Tests (from backend/) — SQLite in-memory, 436 passed / 1 pre-existing skip
 pytest tests/ -q
 pytest tests/test_contagens.py -q                            # single file
 pytest tests/test_contagens.py::test_contagem_sem_token_retorna_401 -v   # single test

@@ -1002,7 +1002,11 @@ async function processCode(codigo) {
     addRecente(codigo)
     stopCamera(); showState('item'); renderItem()
   } catch(e) {
-    if (e.status === 404) {
+    if (e.status === 401) {
+      // Token expirou/foi trocado (ex: admin gerou token da 2ª rodada) —
+      // volta para a tela de token em vez de deixar o operador num beco.
+      voltarTelaToken()
+    } else if (e.status === 404) {
       showState('erro')
       document.getElementById('erro-titulo').textContent = 'Item não encontrado'
       document.getElementById('erro-msg').textContent = `O código "${codigo}" não está cadastrado nesta sessão.`
@@ -1014,6 +1018,20 @@ async function processCode(codigo) {
   } finally {
     if (hint) hint.textContent = 'Aponte para o QR Code ou código de barras'
   }
+}
+
+// Token inválido/trocado: limpa o token salvo e pede o novo (novo QR/rodada)
+function voltarTelaToken() {
+  tokenValidado = false
+  tokenAtivo = ''
+  sessionStorage.removeItem(_TOKEN_STORAGE_KEY)
+  stopCamera()
+  if (ws) ws.disconnect()
+  document.getElementById('token-sessao-nome').textContent = sessao?.nome || sessaoId
+  const inp = document.getElementById('token-input'); if (inp) inp.value = ''
+  const erroEl = document.getElementById('token-erro')
+  if (erroEl) { erroEl.textContent = 'Token expirado ou trocado — escaneie o novo QR Code ou digite o novo token.'; erroEl.classList.remove('hidden') }
+  showState('token')
 }
 
 // ── renderItem
@@ -1168,6 +1186,7 @@ async function submitContagem(opName) {
       .catch(() => {})
     showSuccessState(isDivg, alertas)
   } catch(e) {
+    if (e.status === 401) { voltarTelaToken(); return }
     const isNetworkError = !navigator.onLine||e.message?.includes('fetch')||e.status==null
     if (isNetworkError) {
       salvarOffline({ codigo:currentCodigo, quantidade_encontrada:currentQty, operador:op, observacao:obs })

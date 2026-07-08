@@ -14,6 +14,19 @@ def _sanitizar_formula(v: str) -> str:
     return v
 
 
+def _normalizar_codigo(v: str) -> str:
+    """Remove o sufixo '.0' de códigos numéricos.
+
+    Quando a coluna de código tem alguma célula vazia, o pandas converte a
+    coluna inteira para float — o código 1001 vira "1001.0" e o scanner
+    (que lê "1001" do código de barras) nunca encontra o item.
+    """
+    v = v.strip()
+    if v.endswith(".0") and v[:-2].isdigit():
+        return v[:-2]
+    return v
+
+
 # Aliases aceitos para cada coluna canônica.
 # Permite importar planilhas com cabeçalhos em diferentes idiomas/formatos.
 _ALIASES: dict[str, set[str]] = {
@@ -76,9 +89,19 @@ def importar_planilha(conteudo: bytes, filename: str = "") -> list[dict]:
     try:
         fname = (filename or "").lower()
         if fname.endswith(".csv"):
-            df = pd.read_csv(io.BytesIO(conteudo), dtype=str, nrows=_MAX_ROWS + 1)
+            # sep=None + engine="python" detecta o separador — Excel PT-BR exporta
+            # CSV com ';' (o default ',' lia tudo como uma única coluna).
+            # utf-8-sig remove o BOM que o Excel adiciona; fallback latin-1 cobre
+            # CSVs legados do Windows (acentos fora de UTF-8).
+            _csv_kwargs = dict(dtype=str, nrows=_MAX_ROWS + 1, sep=None, engine="python")
+            try:
+                df = pd.read_csv(io.BytesIO(conteudo), encoding="utf-8-sig", **_csv_kwargs)
+            except UnicodeDecodeError:
+                df = pd.read_csv(io.BytesIO(conteudo), encoding="latin-1", **_csv_kwargs)
         else:
             df = pd.read_excel(io.BytesIO(conteudo), engine="openpyxl", nrows=_MAX_ROWS + 1)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Erro ao ler arquivo: {str(e)}")
 
@@ -140,7 +163,7 @@ def importar_planilha(conteudo: bytes, filename: str = "") -> list[dict]:
 
     itens = []
     for r in df[colunas_base].to_dict(orient="records"):
-        cod = _sanitizar_formula(str(r["codigo"]).strip())
+        cod = _sanitizar_formula(_normalizar_codigo(str(r["codigo"])))
         prod = _sanitizar_formula(str(r["produto"]).strip())
         if not cod or not prod:
             continue
