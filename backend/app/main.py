@@ -51,11 +51,14 @@ async def lifespan(app: FastAPI):
     # create_tables() só roda fora de produção (dev/test) para facilitar o setup local.
     if not _IS_PROD:
         create_tables()
-    # Inicia scheduler de agendamentos em background
+    # Inicia scheduler de agendamentos em background.
+    # A referência é guardada em app.state: tasks sem referência podem ser
+    # coletadas pelo GC no meio da execução (aviso documentado do asyncio).
     import asyncio
     from app.services.scheduler import loop_agendamentos
-    asyncio.create_task(loop_agendamentos())
+    app.state.scheduler_task = asyncio.create_task(loop_agendamentos())
     yield
+    app.state.scheduler_task.cancel()
 
 
 app = FastAPI(
