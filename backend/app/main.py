@@ -223,6 +223,10 @@ if _STATIC.exists():
     def dashboard_page():
         return FileResponse(str(_STATIC / "dashboard.html"))
 
+    @app.get("/agendamentos")
+    def agendamentos_page():
+        return FileResponse(str(_STATIC / "agendamentos.html"))
+
     @app.get("/sessao/{sessao_id}")
     def sessao_page(sessao_id: str):
         return FileResponse(str(_STATIC / "sessao.html"))

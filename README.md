@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-336791?style=flat-square&logo=postgresql&logoColor=white)]()
 [![WebSocket](https://img.shields.io/badge/WebSocket-Tempo%20Real-10eb8a?style=flat-square)]()
-[![Tests](https://img.shields.io/badge/Testes-436%20passando-4CAF50?style=flat-square)]()
+[![Tests](https://img.shields.io/badge/Testes-438%20passando-4CAF50?style=flat-square)]()
 [![Deploy](https://img.shields.io/badge/Deploy-Render-46E3B7?style=flat-square&logo=render&logoColor=white)](https://inventario-qr-api.onrender.com)
 [![IA](https://img.shields.io/badge/IA%20opcional-Claude%20%2F%20Groq-D97706?style=flat-square)](https://anthropic.com)
 
@@ -146,7 +146,7 @@ inventario-qr/
 │   ├── .agents/              # 11 agentes de IA (dentro de backend/ por causa do Docker context)
 │   ├── alembic/              # Migrations 0001 → 0008
 │   ├── static/               # index, login, dashboard, sessao, mobile, supervisor + js/ + sw.js
-│   ├── tests/                # 436 testes (pytest + SQLite in-memory)
+│   ├── tests/                # 438 testes (pytest + SQLite in-memory)
 │   ├── Dockerfile            # Multi-stage, usuário não-root
 │   └── entrypoint.sh         # Aguarda DB → detect_schema_state → alembic upgrade → gunicorn
 ├── .github/workflows/ci.yml  # pytest + validações de deploy a cada push/PR
@@ -208,7 +208,7 @@ docker compose up --build
 ```bash
 cd backend
 pytest tests/ -q
-# 436 passed, 1 skipped
+# 438 passed, 1 skipped
 ```
 
 ### 6. Fluxo de uso
@@ -327,7 +327,7 @@ Admin conclui a sessão
 ## CI e Deploy
 
 ### CI (GitHub Actions)
-Cada push/PR roda a suíte completa (436 testes em SQLite in-memory), valida que o Alembic tem exatamente 1 head e que `entrypoint.sh` está em LF (CRLF quebra o boot do container). O deploy no Render é automático a partir do `main` — **o CI é o único gate antes de produção**.
+Cada push/PR roda a suíte completa (438 testes em SQLite in-memory), valida que o Alembic tem exatamente 1 head e que `entrypoint.sh` está em LF (CRLF quebra o boot do container). O deploy no Render é automático a partir do `main` — **o CI é o único gate antes de produção**.
 
 ### Produção (Render + Neon)
 No ar em **https://inventario-qr-api.onrender.com**: web service Docker no Render (`render.yaml`, contexto `./backend`) + PostgreSQL gerenciado no **Neon** (o free tier do Postgres do Render expira em ~90 dias; o do Neon não).

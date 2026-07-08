@@ -231,3 +231,19 @@ def test_executar_agora_com_template_copia_itens(client, sessao_com_itens):
     assert r2.status_code == 200
     itens = r2.json()
     assert len(itens) == 3  # mesmos 3 itens do template
+
+
+def test_proxima_execucao_respeita_fuso_brasilia():
+    """hora='08:00' significa 08:00 em America/Sao_Paulo (UTC-3) → 11:00 UTC.
+    Sem o SCHEDULER_TZ, a sessão nasceria às 05:00 no horário local."""
+    from datetime import timezone as _tz
+    from app.services.scheduler import calcular_proxima_execucao_inicial
+    p = calcular_proxima_execucao_inicial("diario", "08:00", None, None)
+    assert p.tzinfo is not None
+    assert p.astimezone(_tz.utc).hour == 11
+
+
+def test_pagina_agendamentos_existe(client):
+    r = client.get("/agendamentos")
+    assert r.status_code == 200
+    assert "Agendamentos" in r.text

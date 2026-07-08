@@ -190,13 +190,31 @@ def _executar_agendamento_por_id(agendamento_id: str, agora: datetime) -> str | 
         return nova_sessao.id
 
 
+def _tz_agendamentos():
+    """Fuso em que o campo `hora` é interpretado (SCHEDULER_TZ, default America/Sao_Paulo).
+    Sem isso, "08:00" seria UTC — a sessão nasceria às 05:00 no horário de Brasília."""
+    from zoneinfo import ZoneInfo
+    from app.config import SCHEDULER_TZ
+    try:
+        return ZoneInfo(SCHEDULER_TZ)
+    except Exception:
+        logger.warning("SCHEDULER_TZ inválido (%r) — usando UTC", SCHEDULER_TZ)
+        return timezone.utc
+
+
 def _calcular_proxima_execucao(agendamento, referencia: datetime) -> datetime | None:
-    """Calcula a próxima data/hora de execução conforme a frequência."""
+    """Calcula a próxima data/hora de execução conforme a frequência.
+    O cálculo é feito no fuso SCHEDULER_TZ; o resultado é armazenado em UTC."""
     hora_str = agendamento.hora or "08:00"
     try:
         hora, minuto = map(int, hora_str.split(":"))
     except ValueError:
         hora, minuto = 8, 0
+
+    tz = _tz_agendamentos()
+    if referencia.tzinfo is None:
+        referencia = referencia.replace(tzinfo=timezone.utc)
+    referencia = referencia.astimezone(tz)
 
     if agendamento.frequencia == "unico":
         return None
@@ -205,7 +223,7 @@ def _calcular_proxima_execucao(agendamento, referencia: datetime) -> datetime | 
         proxima = (referencia + timedelta(days=1)).replace(
             hour=hora, minute=minuto, second=0, microsecond=0
         )
-        return proxima
+        return proxima.astimezone(timezone.utc)
 
     if agendamento.frequencia == "semanal":
         dia_alvo = agendamento.dia_semana or 0
@@ -215,7 +233,7 @@ def _calcular_proxima_execucao(agendamento, referencia: datetime) -> datetime | 
         proxima = (referencia + timedelta(days=dias_faltando)).replace(
             hour=hora, minute=minuto, second=0, microsecond=0
         )
-        return proxima
+        return proxima.astimezone(timezone.utc)
 
     if agendamento.frequencia == "mensal":
         dia_alvo = agendamento.dia_mes or 1
@@ -233,7 +251,7 @@ def _calcular_proxima_execucao(agendamento, referencia: datetime) -> datetime | 
             year=ano_seguinte, month=mes_seguinte, day=dia_final,
             hour=hora, minute=minuto, second=0, microsecond=0
         )
-        return proxima
+        return proxima.astimezone(timezone.utc)
 
     return None
 
@@ -245,8 +263,15 @@ def calcular_proxima_execucao_inicial(
     dia_mes: int | None,
     data_inicio: datetime | None = None,
 ) -> datetime:
-    """Calcula a primeira execução ao criar um novo agendamento."""
+    """Calcula a primeira execução ao criar um novo agendamento.
+    `hora` é interpretada no fuso SCHEDULER_TZ; o resultado é armazenado em UTC."""
+    tz = _tz_agendamentos()
     agora = data_inicio or datetime.now(timezone.utc)
+    if agora.tzinfo is None:
+        # datetime sem fuso vindo do payload: interpreta no fuso dos agendamentos
+        agora = agora.replace(tzinfo=tz)
+    agora = agora.astimezone(tz)
+
     try:
         h, m = map(int, hora.split(":"))
     except ValueError:
@@ -254,13 +279,13 @@ def calcular_proxima_execucao_inicial(
 
     if frequencia == "unico":
         # Para único, data_inicio deve ser fornecida pelo usuário
-        return data_inicio or agora
+        return (data_inicio or agora) if (data_inicio is None or data_inicio.tzinfo) else data_inicio.replace(tzinfo=tz)
 
     if frequencia == "diario":
         proxima = agora.replace(hour=h, minute=m, second=0, microsecond=0)
         if proxima <= agora:
             proxima += timedelta(days=1)
-        return proxima
+        return proxima.astimezone(timezone.utc)
 
     if frequencia == "semanal":
         dia_alvo = dia_semana or 0
@@ -270,11 +295,11 @@ def calcular_proxima_execucao_inicial(
             if proxima <= agora:
                 dias_faltando = 7
             else:
-                return proxima
+                return proxima.astimezone(timezone.utc)
         proxima = (agora + timedelta(days=dias_faltando)).replace(
             hour=h, minute=m, second=0, microsecond=0
         )
-        return proxima
+        return proxima.astimezone(timezone.utc)
 
     if frequencia == "mensal":
         dia_alvo = dia_mes or 1
@@ -291,6 +316,6 @@ def calcular_proxima_execucao_inicial(
             ultimo_dia = calendar.monthrange(ano_seguinte, mes_seguinte)[1]
             dia_final = min(dia_alvo, ultimo_dia)
             proxima = proxima.replace(year=ano_seguinte, month=mes_seguinte, day=dia_final)
-        return proxima
+        return proxima.astimezone(timezone.utc)
 
-    return agora + timedelta(hours=1)
+    return (agora + timedelta(hours=1)).astimezone(timezone.utc)

@@ -24,6 +24,11 @@ MAX_CONNECTIONS_PER_SESSION: int = int(os.getenv("MAX_CONNECTIONS_PER_SESSION", 
 MAX_RODADAS_DIVERGENCIA: int = int(os.getenv("MAX_RODADAS_DIVERGENCIA", "5"))
 UPLOAD_MAX_ROWS: int = int(os.getenv("UPLOAD_MAX_ROWS", "50000"))
 
+# ── Agendamentos ──────────────────────────────────────────────────────────────
+# Fuso em que o campo `hora` dos agendamentos é interpretado. Sem isso, "08:00"
+# seria UTC e a sessão nasceria às 05:00 no horário de Brasília.
+SCHEDULER_TZ: str = os.getenv("SCHEDULER_TZ", "America/Sao_Paulo")
+
 # ── Limites de campo ─────────────────────────────────────────────────────────
 MAX_LEN_OPERADOR: int = 100
 MAX_LEN_OBSERVACAO: int = 500

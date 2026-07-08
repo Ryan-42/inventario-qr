@@ -71,8 +71,12 @@ class AgendamentoUpdate(BaseModel):
 
 
 def _verificar_token_admin(a, token_admin: str) -> None:
-    """Token vazio nunca é válido — compare_digest("", "") retorna True."""
-    if not a.token_admin or not token_admin or not hmac.compare_digest(a.token_admin, token_admin):
+    """Compat: o JWT admin (dependência do router) é quem autoriza. O token_admin
+    do agendamento só é validado se o cliente o enviar — e aí precisa estar certo
+    (token vazio nunca é válido: compare_digest("", "") retorna True)."""
+    if not token_admin:
+        return
+    if not a.token_admin or not hmac.compare_digest(a.token_admin, token_admin):
         raise HTTPException(status_code=403, detail="Token de administrador inválido.")
 
 
@@ -185,10 +189,10 @@ def buscar_agendamento(agendamento_id: str, db: Session = Depends(get_db)) -> di
 def atualizar_agendamento(
     agendamento_id: str,
     payload: AgendamentoUpdate,
-    token_admin: str = Query(...),
+    token_admin: str = Query(default=""),
     db: Session = Depends(get_db),
 ) -> dict:
-    """Atualiza campos do agendamento. Requer token_admin do agendamento."""
+    """Atualiza campos do agendamento. Autorização: JWT admin (token_admin opcional, legado)."""
 
     a = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
     if not a:
@@ -218,10 +222,10 @@ def atualizar_agendamento(
 @router.delete("/{agendamento_id}", status_code=204)
 def deletar_agendamento(
     agendamento_id: str,
-    token_admin: str = Query(...),
+    token_admin: str = Query(default=""),
     db: Session = Depends(get_db),
 ):
-    """Remove permanentemente um agendamento. Requer token_admin do agendamento."""
+    """Remove permanentemente um agendamento. Autorização: JWT admin (token_admin opcional, legado)."""
 
     a = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
     if not a:
@@ -235,7 +239,7 @@ def deletar_agendamento(
 @router.post("/{agendamento_id}/executar-agora")
 def executar_agora(
     agendamento_id: str,
-    token_admin: str = Query(...),
+    token_admin: str = Query(default=""),
     db: Session = Depends(get_db),
 ) -> dict:
     """

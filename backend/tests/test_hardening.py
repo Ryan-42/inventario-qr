@@ -276,27 +276,28 @@ def test_auditoria_filtro_operador_no_sql(client, sessao_com_itens):
 
 # ── Rodada 3: agendamentos, token de grupo regenerado ─────────────────────────
 
-def test_agendamento_token_admin_vazio_rejeitado(client):
-    """Agendamento com token_admin vazio não pode aceitar token vazio
-    (hmac.compare_digest("", "") == True)."""
+def test_agendamento_jwt_governa_token_admin_opcional(client):
+    """JWT admin autoriza os endpoints de agendamento; token_admin (legado) só é
+    validado quando enviado — e token errado continua sendo rejeitado."""
     r = client.post("/api/agendamentos/", json={
         "nome_template": "Inventário semanal", "frequencia": "diario", "hora": "08:00",
     })
     assert r.status_code == 201, r.text
     ag_id = r.json()["id"]
 
-    # Simula registro legado com token vazio (coluna é NOT NULL)
-    from tests.conftest import override_get_db
-    db = next(override_get_db())
-    from app.models.agendamento import AgendamentoSessao
-    ag = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == ag_id).first()
-    ag.token_admin = ""
-    db.commit()
+    # Sem token_admin: JWT admin basta
+    r = client.patch(f"/api/agendamentos/{ag_id}", json={"hora": "09:00"})
+    assert r.status_code == 200, r.text
+    assert r.json()["hora"] == "09:00"
 
-    r = client.patch(f"/api/agendamentos/{ag_id}?token_admin=", json={"hora": "09:00"})
+    # token_admin errado continua rejeitado
+    r = client.patch(f"/api/agendamentos/{ag_id}?token_admin=ERRADO", json={"hora": "10:00"})
     assert r.status_code == 403
-    r = client.delete(f"/api/agendamentos/{ag_id}?token_admin=")
-    assert r.status_code == 403
+
+    # Sem JWT: 401 (a dependência do router é quem manda)
+    c = _cliente_sem_jwt()
+    r = c.patch(f"/api/agendamentos/{ag_id}", json={"hora": "11:00"})
+    assert r.status_code == 401
 
 
 def test_token_grupo_regenerado_mantem_16_chars(client, sessao):

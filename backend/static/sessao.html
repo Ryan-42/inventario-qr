@@ -130,6 +130,11 @@ tailwind.config = {
         <span class="material-symbols-outlined text-[16px]">lock_open</span>
         <span class="hide-mobile">Reabrir</span>
       </button>
+      <button id="btn-para-ajuste" class="btn-stitch-ia" style="border-color:rgba(255,184,41,0.4);color:#ffb829" title="Fila de ajuste — itens com divergência confirmada">
+        <span class="material-symbols-outlined text-[16px]">build</span>
+        <span class="hide-mobile">Ajustes</span>
+        <span id="badge-para-ajuste" style="display:none;background:rgba(255,184,41,0.18);border-radius:999px;padding:0 .45rem;font-size:.7rem;font-weight:700"></span>
+      </button>
       <button id="btn-ai-analise" class="btn-stitch-ia text-secondary border-secondary/30 hover:bg-secondary/10" title="Análise de IA">
         <span class="material-symbols-outlined text-[18px]">psychology</span>
         <span class="hide-mobile">IA</span>
@@ -491,6 +496,63 @@ tailwind.config = {
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ── Modal: Para Ajuste ── -->
+<div id="modal-para-ajuste" class="modal-backdrop">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-header">
+      <span class="modal-title" style="display:flex;align-items:center;gap:.5rem">
+        <span class="material-symbols-outlined text-[15px]" style="color:#ffb829">build</span>
+        Fila de Ajuste
+      </span>
+      <button class="modal-close" id="btn-close-para-ajuste">✕</button>
+    </div>
+
+    <p style="font-size:.8125rem;color:#bdbdbd;line-height:1.5;margin-bottom:1rem">
+      Itens com a mesma divergência <strong style="color:#ffb829">confirmada em recontagem</strong> —
+      a contagem física está correta e o saldo do sistema precisa ser ajustado no ERP.
+    </p>
+
+    <!-- Resumo -->
+    <div id="ajuste-resumo" style="display:none;gap:.75rem;margin-bottom:1rem">
+      <div style="flex:1;background:rgba(15,32,64,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:.75rem;text-align:center">
+        <div style="font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9a9a9a">Itens</div>
+        <div id="ajuste-total-itens" style="font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:700;color:#ffb829">0</div>
+      </div>
+      <div style="flex:1;background:rgba(15,32,64,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:.75rem;text-align:center">
+        <div style="font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9a9a9a">Unidades (Δ)</div>
+        <div id="ajuste-total-unidades" style="font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:700;color:#e8e8e8">0</div>
+      </div>
+      <div id="ajuste-card-valor" style="flex:1;background:rgba(15,32,64,0.8);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:.75rem;text-align:center">
+        <div style="font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9a9a9a">Impacto R$</div>
+        <div id="ajuste-total-valor" style="font-family:'JetBrains Mono',monospace;font-size:1.25rem;font-weight:700;color:#ff7a92">—</div>
+      </div>
+    </div>
+
+    <!-- Lista -->
+    <div id="ajuste-lista" style="display:flex;flex-direction:column;gap:.5rem;max-height:340px;overflow-y:auto;margin-bottom:1rem"></div>
+    <div id="ajuste-vazio" style="display:none;text-align:center;padding:1.5rem;color:#9a9a9a;font-size:.8125rem">
+      <span class="material-symbols-outlined text-[32px]" style="color:#5fc9b4;display:block;margin-bottom:.5rem">check_circle</span>
+      Nenhum item na fila de ajuste — nenhuma divergência foi confirmada em recontagem.
+    </div>
+
+    <!-- Ações -->
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+      <button id="btn-ajuste-exportar" class="btn btn-primary" style="flex:1;justify-content:center">
+        <span class="material-symbols-outlined text-[16px]">download</span>
+        Exportar divergências (.xlsx)
+      </button>
+      <button id="btn-ajuste-copiar" class="btn btn-secondary" style="flex:1;justify-content:center">
+        <span class="material-symbols-outlined text-[16px]">content_copy</span>
+        Copiar lista
+      </button>
+    </div>
+    <p style="font-size:.7rem;color:#9a9a9a;margin-top:.625rem;line-height:1.5">
+      O envio dos ajustes ao TOTVS (<code style="color:#8052ff">POST /api/integracoes/totvs/sessao/{id}/enviar-ajuste</code>)
+      é liberado após a conclusão e a segunda aprovação da sessão.
+    </p>
   </div>
 </div>
 
@@ -1290,7 +1352,7 @@ document.getElementById('btn-confirmar-importar').addEventListener('click', asyn
     const result=await uploadPlanilha(sessaoId,selectedFile)
     toast(`Planilha importada: ${result.total||result.itens_importados||0} itens`,'success')
     const [newStats,newItens]=await Promise.all([statsSessao(sessaoId),listarItens(sessaoId)])
-    stats=newStats; itens=newItens; renderStats(); renderItens(currentFilter,currentSearch)
+    stats=newStats; itens=newItens; atualizarBadgeAjuste(itens); renderStats(); renderItens(currentFilter,currentSearch)
     closeModal('modal-upload'); selectedFile=null
     loadValorEstoque()
   } catch(e) {
@@ -1406,6 +1468,7 @@ async function _fetchItens() {
   try {
     const [fetchedItens,fetchedConts]=await Promise.all([listarItens(sessaoId),listarContagens(sessaoId)])
     itens=fetchedItens||[]
+    atualizarBadgeAjuste(itens)
     if(!contagens.length){contagens=fetchedConts||[];renderChart(contagens);renderOperators(contagens)}
     itensLoaded=true; renderItens(currentFilter,currentSearch)
   } catch(e) {
@@ -1700,6 +1763,78 @@ document.getElementById('btn-reabrir').addEventListener('click', async () => {
   } catch (e) {
     toast(e.message || 'Não foi possível reabrir a sessão.', 'error')
   } finally { btn.disabled = false }
+})
+
+// ── Fila de Ajuste (itens com divergência confirmada em recontagem)
+const _fmtBRL = v => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+function atualizarBadgeAjuste(lista) {
+  const n = (lista || []).filter(i => i.status === 'Para Ajuste').length
+  const badge = document.getElementById('badge-para-ajuste')
+  if (badge) { badge.textContent = n; badge.style.display = n > 0 ? '' : 'none' }
+}
+
+async function abrirModalAjuste() {
+  openModal('modal-para-ajuste')
+  const listaEl = document.getElementById('ajuste-lista')
+  const vazioEl = document.getElementById('ajuste-vazio')
+  const resumoEl = document.getElementById('ajuste-resumo')
+  listaEl.innerHTML = '<div style="text-align:center;padding:1rem;color:#9a9a9a;font-size:.8125rem">Carregando…</div>'
+  try {
+    const todos = await listarItens(sessaoId)
+    itens = todos; atualizarBadgeAjuste(todos)
+    const ajustes = (todos || []).filter(i => i.status === 'Para Ajuste')
+    if (!ajustes.length) {
+      listaEl.innerHTML = ''; vazioEl.style.display = ''; resumoEl.style.display = 'none'
+      return
+    }
+    vazioEl.style.display = 'none'; resumoEl.style.display = 'flex'
+
+    const totalUnid = ajustes.reduce((s, i) => s + (i.diferenca || 0), 0)
+    const comValor = ajustes.filter(i => i.diferenca_valor != null)
+    const totalValor = comValor.reduce((s, i) => s + i.diferenca_valor, 0)
+    document.getElementById('ajuste-total-itens').textContent = ajustes.length
+    document.getElementById('ajuste-total-unidades').textContent = (totalUnid > 0 ? '+' : '') + totalUnid
+    const valorEl = document.getElementById('ajuste-total-valor')
+    valorEl.textContent = comValor.length ? _fmtBRL(totalValor) : '—'
+    valorEl.style.color = totalValor > 0 ? '#5fc9b4' : '#ff7a92'
+
+    listaEl.innerHTML = ajustes.map(i => {
+      const diff = i.diferenca || 0
+      const diffTxt = (diff > 0 ? '+' : '') + diff
+      const diffCor = diff > 0 ? '#5fc9b4' : '#ff7a92'
+      const valorTxt = i.diferenca_valor != null
+        ? `<span style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:${i.diferenca_valor > 0 ? '#5fc9b4' : '#ff7a92'}">${escapeHtml(_fmtBRL(i.diferenca_valor))}</span>` : ''
+      return `
+        <div style="background:rgba(15,32,64,0.8);border:1px solid rgba(255,184,41,0.15);border-radius:10px;padding:.625rem .75rem;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+          <div style="flex:1;min-width:180px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:.75rem;color:#8052ff">${escapeHtml(i.codigo)}</div>
+            <div style="font-size:.8125rem;color:#e8e8e8;font-weight:500">${escapeHtml(i.produto)}</div>
+            <div style="font-size:.7rem;color:#9a9a9a">${escapeHtml(i.local_fisico || 'sem local')}${i.operador ? ' · ' + escapeHtml(i.operador) : ''}${i.observacao ? ' · “' + escapeHtml(i.observacao) + '”' : ''}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:.8125rem;color:#e8e8e8">${i.quantidade_base} → <strong>${i.quantidade_encontrada}</strong>
+              <span style="color:${diffCor};font-weight:700">(${diffTxt})</span></div>
+            ${valorTxt}
+          </div>
+        </div>`
+    }).join('')
+  } catch (e) {
+    listaEl.innerHTML = `<div style="text-align:center;padding:1rem;color:#ff7a92;font-size:.8125rem">${escapeHtml(e.message || 'Erro ao carregar itens.')}</div>`
+  }
+}
+
+document.getElementById('btn-para-ajuste').addEventListener('click', abrirModalAjuste)
+document.getElementById('btn-close-para-ajuste').addEventListener('click', () => closeModal('modal-para-ajuste'))
+document.getElementById('btn-ajuste-exportar').addEventListener('click', () => {
+  exportarDivergencias(sessaoId, `ajustes_${sessao?.codigo || sessaoId}.xlsx`).catch(e => toast(e.message || 'Erro ao exportar.', 'error'))
+})
+document.getElementById('btn-ajuste-copiar').addEventListener('click', async () => {
+  const ajustes = (itens || []).filter(i => i.status === 'Para Ajuste')
+  const linhas = ajustes.map(i => `${i.codigo}\t${i.produto}\t${i.quantidade_base}\t${i.quantidade_encontrada}\t${i.diferenca}`)
+  const texto = 'codigo\tproduto\tbase\tencontrado\tdiferenca\n' + linhas.join('\n')
+  try { await navigator.clipboard.writeText(texto); toast('Lista copiada (cole no Excel).', 'success') }
+  catch { toast('Não foi possível copiar.', 'error') }
 })
 
 // ── Init
