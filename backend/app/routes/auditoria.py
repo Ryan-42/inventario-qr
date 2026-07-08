@@ -38,17 +38,18 @@ def trilha_auditoria(
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
 
-    historico = item_repo.listar_historico(db, sessao_id, codigo=codigo, limit=limit + 1, offset=offset)
+    # Filtros aplicados no SQL ANTES da paginação — aplicá-los depois produzia
+    # páginas incompletas e total_registros/tem_mais incorretos.
+    historico = item_repo.listar_historico(
+        db, sessao_id, codigo=codigo, limit=limit + 1, offset=offset,
+        operador=operador, apenas_divergencias=apenas_divergencias,
+    )
 
     tem_mais = len(historico) > limit
     historico = historico[:limit]
 
     registros = []
     for h in historico:
-        if apenas_divergencias and not h.divergencia:
-            continue
-        if operador and (h.operador or "").lower() != operador.lower():
-            continue
         registros.append({
             "id": h.id,
             "codigo": h.codigo,

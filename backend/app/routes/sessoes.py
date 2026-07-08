@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, BackgroundTasks
 from sqlalchemy.orm import Session
 
-from app.auth import get_admin_logado
+from app.auth import get_admin_logado, get_admin_logado_opcional
 from app.database import get_db
 from app.websockets.manager import manager
 from app.limiter import limiter
@@ -96,23 +96,31 @@ async def verificar_admin(request: Request, sessao_id: str, token: str, db: Sess
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    # Token vazio nunca é válido (compare_digest("","")==True quando token_admin é None)
+    if not token or not sessao.token_admin:
+        return {"valido": False}
     # hmac.compare_digest evita timing attack
-    valido = hmac.compare_digest(sessao.token_admin or "", token)
+    valido = hmac.compare_digest(sessao.token_admin, token)
     return {"valido": valido}
 
 
 
 @router.get("/{sessao_id}", response_model=SessaoResponse)
 @limiter.limit("120/minute")
-async def buscar_sessao(request: Request, sessao_id: str, db: Session = Depends(get_db)):
+async def buscar_sessao(request: Request, sessao_id: str, db: Session = Depends(get_db),
+                        admin=Depends(get_admin_logado_opcional)):
     sessao_dict = sessao_repo.buscar_sessao_com_stats(db, sessao_id)
     if not sessao_dict:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    # Páginas de operador/supervisor consultam este endpoint sem JWT —
+    # não expor a webhook_url (config interna) para quem não é admin.
+    if not admin:
+        sessao_dict = {**sessao_dict, "webhook_url": None}
     return sessao_dict
 
 
 @router.get("/{sessao_id}/stats", response_model=SessaoStats)
-def stats_sessao(sessao_id: str, db: Session = Depends(get_db)):
+def stats_sessao(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -220,6 +228,37 @@ async def cancelar_sessao(sessao_id: str, background_tasks: BackgroundTasks,
     return stats
 
 
+@router.patch("/{sessao_id}/reabrir", response_model=SessaoResponse)
+async def reabrir_sessao(sessao_id: str, background_tasks: BackgroundTasks,
+                         db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
+    """
+    Reabre uma sessão concluída para correções (ex: rejeitada na segunda aprovação).
+    Não é permitido reabrir sessões já aprovadas pelo segundo aprovador — o
+    inventário aprovado é registro imutável para o ERP.
+    """
+    sessao = sessao_repo.buscar_sessao(db, sessao_id)
+    if not sessao:
+        raise HTTPException(status_code=404, detail="Sessão não encontrada")
+    if sessao.status != StatusSessao.concluida:
+        raise HTTPException(status_code=409, detail=f"Sessão está '{sessao.status.value}' — apenas sessões concluídas podem ser reabertas.")
+    if (getattr(sessao, "segunda_aprovacao_ok", 0) or 0) == 1:
+        raise HTTPException(
+            status_code=409,
+            detail="Sessão já aprovada pelo segundo aprovador não pode ser reaberta — o registro é imutável.",
+        )
+    reaberta = sessao_repo.reabrir_sessao(db, sessao_id)
+    if not reaberta:
+        raise HTTPException(status_code=409, detail="Sessão não pôde ser reaberta (conflito). Tente novamente.")
+    background_tasks.add_task(manager.broadcast_safe, sessao_id, {
+        "tipo": "sessao_status_alterado", "status": "ativa",
+        "mensagem": "O inventário foi reaberto pelo administrador para correções.",
+    })
+    stats = sessao_repo.buscar_sessao_com_stats(db, sessao_id)
+    if stats is None:
+        raise HTTPException(status_code=500, detail="Erro interno ao buscar sessão reaberta.")
+    return stats
+
+
 @router.delete("/{sessao_id}", status_code=204)
 async def deletar_sessao(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """Remove permanentemente a sessão e todos os dados associados (itens, contagens, grupos)."""
@@ -235,7 +274,7 @@ async def deletar_sessao(sessao_id: str, db: Session = Depends(get_db), _admin=D
 
 
 @router.get("/{sessao_id}/valor-estoque", response_model=ValorEstoqueStats)
-def valor_estoque_sessao(sessao_id: str, db: Session = Depends(get_db)):
+def valor_estoque_sessao(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """Retorna análise financeira: valor inicial vs final do inventário."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
@@ -253,14 +292,13 @@ def progresso_rodada(sessao_id: str, db: Session = Depends(get_db)):
 
 
 @router.get("/{sessao_id}/metricas")
-def metricas_sessao(sessao_id: str, db: Session = Depends(get_db)):
+def metricas_sessao(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
     """
     Retorna KPIs de produtividade derivados dos dados do inventário.
 
     Inclui: duração, itens/min, taxa de divergência, taxa de retrabalho,
-    % de rastreabilidade e breakdown por operador.
-    Não requer autenticação — os dados são agregados, sem PII exposta além de nomes
-    de operador (que já constam nas contagens públicas da sessão).
+    % de rastreabilidade e breakdown por operador. Requer JWT admin —
+    expõe desempenho individual de operadores (dado sensível de RH).
     """
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
@@ -315,7 +353,9 @@ async def verificar_token(request: Request, sessao_id: str, token: str, db: Sess
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    valido = hmac.compare_digest(sessao.token_acesso or "", token)
+    if not token or not sessao.token_acesso:
+        return {"valido": False, "rodada": sessao.rodada_token or 1}
+    valido = hmac.compare_digest(sessao.token_acesso, token)
     return {"valido": valido, "rodada": sessao.rodada_token or 1}
 
 
@@ -329,9 +369,11 @@ def _validar_base_url(base_url: str) -> None:
 
 
 @router.get("/{sessao_id}/qrcode-acesso")
-def qrcode_acesso(sessao_id: str, base_url: str = "", db: Session = Depends(get_db)):
+def qrcode_acesso(sessao_id: str, base_url: str = "", db: Session = Depends(get_db),
+                  _admin=Depends(get_admin_logado)):
     """Retorna o QR Code como imagem PNG para acesso mobile.
     Parâmetro `base_url` deve ser a origem completa (ex: http://192.168.1.10:8000).
+    Requer JWT admin — a imagem embute o token_acesso da sessão.
     """
     import qrcode as qrcode_lib
     from io import BytesIO
@@ -364,8 +406,9 @@ def qrcode_acesso(sessao_id: str, base_url: str = "", db: Session = Depends(get_
 
 
 @router.get("/{sessao_id}/rodadas", response_model=RodadasInfo)
-def rodadas_sessao(sessao_id: str, db: Session = Depends(get_db)):
-    """Retorna resumo das rodadas de contagem e itens pendentes por rodada."""
+def rodadas_sessao(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
+    """Retorna resumo das rodadas de contagem e itens pendentes por rodada.
+    Requer JWT admin — expõe quantidade_base (quebraria a contagem cega)."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -442,10 +485,13 @@ def rodadas_sessao(sessao_id: str, db: Session = Depends(get_db)):
 # ── Aprovação 4 olhos ─────────────────────────────────────────────────────────
 
 @router.get("/{sessao_id}/segunda-aprovacao")
-def status_segunda_aprovacao(sessao_id: str, db: Session = Depends(get_db)) -> dict:
+def status_segunda_aprovacao(sessao_id: str, db: Session = Depends(get_db),
+                             _admin=Depends(get_admin_logado)) -> dict:
     """
     Retorna o status da segunda aprovação.
     Expõe o token para que o gestor envie ao segundo aprovador (por e-mail, etc.)
+    Requer JWT admin — sem essa proteção qualquer pessoa com o sessao_id
+    obteria o token e aprovaria sozinha, anulando o controle de 4 olhos.
     """
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:

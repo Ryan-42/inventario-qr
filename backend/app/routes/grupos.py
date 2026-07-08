@@ -59,8 +59,9 @@ class GrupoUpdate(BaseModel):
 # ── Grupos de operadores ──────────────────────────────────────────────────────
 
 @router.get("/{sessao_id}/grupos")
-def listar_grupos(sessao_id: str, db: Session = Depends(get_db)):
-    """Lista todos os grupos de operadores da sessão."""
+def listar_grupos(sessao_id: str, db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
+    """Lista todos os grupos de operadores da sessão.
+    Requer JWT admin — a resposta inclui o token de acesso de cada grupo."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -120,8 +121,9 @@ def regenerar_token_grupo(sessao_id: str, grupo_id: str,
 
 @router.get("/{sessao_id}/grupos/{grupo_id}/qrcode")
 def qrcode_grupo(sessao_id: str, grupo_id: str, base_url: str = "",
-                 db: Session = Depends(get_db)):
-    """Retorna QR Code PNG do grupo para compartilhar com operadores."""
+                 db: Session = Depends(get_db), _admin=Depends(get_admin_logado)):
+    """Retorna QR Code PNG do grupo para compartilhar com operadores.
+    Requer JWT admin — a imagem embute o token do grupo."""
     import qrcode as qrcode_lib
     _validar_base_url(base_url)
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
@@ -176,12 +178,17 @@ async def verificar_token_grupo(request: Request, sessao_id: str, token: str, db
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
 
+    # Token vazio nunca é válido — compare_digest("","")==True quando o token
+    # armazenado ainda é None validaria "?token=" como supervisor.
+    if not token:
+        return {"tipo": None, "valido": False, "grupo": None}
+
     # Verifica token de supervisor — hmac.compare_digest previne timing attack
-    if hmac.compare_digest(sessao.token_supervisor or "", token):
+    if sessao.token_supervisor and hmac.compare_digest(sessao.token_supervisor, token):
         return {"tipo": "supervisor", "valido": True, "grupo": None}
 
     # Verifica token geral da sessão
-    if hmac.compare_digest(sessao.token_acesso or "", token):
+    if sessao.token_acesso and hmac.compare_digest(sessao.token_acesso, token):
         return {"tipo": "geral", "valido": True, "grupo": None}
 
     # Verifica token de grupo
@@ -288,8 +295,11 @@ def gerar_token_supervisor(sessao_id: str, db: Session = Depends(get_db), _admin
 
 
 @router.get("/{sessao_id}/qrcode-supervisor")
-def qrcode_supervisor(sessao_id: str, base_url: str = "", db: Session = Depends(get_db)):
-    """QR Code PNG para acesso do supervisor."""
+def qrcode_supervisor(sessao_id: str, base_url: str = "", db: Session = Depends(get_db),
+                      _admin=Depends(get_admin_logado)):
+    """QR Code PNG para acesso do supervisor.
+    Requer JWT admin — a imagem embute o token_supervisor (um operador que
+    conhecesse o sessao_id poderia escalar privilégio para supervisor)."""
     import qrcode as qrcode_lib
     _validar_base_url(base_url)
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
@@ -324,7 +334,9 @@ def itens_supervisor(sessao_id: str, token: str, db: Session = Depends(get_db)):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
-    if not hmac.compare_digest(sessao.token_supervisor or "", token):
+    if not token or not sessao.token_supervisor:
+        raise HTTPException(status_code=403, detail="Token de supervisor inválido")
+    if not hmac.compare_digest(sessao.token_supervisor, token):
         raise HTTPException(status_code=403, detail="Token de supervisor inválido")
 
     logger.info("supervisor_access sessao=%s", sessao_id)

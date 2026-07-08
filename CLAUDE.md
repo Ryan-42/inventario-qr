@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 uvicorn app.main:app --reload --port 8000
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000   # expose to phones on same Wi-Fi
 
-# Tests (from backend/) — SQLite in-memory, 396 passed / 1 pre-existing skip
+# Tests (from backend/) — SQLite in-memory, 429 passed / 1 pre-existing skip
 pytest tests/ -q
 pytest tests/test_contagens.py -q                            # single file
 pytest tests/test_contagens.py::test_contagem_sem_token_retorna_401 -v   # single test
@@ -45,6 +45,10 @@ docker compose -f docker-compose.prod.yml up --build   # prod-like, Postgres
 
 - **Admin login**: JWT, `app/auth.py` (`get_admin_logado`, `get_admin_logado_opcional` for routes admins can optionally use).
 - **Operator/session access**: per-session tokens (`token_acesso`, `token_supervisor`, group tokens), compared with `hmac.compare_digest`. Always reject an empty token explicitly before comparing — `hmac.compare_digest("", "") == True`, so an unset `token_supervisor` (`None` → `""`) will silently accept an empty token unless guarded.
+
+Blind counting is enforced at the API: `GET /itens`, `/contagens`, `/historico`, `/stats`, `/rodadas`, `/metricas`, `/valor-estoque`, `/grupos`, `/segunda-aprovacao` and the QR-code PNG endpoints require admin JWT (they expose `quantidade_base` or embedded tokens). `/buscar/{codigo}` and `/itens-operador` accept an operator token but return `quantidade_base`/`contagem_anterior` only to admins. `GET /sessoes/{id}` and `/progresso` stay public (mobile/supervisor pages consume them without JWT), with `webhook_url` stripped for non-admins. Regression coverage: `tests/test_hardening.py`.
+
+`static/sw.js` pre-caches `/static/js/*.js` cache-first — **bump `CACHE_NAME` whenever api.js/ws.js/auth.js change**, or deployed clients keep the stale bundle indefinitely.
 
 ### Counting rounds ("rodadas") and WebSocket
 

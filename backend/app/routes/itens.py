@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from sqlalchemy.orm import Session
 
-from app.auth import get_admin_logado
+from app.auth import get_admin_logado, get_admin_logado_opcional
 from app.database import get_db
 from app.limiter import limiter
 from app.repositories import sessao_repo, item_repo, grupo_repo
@@ -62,8 +62,9 @@ async def validar_planilha(
     sessao_id: str,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    _admin=Depends(get_admin_logado),
 ):
-    """Valida planilha com o ValidationAgent sem salvar no banco."""
+    """Valida planilha com o ValidationAgent sem salvar no banco. Requer JWT admin."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -122,7 +123,9 @@ async def upload_planilha(
             detail=f"Sessão já possui {contagens_count} contagem(ns) registrada(s). Remova as contagens antes de reimportar.",
         )
 
-    _validar_arquivo(file, permitir_csv=False)
+    # CSV também é aceito — importar_planilha já trata; antes só o
+    # /validar-planilha aceitava CSV e o upload rejeitava (inconsistência).
+    _validar_arquivo(file, permitir_csv=True)
 
     conteudo = await file.read()
     if len(conteudo) > _MAX_UPLOAD_BYTES:
@@ -159,7 +162,10 @@ async def upload_planilha(
 
 @router.get("/{sessao_id}/itens", response_model=list[ItemComStatus])
 @limiter.limit("60/minute")
-async def listar_itens_com_status(request: Request, sessao_id: str, db: Session = Depends(get_db)):
+async def listar_itens_com_status(request: Request, sessao_id: str, db: Session = Depends(get_db),
+                                  _admin=Depends(get_admin_logado)):
+    """Inventário completo com quantidade_base. Requer JWT admin — para
+    operadores existe o /itens-operador (contagem cega, sem quantidades)."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
@@ -173,27 +179,45 @@ async def listar_itens_operador(
     sessao_id: str,
     token: Optional[str] = None,
     db: Session = Depends(get_db),
+    admin=Depends(get_admin_logado_opcional),
 ):
-    """Lista itens para o operador (contagem cega): código, descrição e local — sem quantidade."""
+    """Lista itens para o operador (contagem cega): código, descrição e local — sem quantidade.
+    Requer token de operador (geral, supervisor ou grupo) ou JWT admin."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
     if sessao.status != StatusSessao.ativa:
         raise HTTPException(status_code=409, detail="Sessão não está ativa")
-    itens = item_repo.listar_itens_para_operador(db, sessao_id)
+    grupo = None
+    if not admin:
+        from app.routes.contagens import _validar_token_operador
+        _validar_token_operador(sessao, token or "", request, db)
     if token:
         grupo = grupo_repo.buscar_grupo_por_token(db, sessao_id, token)
-        if grupo:
-            itens = _filtrar_por_grupo(itens, grupo)
+    itens = item_repo.listar_itens_para_operador(db, sessao_id)
+    if grupo:
+        itens = _filtrar_por_grupo(itens, grupo)
     return itens
 
 
 @router.get("/{sessao_id}/buscar/{codigo}", response_model=BuscaItemResponse)
 @limiter.limit("200/minute")
-async def buscar_item_por_codigo(request: Request, sessao_id: str, codigo: str, db: Session = Depends(get_db)):
+async def buscar_item_por_codigo(request: Request, sessao_id: str, codigo: str,
+                                 token: str = "",
+                                 db: Session = Depends(get_db),
+                                 admin=Depends(get_admin_logado_opcional)):
+    """Busca um item pelo código (usado pelo scanner mobile e pelo painel admin).
+
+    Contagem cega: operadores (token) NÃO recebem quantidade_base nem a
+    contagem anterior — apenas admins (JWT) veem esses campos.
+    """
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")
+
+    if not admin:
+        from app.routes.contagens import _validar_token_operador
+        _validar_token_operador(sessao, token, request, db)
 
     item = item_repo.buscar_item(db, sessao_id, codigo)
     if not item:
@@ -204,9 +228,9 @@ async def buscar_item_por_codigo(request: Request, sessao_id: str, codigo: str, 
     return {
         "codigo": item.codigo,
         "produto": item.produto,
-        "quantidade_base": item.quantidade_base,
+        "quantidade_base": item.quantidade_base if admin else None,
         "ja_contado": contagem is not None,
         "rodada_atual": contagem.rodada if contagem else 0,
         "para_ajuste": bool(contagem.para_ajuste) if contagem else False,
-        "contagem_anterior": contagem,
+        "contagem_anterior": contagem if admin else None,
     }

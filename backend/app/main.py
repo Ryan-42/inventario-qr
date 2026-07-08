@@ -271,12 +271,7 @@ if _STATIC.exists():
                 {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
                 {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
             ],
-            "shortcuts": [
-                {
-                    "name": "Scanner",
-                    "url": "/mobile/",
-                    "description": "Abrir scanner de inventário",
-                    "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}],
-                }
-            ],
+            # Sem shortcut para /mobile/ — a rota exige sessao_id ("/mobile/" daria 404).
+            # O operador entra sempre pelo QR Code, que embute sessão e token.
+            "shortcuts": [],
         }

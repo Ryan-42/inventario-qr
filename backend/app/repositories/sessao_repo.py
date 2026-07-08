@@ -164,6 +164,32 @@ def cancelar_sessao(db: Session, sessao_id: str) -> Optional[Sessao]:
     return buscar_sessao(db, sessao_id)
 
 
+def reabrir_sessao(db: Session, sessao_id: str) -> Optional[Sessao]:
+    from sqlalchemy import update as sa_update
+    # UPDATE atômico: só reabre se ainda estava 'concluida' e não foi aprovada
+    # pelo segundo aprovador (segunda_aprovacao_ok != 1). Zera a data_fim e
+    # volta a aprovação para 'pendente' — o ciclo de aprovação recomeça.
+    rowcount = db.execute(
+        sa_update(Sessao)
+        .where(
+            Sessao.id == sessao_id,
+            Sessao.status == StatusSessao.concluida,
+            (Sessao.segunda_aprovacao_ok.is_(None)) | (Sessao.segunda_aprovacao_ok != 1),
+        )
+        .values(
+            status=StatusSessao.ativa,
+            data_fim=None,
+            segunda_aprovacao_ok=0,
+            segunda_aprovacao_por=None,
+            segunda_aprovacao_em=None,
+        )
+    ).rowcount
+    db.commit()
+    if rowcount == 0:
+        return None
+    return buscar_sessao(db, sessao_id)
+
+
 def deletar_sessao(db: Session, sessao_id: str) -> bool:
     from app.models.contagem import HistoricoContagem
     sessao = buscar_sessao(db, sessao_id)

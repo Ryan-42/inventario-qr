@@ -25,6 +25,7 @@ def listar_contagens_sessao(
     skip: int = 0,
     limit: int = 500,
     db: Session = Depends(get_db),
+    _admin=Depends(get_admin_logado),
 ):
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
@@ -182,9 +183,10 @@ def listar_historico(
     limit: int = 500,
     offset: int = 0,
     db: Session = Depends(get_db),
+    _admin=Depends(get_admin_logado),
 ):
     """Retorna histórico append-only de todas as contagens da sessão (ou de um código específico).
-    Paginado: máximo 2000 registros por chamada."""
+    Paginado: máximo 2000 registros por chamada. Requer JWT admin — expõe quantidade_base."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)
     if not sessao:
         raise HTTPException(status_code=404, detail="Sessão não encontrada")

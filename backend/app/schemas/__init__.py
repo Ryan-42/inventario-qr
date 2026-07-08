@@ -180,7 +180,8 @@ class HistoricoContagemResponse(BaseModel):
 class BuscaItemResponse(BaseModel):
     codigo: str
     produto: str
-    quantidade_base: int
+    # None para operadores (contagem cega) — só admins recebem a quantidade base
+    quantidade_base: Optional[int] = None
     ja_contado: bool
     rodada_atual: int = 0
     para_ajuste: bool = False

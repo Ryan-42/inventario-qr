@@ -28,12 +28,13 @@ def _token_ws_valido(sessao, token: str, db: Session) -> bool:
         return True
     if sessao.token_supervisor and hmac.compare_digest(sessao.token_supervisor, token):
         return True
-    from app.models.admin import Admin
     from app.auth import _SECRET_KEY, _ALGORITHM
+    from app.services.token_blacklist import is_revoked
     try:
-        from jose import jwt as _jwt, JWTError
+        from jose import jwt as _jwt
         payload = _jwt.decode(token, _SECRET_KEY, algorithms=[_ALGORITHM])
-        if payload.get("sub"):
+        # Respeita o logout: JWT revogado (jti na blacklist) não abre WebSocket
+        if payload.get("sub") and not is_revoked(payload.get("jti") or ""):
             return True
     except Exception:
         pass

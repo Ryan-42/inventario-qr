@@ -179,7 +179,13 @@ def verificar_token_admin(
     ip = _ip_de(request)
     _verificar_bloqueio(ip)
 
-    valido = hmac.compare_digest(sessao.token_admin or "", token_admin or "")
+    # Token vazio nunca é válido: compare_digest("", "") == True aceitaria
+    # token vazio quando token_admin ainda não foi gerado (None → "").
+    if not token_admin or not sessao.token_admin:
+        _registrar_falha(ip, getattr(sessao, "id", "?"))
+        raise HTTPException(status_code=403, detail="Token de administrador inválido.")
+
+    valido = hmac.compare_digest(sessao.token_admin, token_admin)
     if not valido:
         sessao_id = getattr(sessao, "id", "?")
         _registrar_falha(ip, sessao_id)
@@ -196,7 +202,10 @@ def verificar_token_admin_str(
 ) -> None:
     """Variante para quando não há objeto Sessao disponível (ex: agendamentos)."""
     _verificar_bloqueio(ip)
-    if not hmac.compare_digest(token_esperado or "", token_recebido or ""):
+    if not token_esperado or not token_recebido:
+        _registrar_falha(ip, contexto)
+        raise HTTPException(status_code=403, detail="Token inválido.")
+    if not hmac.compare_digest(token_esperado, token_recebido):
         _registrar_falha(ip, contexto)
         raise HTTPException(status_code=403, detail="Token inválido.")
     _registrar_sucesso(ip)

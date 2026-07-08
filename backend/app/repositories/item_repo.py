@@ -245,10 +245,17 @@ def listar_historico(
     codigo: str | None = None,
     limit: int | None = 500,
     offset: int = 0,
+    operador: str | None = None,
+    apenas_divergencias: bool = False,
 ) -> list[HistoricoContagem]:
+    from sqlalchemy import func as sa_func
     q = db.query(HistoricoContagem).filter(HistoricoContagem.sessao_id == sessao_id)
     if codigo:
         q = q.filter(HistoricoContagem.codigo == codigo)
+    if operador:
+        q = q.filter(sa_func.lower(HistoricoContagem.operador) == operador.lower())
+    if apenas_divergencias:
+        q = q.filter(HistoricoContagem.divergencia == True)  # noqa: E712
     q = q.order_by(HistoricoContagem.timestamp.asc())
     if offset:
         q = q.offset(offset)

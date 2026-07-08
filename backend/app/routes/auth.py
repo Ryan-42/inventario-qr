@@ -11,7 +11,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.auth import criar_token, verificar_senha, get_admin_logado
+from app.auth import criar_token, verificar_senha, get_admin_logado, _ip_de as _ip_confiavel
 from app.database import get_db
 from app.limiter import limiter
 from app.models.admin import Admin
@@ -50,10 +50,9 @@ def _login_ok(ip: str) -> None:
 
 
 def _ip_de(request: Request) -> str:
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
-    return request.client.host if request.client else "unknown"
+    # Reusa a versão TRUST_PROXY-aware de app.auth: sem proxy confiável configurado,
+    # X-Forwarded-For pode ser forjado pelo cliente para burlar o rate limit de login.
+    return _ip_confiavel(request)
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
@@ -128,13 +127,45 @@ async def me(admin=Depends(get_admin_logado)):
 
 
 # Endpoint compatível com OAuth2 form (Swagger UI)
+# Mesmas proteções do /auth/login — sem elas este endpoint seria um bypass
+# do rate limit e do rastreio de brute-force.
 @router.post("/token")
+@limiter.limit("10/minute")
 async def token_form(
+    request: Request,
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
+    ip = _ip_de(request)
+    _check_login_rate(ip)
     admin = db.query(Admin).filter(Admin.email == form.username).first()
     if not admin or not verificar_senha(form.password, admin.senha_hash):
+        _login_falha(ip)
+        logger.warning("login_failed email=%s ip=%s (via /auth/token)", form.username, ip)
         raise HTTPException(status_code=401, detail="Credenciais inválidas.")
+    _login_ok(ip)
     token = criar_token({"sub": admin.email})
     return {"access_token": token, "token_type": "bearer"}
+
+
+class AlterarSenhaPayload(BaseModel):
+    senha_atual: str
+    senha_nova: str
+
+
+@router.post("/alterar-senha")
+async def alterar_senha(
+    payload: AlterarSenhaPayload,
+    admin=Depends(get_admin_logado),
+    db: Session = Depends(get_db),
+):
+    """Permite ao admin logado trocar a própria senha (antes só era possível via criar_admin.py no servidor)."""
+    from app.auth import hash_senha
+    if not verificar_senha(payload.senha_atual, admin.senha_hash):
+        raise HTTPException(status_code=403, detail="Senha atual incorreta.")
+    if len(payload.senha_nova) < 8:
+        raise HTTPException(status_code=422, detail="A nova senha deve ter no mínimo 8 caracteres.")
+    admin.senha_hash = hash_senha(payload.senha_nova)
+    db.commit()
+    logger.info("senha_alterada email=%s", admin.email)
+    return {"ok": True, "mensagem": "Senha alterada com sucesso."}
