@@ -171,7 +171,7 @@ def novo_token_admin(sessao_id: str, db: Session = Depends(get_db), _admin=Depen
 
 
 @router.get("/{sessao_id}/verificar-grupo")
-@limiter.limit("15/minute")
+@limiter.limit("30/minute")  # por IP — uma equipe atrás do mesmo NAT entra de uma vez; 15/min derrubava operadores legítimos
 async def verificar_token_grupo(request: Request, sessao_id: str, token: str, db: Session = Depends(get_db)):
     """Verifica se o token pertence a um grupo e retorna as informações do grupo."""
     sessao = sessao_repo.buscar_sessao(db, sessao_id)

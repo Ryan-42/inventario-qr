@@ -70,6 +70,12 @@ class AgendamentoUpdate(BaseModel):
     ativo: bool | None = None
 
 
+def _verificar_token_admin(a, token_admin: str) -> None:
+    """Token vazio nunca é válido — compare_digest("", "") retorna True."""
+    if not a.token_admin or not token_admin or not hmac.compare_digest(a.token_admin, token_admin):
+        raise HTTPException(status_code=403, detail="Token de administrador inválido.")
+
+
 def _to_dict(a, include_token: bool = False) -> dict:
     d = {
         "id": a.id,
@@ -187,8 +193,7 @@ def atualizar_agendamento(
     a = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
-    if not hmac.compare_digest(a.token_admin or "", token_admin or ""):
-        raise HTTPException(status_code=403, detail="Token de administrador inválido.")
+    _verificar_token_admin(a, token_admin)
 
     if payload.nome_template is not None:
         a.nome_template = payload.nome_template
@@ -221,8 +226,7 @@ def deletar_agendamento(
     a = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
-    if not hmac.compare_digest(a.token_admin or "", token_admin or ""):
-        raise HTTPException(status_code=403, detail="Token de administrador inválido.")
+    _verificar_token_admin(a, token_admin)
 
     db.delete(a)
     db.commit()
@@ -244,8 +248,7 @@ def executar_agora(
     a = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == agendamento_id).first()
     if not a:
         raise HTTPException(status_code=404, detail="Agendamento não encontrado")
-    if not hmac.compare_digest(a.token_admin or "", token_admin or ""):
-        raise HTTPException(status_code=403, detail="Token de administrador inválido.")
+    _verificar_token_admin(a, token_admin)
 
     try:
         agora = datetime.now(timezone.utc)

@@ -53,7 +53,8 @@ def atualizar_grupo(db: Session, grupo: GrupoOperador, nome: str = None,
 
 def regenerar_token_grupo(db: Session, grupo: GrupoOperador) -> GrupoOperador:
     import secrets
-    grupo.token = secrets.token_hex(4).upper()
+    # token_hex(8) = 16 chars — mesmo formato/entropia do token gerado na criação
+    grupo.token = secrets.token_hex(8).upper()
     db.commit()
     db.refresh(grupo)
     return grupo

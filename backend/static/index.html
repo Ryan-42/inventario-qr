@@ -610,9 +610,9 @@ function renderCard(s) {
           ${codigo}
         </div>
         <div class="flex items-center gap-xs shrink-0 ml-sm">
-          ${isMinha ? `<button class="btn-delete-sessao text-on-surface-variant/60 hover:text-error transition-colors p-1 rounded hover:bg-error/10" data-delete-id="${escapeHtml(String(s.id))}" data-delete-nome="${escapeHtml(s.nome || 'Sessão sem nome')}" title="Deletar sessão" aria-label="Deletar sessão">
+          <button class="btn-delete-sessao text-on-surface-variant/60 hover:text-error transition-colors p-1 rounded hover:bg-error/10" data-delete-id="${escapeHtml(String(s.id))}" data-delete-nome="${escapeHtml(s.nome || 'Sessão sem nome')}" title="Deletar sessão" aria-label="Deletar sessão">
             <span class="material-symbols-outlined text-[18px]">delete</span>
-          </button>` : ''}
+          </button>
           <button class="card-arrow text-on-surface-variant/50 hover:text-primary transition-colors">
             <span class="material-symbols-outlined">arrow_forward</span>
           </button>

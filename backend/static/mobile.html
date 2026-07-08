@@ -1117,11 +1117,21 @@ async function flushOfflineQueue() {
   let queue; try { queue=JSON.parse(raw) } catch { localStorage.removeItem('inventario_offline_queue'); return }
   if (!queue.length) return
   const pending = queue.filter(item => item.sessaoId === sessaoId); if (!pending.length) return
-  let sent=0; const failed=[]
-  for (const item of pending) { try { await registrarContagem(item.sessaoId,item.payload,item.token||''); sent++ } catch { failed.push(item) } }
+  let sent=0, descartados=0; const failed=[]
+  for (const item of pending) {
+    try { await registrarContagem(item.sessaoId,item.payload,item.token||''); sent++ }
+    catch(e) {
+      // 4xx (exceto 408/429) = rejeição permanente (sessão concluída, token trocado…)
+      // — reencaminhar para sempre só travaria a fila; descarta e avisa.
+      const st = e?.status
+      if (st && st >= 400 && st < 500 && st !== 408 && st !== 429) descartados++
+      else failed.push(item)
+    }
+  }
   const remaining = queue.filter(item=>item.sessaoId!==sessaoId).concat(failed)
   if (remaining.length>0) localStorage.setItem('inventario_offline_queue',JSON.stringify(remaining)); else localStorage.removeItem('inventario_offline_queue')
   if (sent>0) showHintNotif(`${sent} contagem(ns) sincronizada(s)`, 3000)
+  if (descartados>0) showHintNotif(`${descartados} contagem(ns) offline rejeitada(s) pelo servidor e descartada(s)`, 5000)
 }
 
 function showHintNotif(msg, duration=2500) {

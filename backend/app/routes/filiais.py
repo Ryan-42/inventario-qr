@@ -48,13 +48,14 @@ def _to_dict(f: Filial) -> dict:
 @router.post("/", status_code=201)
 def criar_filial(payload: FilialCreate, db: Session = Depends(get_db)) -> dict:
     """Cria uma nova filial. O código deve ser único (ex: SP01, RJ02)."""
-    existente = db.query(Filial).filter(Filial.codigo == payload.codigo).first()
+    codigo = payload.codigo.upper().strip()
+    existente = db.query(Filial).filter(Filial.codigo == codigo).first()
     if existente:
-        raise HTTPException(status_code=409, detail=f"Já existe uma filial com o código '{payload.codigo}'.")
+        raise HTTPException(status_code=409, detail=f"Já existe uma filial com o código '{codigo}'.")
 
     f = Filial(
         nome=payload.nome,
-        codigo=payload.codigo.upper().strip(),
+        codigo=codigo,
         empresa=payload.empresa,
         cidade=payload.cidade,
     )

@@ -272,3 +272,41 @@ def test_auditoria_filtro_operador_no_sql(client, sessao_com_itens):
     assert len(body["registros"]) == 1
     assert body["registros"][0]["operador"] == "Alice"
     assert body["tem_mais"] is True
+
+
+# ── Rodada 3: agendamentos, token de grupo regenerado ─────────────────────────
+
+def test_agendamento_token_admin_vazio_rejeitado(client):
+    """Agendamento com token_admin vazio não pode aceitar token vazio
+    (hmac.compare_digest("", "") == True)."""
+    r = client.post("/api/agendamentos/", json={
+        "nome_template": "Inventário semanal", "frequencia": "diario", "hora": "08:00",
+    })
+    assert r.status_code == 201, r.text
+    ag_id = r.json()["id"]
+
+    # Simula registro legado com token vazio (coluna é NOT NULL)
+    from tests.conftest import override_get_db
+    db = next(override_get_db())
+    from app.models.agendamento import AgendamentoSessao
+    ag = db.query(AgendamentoSessao).filter(AgendamentoSessao.id == ag_id).first()
+    ag.token_admin = ""
+    db.commit()
+
+    r = client.patch(f"/api/agendamentos/{ag_id}?token_admin=", json={"hora": "09:00"})
+    assert r.status_code == 403
+    r = client.delete(f"/api/agendamentos/{ag_id}?token_admin=")
+    assert r.status_code == 403
+
+
+def test_token_grupo_regenerado_mantem_16_chars(client, sessao):
+    """Regenerar não pode enfraquecer o token (era token_hex(4) = 8 chars)."""
+    sid = sessao["id"]
+    r = client.post(f"/api/sessoes/{sid}/grupos", json={"nome": "Equipe A", "tipo_filtro": "todos", "filtro": ""})
+    assert r.status_code in (200, 201), r.text
+    grupo = r.json()
+    assert len(grupo["token"]) == 16
+    r = client.post(f"/api/sessoes/{sid}/grupos/{grupo['id']}/regenerar-token")
+    assert r.status_code == 200, r.text
+    novo = r.json()["token"]
+    assert len(novo) == 16 and novo != grupo["token"]
