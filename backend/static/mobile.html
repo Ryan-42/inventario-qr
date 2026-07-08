@@ -532,7 +532,7 @@ tailwind.config = {
 </div>
 
 <script type="module">
-import { buscarSessao, buscarItem, registrarContagem, alertaSessao } from '/static/js/api.js'
+import { buscarSessao, buscarItem, registrarContagem } from '/static/js/api.js'
 import { SessionWS } from '/static/js/ws.js'
 
 // ── State
@@ -1148,7 +1148,8 @@ async function submitContagem(opName) {
     const base = currentItem?.quantidade_base ?? currentItem?.quantidade
     // Usa divergência calculada pelo servidor (source of truth), não threshold local de 20%
     const isDivg = result?.divergencia === true || (base != null && currentQty !== base)
-    if (isDivg) alertaSessao(sessaoId, { codigo:currentCodigo, quantidade_encontrada:currentQty, quantidade_base:base, operador:op }).catch(()=>{})
+    // AlertaAgent roda no servidor a cada contagem divergente (contagens.py, background task).
+    // Não chamar /agentes/alerta daqui: exige JWT admin e o 401 expulsava o operador p/ /login.
     const alertas = result?.alertas || result?.alerts || []
     // Atualiza progresso imediatamente via REST (fallback se WS demorar)
     fetch(`/api/sessoes/${sessaoId}/progresso`)

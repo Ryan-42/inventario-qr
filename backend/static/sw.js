@@ -7,9 +7,9 @@
  *   - /api/* e WebSocket → sem interceptação  (dados sempre frescos)
  */
 
-// v3: api.js mudou (buscarItem agora envia token do operador) — bump força
-// os clientes a descartarem o cache antigo (estratégia cache-first em /static/*)
-const CACHE_NAME = 'inviq-v3'
+// v4: api.js mudou (401 em página de operador não redireciona mais p/ /login) —
+// bump força os clientes a descartarem o cache antigo (cache-first em /static/*)
+const CACHE_NAME = 'inviq-v4'
 
 const PRE_CACHE = [
   '/static/css/app.css',

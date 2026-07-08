@@ -6,12 +6,20 @@ function _jwtHeader() {
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
+// Páginas de operador (mobile/supervisor) não usam login de admin: um 401 ali
+// significa token de operador inválido e deve virar erro tratável na própria
+// página — nunca redirect para /login (expulsaria o operador do fluxo sem login).
+function _paginaOperador() {
+  const p = window.location.pathname
+  return p.startsWith('/mobile') || p.startsWith('/supervisor')
+}
+
 async function apiFetch(path, options = {}) {
   const res = await fetch(BASE + path, {
     headers: { 'Content-Type': 'application/json', ..._jwtHeader(), ...options.headers },
     ...options,
   })
-  if (res.status === 401) {
+  if (res.status === 401 && !_paginaOperador()) {
     sessionStorage.removeItem('inviq_token')
     sessionStorage.removeItem('inviq_admin')
     window.location.replace('/login')
