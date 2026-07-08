@@ -34,11 +34,25 @@ export const statsSessao = (id) => apiFetch(`/sessoes/${id}/stats`)
 export const concluirSessao = (id) => apiFetch(`/sessoes/${id}/concluir`, { method: 'PATCH' })
 export const cancelarSessao = (id) => apiFetch(`/sessoes/${id}/cancelar`, { method: 'PATCH' })
 export const deletarSessao = (id) => apiFetch(`/sessoes/${id}`, { method: 'DELETE' })
+export const reabrirSessao = (id) => apiFetch(`/sessoes/${id}/reabrir`, { method: 'PATCH' })
 export const rodadasSessao = (id) => apiFetch(`/sessoes/${id}/rodadas`)
+
+// ── Grupos de operadores ─────────────────────────────────────────────
+export const listarGrupos = (sessaoId) => apiFetch(`/sessoes/${sessaoId}/grupos`)
+export const criarGrupo = (sessaoId, payload) =>
+  apiFetch(`/sessoes/${sessaoId}/grupos`, { method: 'POST', body: JSON.stringify(payload) })
+export const deletarGrupo = (sessaoId, grupoId) =>
+  apiFetch(`/sessoes/${sessaoId}/grupos/${grupoId}`, { method: 'DELETE' })
+export const regenerarTokenGrupo = (sessaoId, grupoId) =>
+  apiFetch(`/sessoes/${sessaoId}/grupos/${grupoId}/regenerar-token`, { method: 'POST' })
 
 // ── Items ────────────────────────────────────────────────────────────
 export const listarItens = (sessaoId) => apiFetch(`/sessoes/${sessaoId}/itens`)
-export const buscarItem = (sessaoId, codigo) => apiFetch(`/sessoes/${sessaoId}/buscar/${encodeURIComponent(codigo)}`)
+// token: operador mobile envia o token de acesso (admin JWT dispensa o token)
+export const buscarItem = (sessaoId, codigo, token = '') => {
+  const qs = token ? `?token=${encodeURIComponent(token)}` : ''
+  return apiFetch(`/sessoes/${sessaoId}/buscar/${encodeURIComponent(codigo)}${qs}`)
+}
 export const listarContagens = (sessaoId) => apiFetch(`/sessoes/${sessaoId}/contagens`)
 // token: operador token (token_acesso, supervisor ou grupo) — obrigatório para operadores mobile
 export const registrarContagem = (sessaoId, payload, token = '') => {

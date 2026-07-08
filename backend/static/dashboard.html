@@ -300,8 +300,12 @@ tailwind.config = {
 
 <div id="toast-container"></div>
 
+<script src="/static/js/auth.js"></script>
 <script>
 let chartTendencia = null;
+
+// Exige login — os endpoints /api/dashboard/* requerem JWT admin
+checkAuth();
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -314,7 +318,8 @@ function toast(msg, tipo = 'error') {
 }
 
 async function api(path) {
-  const r = await fetch('/api' + path);
+  // fetchAuth injeta o JWT e redireciona para /login em 401
+  const r = await fetchAuth('/api' + path);
   if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
   return r.json();
 }

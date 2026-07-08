@@ -997,7 +997,7 @@ async function processCode(codigo) {
     }
   }
   try {
-    const data = await buscarItem(sessaoId, codigo)
+    const data = await buscarItem(sessaoId, codigo, tokenAtivo)
     currentItem = data; currentCodigo = codigo; currentQty = 0
     addRecente(codigo)
     stopCamera(); showState('item'); renderItem()
